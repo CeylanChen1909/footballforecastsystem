@@ -1,0 +1,30 @@
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+WORKDIR /workspace
+COPY pom.xml ./
+COPY football-common ./football-common
+COPY football-gateway ./football-gateway
+COPY football-user-service ./football-user-service
+COPY football-match-service ./football-match-service
+COPY football-news-service ./football-news-service
+COPY football-team-service ./football-team-service
+COPY football-prediction-service ./football-prediction-service
+COPY football-data-sync-service ./football-data-sync-service
+COPY football-crawler-service ./football-crawler-service
+
+ARG MODULE
+RUN mvn -pl ${MODULE} -am clean package spring-boot:repackage -DskipTests \
+    && mkdir -p /workspace/build-output \
+    && cp /workspace/${MODULE}/target/${MODULE}-*.jar /workspace/build-output/app.jar
+
+FROM eclipse-temurin:17-jre-jammy
+
+WORKDIR /app
+COPY --from=builder /workspace/build-output/app.jar /app/app.jar
+
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+ENV SPRING_PROFILES_ACTIVE=prod
+
+EXPOSE 8082 9001 9002 9003 9004 9005 9006 9009
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

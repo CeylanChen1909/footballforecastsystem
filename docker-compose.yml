@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: football-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: football_forecast
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - football-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: football-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - football-network
+
+  # Nacos 服务注册中心
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: football-nacos
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos_data:/home/nacos/data
+    networks:
+      - football-network
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+
+networks:
+  football-network:
+    driver: bridge

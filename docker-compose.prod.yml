@@ -1,0 +1,293 @@
+version: '3.8'
+
+x-java-service-env: &java-service-env
+  SPRING_PROFILES_ACTIVE: prod
+  MYSQL_HOST: mysql
+  MYSQL_PORT: 3306
+  MYSQL_DB: ${MYSQL_DB}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+  FOOTBALL_NACOS_ADDR: nacos:8848
+  JWT_SECRET: ${JWT_SECRET}
+  API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+  CRAWLER_BASE_URL: http://football-crawler-service:9009
+  PYTHON_INFERENCE_ENABLED: ${PYTHON_INFERENCE_ENABLED:-true}
+  PYTHON_INFERENCE_URL: http://football-ml-service:5001
+  TZ: Asia/Shanghai
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: football-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/football_forecast_schema.sql:/docker-entrypoint-initdb.d/01-football-forecast-schema.sql:ro
+      - ./football-crawler-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/02-crawler-schema.sql:ro
+    networks:
+      - football-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: football-redis
+    restart: unless-stopped
+    command: sh -c 'if [ -n "$${REDIS_PASSWORD}" ]; then redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"; else redis-server --appendonly yes; fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - football-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: football-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
+    volumes:
+      - nacos_data:/home/nacos/data
+    networks:
+      - football-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+
+  football-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-gateway
+    container_name: football-gateway
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+      JAVA_OPTS: ${GATEWAY_JAVA_OPTS:--Xms256m -Xmx512m}
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - football-network
+
+  football-user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-user-service
+    container_name: football-user-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - football-network
+
+  football-match-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-match-service
+    container_name: football-match-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      football-crawler-service:
+        condition: service_started
+    networks:
+      - football-network
+
+  football-news-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-news-service
+    container_name: football-news-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      football-crawler-service:
+        condition: service_started
+    networks:
+      - football-network
+
+  football-team-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-team-service
+    container_name: football-team-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      football-crawler-service:
+        condition: service_started
+    networks:
+      - football-network
+
+  football-prediction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-prediction-service
+    container_name: football-prediction-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      football-ml-service:
+        condition: service_started
+    networks:
+      - football-network
+
+  football-data-sync-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-data-sync-service
+    container_name: football-data-sync-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - football-network
+
+  football-crawler-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.spring
+      args:
+        MODULE: football-crawler-service
+    container_name: football-crawler-service
+    restart: unless-stopped
+    environment:
+      <<: *java-service-env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - football-network
+
+  football-ml-service:
+    build:
+      context: ./football-ml-service
+    container_name: football-ml-service
+    restart: unless-stopped
+    environment:
+      API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./football-ml-service/models:/app/models:ro
+    networks:
+      - football-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: football-frontend
+    restart: unless-stopped
+    ports:
+      - "80:3000"
+    depends_on:
+      football-gateway:
+        condition: service_started
+    networks:
+      - football-network
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+  ml_models:
+
+networks:
+  football-network:
+    driver: bridge

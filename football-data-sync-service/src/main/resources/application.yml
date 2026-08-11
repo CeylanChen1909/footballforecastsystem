@@ -1,0 +1,41 @@
+server:
+  port: 9006
+
+spring:
+  application:
+    name: football-data-sync-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DB:football_forecast}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    sentinel:
+      enabled: true
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+api-football:
+  base-url: https://v3.football.api-sports.io
+  api-key: ${API_FOOTBALL_API_KEY:7294a6ff586cc5f3531171bc154ced85}
+  cache-ttl-seconds: 600
+
+sync:
+  leagues: "39,140,135,78,61,2"
+  season: 2024
+  cron: "0 30 */6 * * ?"
+
+logging:
+  level:
+    com.chen.football.datasync: INFO

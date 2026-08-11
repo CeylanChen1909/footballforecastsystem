@@ -1,0 +1,27 @@
+server:
+  port: 9004
+spring:
+  application:
+    name: football-team-service
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    sentinel:
+      enabled: true
+crawler:
+  base-url: ${CRAWLER_BASE_URL:http://127.0.0.1:9009}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

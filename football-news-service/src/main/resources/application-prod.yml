@@ -1,0 +1,35 @@
+server:
+  port: 9003
+spring:
+  application:
+    name: football-news-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DB:football}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:football}
+    password: ${MYSQL_PASSWORD:cC190976043}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    sentinel:
+      enabled: false
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+crawler:
+  base-url: ${CRAWLER_BASE_URL:http://127.0.0.1:9009}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.chen.football.news: INFO

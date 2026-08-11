@@ -1,0 +1,151 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: football-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5000ms
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        enabled: false
+    sentinel:
+      enabled: false
+    gateway:
+      global-filter:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 500
+            redis-rate-limiter.burstCapacity: 1000
+            redis-rate-limiter.requestedTokens: 1
+      routes:
+        - id: user-service
+          uri: lb://football-user-service
+          predicates: [ Path=/api/users/** ]
+
+        - id: admin-user-service
+          uri: lb://football-user-service
+          predicates:
+            - Path=/api/admin/users
+            - Path=/api/admin/users/**
+
+        - id: match-service
+          uri: lb://football-match-service
+          predicates: [ Path=/api/matches/** ]
+
+        - id: admin-match-service
+          uri: lb://football-match-service
+          predicates: [ Path=/api/admin/matches/** ]
+
+        - id: news-service
+          uri: lb://football-news-service
+          predicates: [ Path=/api/news/** ]
+
+        - id: admin-news-service
+          uri: lb://football-news-service
+          predicates: [ Path=/api/admin/news/** ]
+
+        - id: admin-video-status-service
+          uri: lb://football-news-service
+          predicates:
+            - Path=/api/admin/videos/*/status
+
+        - id: admin-video-detail-service
+          uri: lb://football-news-service
+          predicates:
+            - Path=/api/admin/videos/*
+
+        - id: admin-video-service
+          uri: lb://football-news-service
+          predicates:
+            - Path=/api/admin/videos
+            - Path=/api/admin/videos/**
+
+        - id: public-video-service
+          uri: lb://football-news-service
+          predicates:
+            - Path=/api/videos
+            - Path=/api/videos/**
+
+        - id: admin-config-service
+          uri: lb://football-news-service
+          predicates: [ Path=/api/admin/config/** ]
+
+        - id: team-service
+          uri: lb://football-team-service
+          predicates: [ Path=/api/teams/** ]
+
+        - id: prediction-service
+          uri: lb://football-prediction-service
+          predicates: [ Path=/api/predictions/** ]
+
+        - id: data-sync-service
+          uri: lb://football-data-sync-service
+          predicates: [ Path=/api/sync/** ]
+
+        - id: crawler-service
+          uri: lb://football-crawler-service
+          predicates: [ Path=/api/crawler/** ]
+
+        - id: proxy-service
+          uri: lb://football-crawler-service
+          predicates: [ Path=/api/proxy/** ]
+
+      default-filters:
+        - name: Retry
+          args:
+            retries: 2
+            statuses: INTERNAL_SERVER_ERROR,SERVICE_UNAVAILABLE
+            backoff:
+              firstBackoff: 100ms
+              maxBackoff: 500ms
+              maxAttempts: 3
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 30s
+        pool:
+          type: FIXED
+          max-connections: 1000
+          acquire-timeout: 30000
+          idle-timeout: 600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+api:
+  version: v1
+  timeout: 30000
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO

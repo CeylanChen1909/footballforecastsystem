@@ -1,0 +1,97 @@
+{
+  "trained_at": "2026-06-08T08:41:22.167836",
+  "dataset_size": 2744,
+  "accuracy": 0.4991,
+  "precision": 0.474,
+  "recall": 0.4991,
+  "f1": 0.4751,
+  "cv_accuracy_mean": 0.4834,
+  "cv_accuracy_std": 0.0235,
+  "feature_importance": [
+    {
+      "feature": "elo_diff",
+      "importance": 0.1073
+    },
+    {
+      "feature": "home_win_rate_diff",
+      "importance": 0.0621
+    },
+    {
+      "feature": "home_goal_diff",
+      "importance": 0.0576
+    },
+    {
+      "feature": "h2h_draws",
+      "importance": 0.0562
+    },
+    {
+      "feature": "away_win_rate",
+      "importance": 0.0561
+    },
+    {
+      "feature": "away_avg_goals",
+      "importance": 0.0554
+    },
+    {
+      "feature": "home_avg_goals",
+      "importance": 0.0551
+    },
+    {
+      "feature": "home_elo",
+      "importance": 0.0538
+    },
+    {
+      "feature": "elo_sum",
+      "importance": 0.0537
+    },
+    {
+      "feature": "away_elo",
+      "importance": 0.052
+    },
+    {
+      "feature": "h2h_away_wins",
+      "importance": 0.051
+    },
+    {
+      "feature": "avg_total_goals",
+      "importance": 0.0508
+    },
+    {
+      "feature": "away_avg_loss",
+      "importance": 0.0505
+    },
+    {
+      "feature": "home_win_rate",
+      "importance": 0.0501
+    },
+    {
+      "feature": "home_avg_loss",
+      "importance": 0.0492
+    },
+    {
+      "feature": "away_days_rest",
+      "importance": 0.0483
+    },
+    {
+      "feature": "home_days_rest",
+      "importance": 0.0464
+    },
+    {
+      "feature": "h2h_home_wins",
+      "importance": 0.0443
+    },
+    {
+      "feature": "away_avg_cards",
+      "importance": 0.0
+    },
+    {
+      "feature": "home_avg_cards",
+      "importance": 0.0
+    }
+  ],
+  "classes": [
+    "HOME_WIN",
+    "DRAW",
+    "AWAY_WIN"
+  ]
+}
