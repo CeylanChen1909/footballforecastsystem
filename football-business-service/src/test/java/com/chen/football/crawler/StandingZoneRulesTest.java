@@ -26,8 +26,17 @@ class StandingZoneRulesTest {
         assertEquals("CHAMPIONS_LEAGUE", StandingZoneRules.resolve("英超", "2026", 5, 20).code());
         assertEquals("EUROPA_LEAGUE", StandingZoneRules.resolve("英超", "2026", 6, 20).code());
         assertEquals("CONFERENCE_LEAGUE_QUALIFYING", StandingZoneRules.resolve("英超", "2026", 8, 20).code());
+        assertEquals("CHAMPIONS_LEAGUE", StandingZoneRules.resolve("荷甲", "2026", 2, 18).code());
+        assertEquals("CHAMPIONS_LEAGUE", StandingZoneRules.resolve("葡超", "2026", 2, 18).code());
+        assertEquals("CHAMPIONS_LEAGUE", StandingZoneRules.resolve("比甲", "2026", 1, 16).code());
         assertEquals("PROMOTION", StandingZoneRules.resolve("英冠", "2025/2026", 2, 24).code());
         assertEquals("PROMOTION_PLAYOFF", StandingZoneRules.resolve("英冠", "2025/2026", 4, 24).code());
+    }
+
+    @Test
+    void unknownLeagueDoesNotFallBackToAFalseTopFourChampionsZone() {
+        assertEquals("", StandingZoneRules.resolve("未知联赛", "2026", 1, 20).code());
+        assertEquals("", StandingZoneRules.resolve("未知联赛", "2026", 4, 20).code());
     }
 
     @Test

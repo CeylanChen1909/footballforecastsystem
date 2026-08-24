@@ -26,7 +26,11 @@ public final class StandingZoneRules {
             Map.entry("法甲", "法甲"), Map.entry("ligue1", "法甲"), Map.entry("fl1", "法甲"),
             Map.entry("荷甲", "荷甲"), Map.entry("eredivisie", "荷甲"), Map.entry("ded", "荷甲"),
             Map.entry("葡超", "葡超"), Map.entry("primeiraliga", "葡超"), Map.entry("ppl", "葡超"),
-            Map.entry("英冠", "英冠"), Map.entry("championship", "英冠"), Map.entry("elc", "英冠")
+            Map.entry("英冠", "英冠"), Map.entry("championship", "英冠"), Map.entry("elc", "英冠"),
+            Map.entry("比甲", "比甲"), Map.entry("jupilerproleague", "比甲"), Map.entry("belgium", "比甲"),
+            Map.entry("捷克甲", "捷克甲"), Map.entry("czechfirstleague", "捷克甲"), Map.entry("czechia", "捷克甲"),
+            Map.entry("土超", "土超"), Map.entry("superlig", "土超"), Map.entry("turkiye", "土超"),
+            Map.entry("乌超", "乌超"), Map.entry("premierleagueukraine", "乌超"), Map.entry("ukraine", "乌超")
     );
 
     private StandingZoneRules() { }
@@ -98,8 +102,8 @@ public final class StandingZoneRules {
         String normalizedSeason = season == null || season.isBlank() ? "" : season.trim();
         boolean currentVariant = isCurrentVariant(normalizedSeason);
 
-        // The current 2026/27 access list includes the performance-place
-        // changes for England/Spain and the published association allocations.
+        // The current 2026/27 access list includes EPS and the final
+        // rebalancing effects that change the raw association baseline.
         if (currentVariant) {
             return switch (league) {
                 case "英超" -> rule(league, normalizedSeason, "按 2026/27 基础名次：英超前五进入欧冠正赛；杯赛和欧战冠军名额可能顺延。",
@@ -108,8 +112,11 @@ public final class StandingZoneRules {
                         bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 5), band("EUROPA_LEAGUE", "欧联正赛", 6, 6), band("CONFERENCE_LEAGUE", "欧协联正赛", 7, 7)), 3, 0);
                 case "法甲" -> rule(league, normalizedSeason, "按当前法甲名额分配：前三欧冠正赛，第 4 名欧冠资格赛，第 5 名欧联正赛，第 6 名欧协联资格赛；杯赛和欧战冠军名额可能顺延。",
                         bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 3), band("CHAMPIONS_LEAGUE_QUALIFYING", "欧冠资格赛", 4, 4), band("EUROPA_LEAGUE", "欧联正赛", 5, 5), band("CONFERENCE_LEAGUE_QUALIFYING", "欧协联资格赛", 6, 6)), 2, 2);
-                case "荷甲" -> rule(league, normalizedSeason, "按 2026/27 荷甲基础名次：冠军欧冠正赛，亚军欧冠资格赛，第 3 名欧联资格赛，第 4–7 名争夺欧协联资格。",
-                        bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 1), band("CHAMPIONS_LEAGUE_QUALIFYING", "欧冠资格赛", 2, 2), band("EUROPA_LEAGUE_QUALIFYING", "欧联资格赛", 3, 3), band("CONFERENCE_PLAYOFF", "欧协联附加赛", 4, 7)), 2, 2);
+                case "荷甲" -> rule(league, normalizedSeason, "按 2026/27 access list：前两名进入欧冠正赛，第 3 名欧联资格赛，第 4–7 名争夺欧协联资格。",
+                        bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 2), band("EUROPA_LEAGUE_QUALIFYING", "欧联资格赛", 3, 3), band("CONFERENCE_PLAYOFF", "欧协联附加赛", 4, 7)), 2, 2);
+                case "葡超" -> rule(league, normalizedSeason, "按 2026/27 最终 access list：前两名进入欧冠正赛；第 2 个席位来自欧战冠军重平衡，非永久联赛固定名额。",
+                        bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 2), band("EUROPA_LEAGUE_QUALIFYING", "欧联资格赛", 3, 3), band("CONFERENCE_LEAGUE_QUALIFYING", "欧协联资格赛", 4, 4)), 2, 2);
+                case "比甲", "捷克甲", "土超", "乌超" -> singleChampionsLeagueRule(league, normalizedSeason);
                 default -> baseRule(league, normalizedSeason);
             };
         }
@@ -128,9 +135,15 @@ public final class StandingZoneRules {
                     bands(band("PROMOTION", "直接升级", 1, 2), band("PROMOTION_PLAYOFF", "升级附加赛", 3, 6)), 3, 0);
             case "德甲" -> rule(league, season, "按联赛基础名次：前四欧冠正赛，第 5 名欧联正赛，第 6 名欧协联资格赛。",
                     bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 4), band("EUROPA_LEAGUE", "欧联正赛", 5, 5), band("CONFERENCE_LEAGUE_QUALIFYING", "欧协联资格赛", 6, 6)), 2, 2);
-            default -> rule(league, season, "按联赛基础名次计算；杯赛、欧战冠军和额外欧冠名额可能导致资格顺延。",
-                    bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 4), band("EUROPA_LEAGUE", "欧联正赛", 5, 5), band("CONFERENCE_LEAGUE_QUALIFYING", "欧协联资格赛", 6, 6)), 3, 0);
+            case "比甲", "捷克甲", "土超", "乌超" -> singleChampionsLeagueRule(league, season);
+            default -> rule(league, season, "该联赛尚未配置欧战名次规则；不会用默认前四规则伪造欧冠区域。",
+                    List.of(), 0, 0);
         };
+    }
+
+    private static Rule singleChampionsLeagueRule(String league, String season) {
+        return rule(league, season, "按 2026/27 access list：联赛冠军进入欧冠正赛；其余欧战名额与资格赛轮次受协会杯赛和 UEFA 重平衡影响。",
+                bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 1)), 2, 2);
     }
 
     private static Rule rule(String league, String season, String note, List<Band> bands, int relegationCount, int relegationPlayoffFromBottom) {
