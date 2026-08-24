@@ -23,18 +23,21 @@ services:
     cpus: "0.45"
     environment:
       JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-gateway
 
   football-user-service:
     mem_limit: 384m
     cpus: "0.50"
     environment:
       JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-user-service
 
   football-business-service:
     mem_limit: 640m
     cpus: "1.20"
     environment:
       JAVA_OPTS: "-Xms192m -Xmx512m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-business-service
 
   football-ml-service:
     mem_limit: 640m

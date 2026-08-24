@@ -8,7 +8,9 @@ COPY football-user-service ./football-user-service
 COPY football-business-service ./football-business-service
 
 ARG MODULE
-RUN mvn -pl ${MODULE} -am clean package spring-boot:repackage \
+RUN mvn -pl . clean install -DskipTests -N \
+    && mvn -pl football-common clean install -DskipTests \
+    && mvn -pl ${MODULE} clean package spring-boot:repackage -DskipTests \
     && mkdir -p /workspace/build-output \
     && cp /workspace/${MODULE}/target/${MODULE}-*.jar /workspace/build-output/app.jar
 
