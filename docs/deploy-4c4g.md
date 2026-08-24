@@ -246,9 +246,9 @@ docker compose -f docker-compose.prod.yml -f docker-compose.4c4g.yml exec -T mys
 历史比赛 JSON 不写入 Git，也不包含在 Java 镜像中；它们是生产预测构造近期样本的只读数据。部署前必须把训练机或本机的 `football-ml-service/data_cache/` 上传到服务器项目目录：
 
 ```bash
-mkdir -p /srv/footballforecastsystem/football-ml-service/data_cache
+mkdir -p /srv/footballforecast/app/football-ml-service/data_cache
 # 在本机执行，将路径替换为服务器 SSH 用户、地址和项目目录
-scp -r football-ml-service/data_cache/. user@SERVER:/srv/footballforecastsystem/football-ml-service/data_cache/
+scp -r football-ml-service/data_cache/. user@SERVER:/srv/footballforecast/app/football-ml-service/data_cache/
 ```
 
 上传后检查文件数量和大小：
@@ -256,6 +256,8 @@ scp -r football-ml-service/data_cache/. user@SERVER:/srv/footballforecastsystem/
 ```bash
 find football-ml-service/data_cache -type f -name 'football-data-*.json' | wc -l
 du -sh football-ml-service/data_cache
+test -s football-ml-service/models/hybrid_model.joblib
+test -s football-ml-service/models/feature_names.txt
 ```
 
 生产 Compose 会把该目录挂载为 `/app/historical-cache`。目录不存在或为空时，业务服务会主动拒绝启动，避免所有比赛悄悄变成“历史样本不足”。
@@ -421,6 +423,9 @@ docker compose -f docker-compose.prod.yml -f docker-compose.4c4g.yml logs --tail
 - [ ] `JWT_SECRET`、`ML_INTERNAL_TOKEN`、数据库和 Redis 密码彼此独立；
 - [ ] `APP_RUNTIME_DDL_ENABLED=false`、`APP_SCHEMA_REQUIRE_MIGRATIONS=true`；
 - [ ] 已执行备份、迁移预览、正式迁移和来源/重复 ID 复核；
+- [ ] 已上传 `football-ml-service/data_cache/`，并确认历史 JSON 数量大于 0；
+- [ ] 已确认 `football-ml-service/models/hybrid_model.joblib` 和 `feature_names.txt` 存在；
+- [ ] 已使用 `docker-compose.4c4g.yml`，而不是只启动基础 `docker-compose.prod.yml`；
 - [ ] SMTP 注册验证码成功；
 - [ ] HTTPS、Cookie、CORS 和刷新登录流程成功；
 - [ ] Agent 每日预算和请求限流已设置；
