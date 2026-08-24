@@ -136,7 +136,12 @@ public class UserController {
             return ApiResponse.ok(Map.of("required", true, "accepted", LEGAL_CONSENT_VERSION.equals(version), "version", LEGAL_CONSENT_VERSION));
         } catch (Exception ex) {
             log.error("读取用户协议确认状态失败 userId={}: {}", userId, ex.getMessage());
-            return ApiResponse.ok(Map.of("required", true, "accepted", false, "version", LEGAL_CONSENT_VERSION));
+            return ApiResponse.ok(Map.of(
+                    "required", true,
+                    "accepted", false,
+                    "version", LEGAL_CONSENT_VERSION,
+                    "message", "协议记录尚未初始化，请先执行数据库迁移 V2026082404__user_legal_consent.sql"
+            ));
         }
     }
 
@@ -153,7 +158,10 @@ public class UserController {
             return ApiResponse.ok(Map.of("accepted", true, "version", LEGAL_CONSENT_VERSION));
         } catch (Exception ex) {
             log.error("保存用户协议确认失败 userId={}: {}", userId, ex.getMessage());
-            return ApiResponse.ok(Map.of("accepted", false, "message", "协议确认暂时无法保存，请稍后重试"));
+            return ApiResponse.ok(Map.of(
+                    "accepted", false,
+                    "message", "协议确认无法保存，请先执行数据库迁移 V2026082404__user_legal_consent.sql"
+            ));
         }
     }
 
