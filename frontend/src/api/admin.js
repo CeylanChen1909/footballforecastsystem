@@ -1,6 +1,8 @@
 import api from './index'
 
 export const adminApi = {
+  listAllNews(keyword = '', status = '') { return api.get('/admin/news', { params: { keyword, status } }) },
+  getNewsMetrics() { return api.get('/admin/news/metrics') },
   listNews(keyword, status, page = 1, size = 20) { return api.get('/admin/news/page', { params: { keyword, status, page, size } }) },
   getNews(id) { return api.get(`/admin/news/${id}`) },
   saveNews(data) { return data.id ? api.put(`/admin/news/${data.id}`, data) : api.post('/admin/news', data) },
@@ -8,7 +10,8 @@ export const adminApi = {
   deleteNews(id) { return api.delete(`/admin/news/${id}`) },
   setNewsStatus(id, status) { return api.put(`/admin/news/${id}/status`, null, { params: { status } }) },
   listMatchOverrides() { return api.get('/admin/matches') },
-  listCrawlerMatches(params = {}) { return api.get('/crawler/matches/db/page', { params }) },
+  // 这个接口的 response 同时包含分页元数据和当前页数据，保留外层对象供后台分页器使用。
+  listCrawlerMatches(params = {}) { return api.get('/crawler/matches/db/page', { params, preserveMeta: true }) },
   saveCrawlerMatch(data) { return api.post('/crawler/matches', data) },
   updateCrawlerMatch(id, data) { return api.put(`/crawler/matches/${id}/edit`, data) },
   deleteCrawlerMatch(id) { return api.delete(`/crawler/matches/${id}`) },
@@ -22,14 +25,30 @@ export const adminApi = {
   updateVideo(id, data) { return api.put(`/admin/videos/${id}`, data) },
   deleteVideo(id) { return api.delete(`/admin/videos/${id}`) },
   setVideoStatus(id, status) { return api.put(`/admin/videos/${id}/status`, null, { params: { status } }) },
-  debugSeedVideo() { return api.post('/admin/videos/debug/seed') },
+  listContentSources() { return api.get('/admin/content/sources') },
+  saveContentSource(data) { return data.id ? api.post(`/admin/content/sources`, data) : api.post('/admin/content/sources', data) },
+  deleteContentSource(id) { return api.delete(`/admin/content/sources/${id}`) },
+  syncContentSource(id) { return api.post(`/admin/content/sources/${id}/sync`) },
+  syncContentSources() { return api.post('/admin/content/sources/sync') },
   getConfig() { return api.get('/admin/config') },
   saveConfig(data) { return api.put('/admin/config', data) },
   getLogs() { return api.get('/admin/config/logs') },
+  getAnalyticsSummary(days = 7) { return api.get('/analytics/summary', { params: { days } }) },
   syncFootballDataMatches() { return api.post('/crawler/sync/football-data') },
   syncJuheMatches() { return api.post('/crawler/sync/juhe') },
   syncCrawlerMatches() { return api.post('/crawler/sync/crawler') },
   syncTodayMatches() { return api.post('/crawler/sync/today') },
-  syncUpcomingMatches() { return api.post('/crawler/sync/upcoming') },
-  syncAllMatches() { return api.post('/crawler/sync/all') }
+  // 未来 7 天逐日访问主爬虫，允许 BBC 页面解析有足够的响应时间。
+  syncUpcomingMatches() { return api.post('/crawler/sync/upcoming', null, { timeout: 120000 }) },
+  syncAllMatches() { return api.post('/crawler/sync/all') },
+  listCardReports(status = 'OPEN') { return api.get('/card-workshop/admin/reports', { params: { status } }) },
+  resolveCardReport(id, status, note = '') { return api.put(`/card-workshop/admin/reports/${id}`, { status, note }) },
+  listPendingCardModeration() { return api.get('/card-workshop/admin/moderation/pending') },
+  moderateCard(id, status, note = '') { return api.put(`/card-workshop/admin/moderation/${id}`, { status, note }) },
+  listPersonaCatalog(status = '') { return api.get('/card-workshop/admin/catalog', { params: { status } }) },
+  previewPersonaCatalog(payload) { return api.post('/card-workshop/admin/catalog/preview', payload) },
+  createPersonaCatalog(payload) { return api.post('/card-workshop/admin/catalog', payload) },
+  updatePersonaCatalog(id, payload) { return api.put(`/card-workshop/admin/catalog/${id}`, payload) }
+  ,listPersonaCatalogVersions(id) { return api.get(`/card-workshop/admin/catalog/${id}/versions`) }
+  ,listCardLabAudit(limit = 50) { return api.get('/card-workshop/admin/audit', { params: { limit } }) }
 }

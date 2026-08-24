@@ -2,6 +2,9 @@ server:
   port: 8082
 
 spring:
+  config:
+    # 启动时自动加载项目根目录 .env（密钥/数据库等配置无需手动传参）
+    import: optional:file:./.env[.properties]
   application:
     name: football-gateway
   data:
@@ -17,15 +20,16 @@ spring:
       config:
         enabled: false
     sentinel:
-      enabled: true
+      enabled: false
       transport:
         dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
     gateway:
       global-filter:
         - name: RequestRateLimiter
           args:
-            redis-rate-limiter.replenishRate: 500
-            redis-rate-limiter.burstCapacity: 1000
+            key-resolver: "#{@clientAddressKeyResolver}"
+            redis-rate-limiter.replenishRate: ${GATEWAY_RATE_LIMIT_REPLENISH:120}
+            redis-rate-limiter.burstCapacity: ${GATEWAY_RATE_LIMIT_BURST:240}
             redis-rate-limiter.requestedTokens: 1
       routes:
         - id: user-service
@@ -39,90 +43,107 @@ spring:
             - Path=/api/admin/users/**
 
         - id: match-service
-          uri: lb://football-match-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/matches/** ]
 
         - id: admin-match-service
-          uri: lb://football-match-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/admin/matches/** ]
 
         - id: news-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/news/** ]
 
+        - id: content-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/content/** ]
+
         - id: admin-news-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/admin/news/** ]
 
+        - id: admin-content-source-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/admin/content/sources/** ]
+
         - id: admin-video-status-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates:
             - Path=/api/admin/videos/*/status
 
         - id: admin-video-detail-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates:
             - Path=/api/admin/videos/*
 
         - id: admin-video-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates:
             - Path=/api/admin/videos
             - Path=/api/admin/videos/**
 
         - id: public-video-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates:
             - Path=/api/videos
             - Path=/api/videos/**
 
         - id: admin-config-service
-          uri: lb://football-news-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/admin/config/** ]
 
         - id: team-service
-          uri: lb://football-team-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/teams/** ]
 
         - id: prediction-service
-          uri: lb://football-prediction-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/predictions/** ]
 
         - id: data-sync-service
-          uri: lb://football-data-sync-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/sync/** ]
 
         - id: crawler-service
-          uri: lb://football-crawler-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/crawler/** ]
 
+        - id: card-workshop-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/card-workshop/** ]
+
+        - id: card-rogue-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/card-rogue/** ]
+
+        - id: agent-service
+          uri: lb://football-business-service
+          predicates:
+            - Path=/api/agent
+            - Path=/api/agent/**
+
         - id: proxy-service
-          uri: lb://football-crawler-service
+          uri: lb://football-business-service
           predicates: [ Path=/api/proxy/** ]
+
+        - id: analytics-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/analytics/** ]
+
+        - id: search-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/search/** ]
 
       default-filters:
         - name: Retry
           args:
             retries: 2
             statuses: INTERNAL_SERVER_ERROR,SERVICE_UNAVAILABLE
+            methods: GET,HEAD,OPTIONS
             backoff:
               firstBackoff: 100ms
               maxBackoff: 500ms
               maxAttempts: 3
-
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
-            allowCredentials: true
-            maxAge: 3600
 
       httpclient:
         connect-timeout: 10000
@@ -137,10 +158,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 
 api:
   version: v1
@@ -148,5 +172,5 @@ api:
 
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty: INFO
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: WARN

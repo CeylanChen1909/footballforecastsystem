@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,12 +14,7 @@
         <module>football-common</module>
         <module>football-gateway</module>
         <module>football-user-service</module>
-        <module>football-match-service</module>
-        <module>football-news-service</module>
-        <module>football-team-service</module>
-        <module>football-prediction-service</module>
-        <module>football-data-sync-service</module>
-        <module>football-crawler-service</module>
+        <module>football-business-service</module>
     </modules>
 
     <properties>

@@ -6,13 +6,26 @@ spring:
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DB:football}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USER:football}
-    password: ${MYSQL_PASSWORD:cC190976043}
+    password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:true}
+      mail.smtp.starttls.required: ${MAIL_SMTP_STARTTLS_REQUIRED:false}
+      mail.smtp.ssl.enable: ${MAIL_SMTP_SSL_ENABLE:false}
+      mail.smtp.connectiontimeout: ${MAIL_SMTP_CONNECTION_TIMEOUT:10000}
+      mail.smtp.timeout: ${MAIL_SMTP_TIMEOUT:10000}
+      mail.smtp.writetimeout: ${MAIL_SMTP_WRITE_TIMEOUT:10000}
   cloud:
     nacos:
       discovery:
@@ -25,15 +38,33 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 security:
+  demo-accounts-enabled: ${SECURITY_DEMO_ACCOUNTS_ENABLED:false}
+  refresh-token-cookie-only: ${SECURITY_REFRESH_TOKEN_COOKIE_ONLY:true}
+  trust-proxy-headers: ${GATEWAY_TRUST_PROXY_HEADERS:false}
+  email-verification:
+    enabled: ${EMAIL_VERIFICATION_ENABLED:true}
+    console-mode: ${EMAIL_VERIFICATION_CONSOLE_MODE:false}
   jwt:
     issuer: footballforecastsystem
-    secret: ${JWT_SECRET:change-me-in-env-min-32-chars}
+    secret: ${JWT_SECRET}
+
+app:
+  security:
+    production-guard:
+      enabled: true
+  runtime-ddl-enabled: ${APP_RUNTIME_DDL_ENABLED:false}
+  schema:
+    require-migrations: ${APP_SCHEMA_REQUIRE_MIGRATIONS:true}
+    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized

@@ -10,7 +10,7 @@ public class FavoriteEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
-    private Long teamId;
+    private String teamId;
     private String teamName;
     private LocalDateTime createdAt;
 
@@ -18,8 +18,8 @@ public class FavoriteEntity {
     public void setId(Long id) { this.id = id; }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
-    public Long getTeamId() { return teamId; }
-    public void setTeamId(Long teamId) { this.teamId = teamId; }
+    public String getTeamId() { return teamId; }
+    public void setTeamId(String teamId) { this.teamId = teamId; }
     public String getTeamName() { return teamName; }
     public void setTeamName(String teamName) { this.teamName = teamName; }
     public LocalDateTime getCreatedAt() { return createdAt; }

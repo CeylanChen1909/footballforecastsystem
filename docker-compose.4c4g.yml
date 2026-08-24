@@ -1,0 +1,46 @@
+# 4 vCPU / 4 GB RAM 的生产运行时覆盖配置。
+# 使用：docker compose -f docker-compose.prod.yml -f docker-compose.4c4g.yml ...
+# 该文件只限制运行时容器；镜像构建仍建议串行执行，避免构建阶段瞬时占满内存。
+services:
+  mysql:
+    mem_limit: 768m
+    cpus: "0.90"
+
+  redis:
+    mem_limit: 128m
+    cpus: "0.20"
+
+  nacos:
+    mem_limit: 384m
+    cpus: "0.35"
+    environment:
+      JVM_XMS: 128m
+      JVM_XMX: 256m
+      JVM_XMN: 64m
+
+  football-gateway:
+    mem_limit: 384m
+    cpus: "0.45"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+
+  football-user-service:
+    mem_limit: 384m
+    cpus: "0.50"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+
+  football-business-service:
+    mem_limit: 640m
+    cpus: "1.20"
+    environment:
+      JAVA_OPTS: "-Xms192m -Xmx512m -XX:+UseSerialGC"
+
+  football-ml-service:
+    mem_limit: 640m
+    cpus: "0.75"
+    command: ["gunicorn", "-b", "0.0.0.0:5001", "-w", "1", "--timeout", "120", "app:app"]
+
+  frontend:
+    mem_limit: 128m
+    cpus: "0.20"

@@ -1,0 +1,208 @@
+server:
+  port: 9000
+analytics:
+  enabled: ${ANALYTICS_ENABLED:true}
+  retention-days: ${ANALYTICS_RETENTION_DAYS:180}
+spring:
+  config:
+    # 启动时自动加载项目根目录 .env（密钥/数据库等配置无需手动传参）
+    import: optional:file:./.env[.properties]
+  application:
+    name: football-business-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DB:football_forecast}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        # 本地开发时注册回环地址，避免网关选到不可达的局域网地址。
+        ip: ${NACOS_IP:127.0.0.1}
+    sentinel:
+      enabled: false
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+app:
+  debug-seed-enabled: ${APP_DEBUG_SEED_ENABLED:false}
+  runtime-ddl-enabled: ${APP_RUNTIME_DDL_ENABLED:true}
+  schema:
+    require-migrations: ${APP_SCHEMA_REQUIRE_MIGRATIONS:false}
+    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event}
+legacy:
+  prediction-proxy:
+    enabled: ${LEGACY_PREDICTION_PROXY_ENABLED:false}
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+security:
+  jwt:
+    issuer: footballforecastsystem
+    # 必须与 user-service 保持一致；缺失时应用拒绝启动。
+    secret: ${JWT_SECRET}
+crawler:
+  # 爬虫接口已内聚到 business-service 自身（9000），不再有独立 9009 服务
+  base-url: ${CRAWLER_BASE_URL:http://127.0.0.1:9000}
+  cache-ttl-seconds: ${CRAWLER_CACHE_TTL:300}
+  # 比赛身份和赛程只由主爬虫源写入；API-Football 仅可作为不写比赛表的详情别名补充。
+  primary-only: ${CRAWLER_PRIMARY_ONLY:true}
+  primary-source: ${CRAWLER_PRIMARY_SOURCE:bbc-scores}
+  task:
+    enabled: ${CRAWLER_TASK_ENABLED:true}
+    today-fixed-rate-ms: ${CRAWLER_TODAY_FIXED_RATE_MS:300000}
+    score-update-fixed-rate-ms: ${CRAWLER_SCORE_UPDATE_FIXED_RATE_MS:300000}
+    score-lookback-days: ${CRAWLER_SCORE_LOOKBACK_DAYS:3}
+    score-live-lookback-days: ${CRAWLER_SCORE_LIVE_LOOKBACK_DAYS:1}
+    score-correction-fixed-delay-ms: ${CRAWLER_SCORE_CORRECTION_FIXED_DELAY_MS:1800000}
+    score-correction-initial-delay-ms: ${CRAWLER_SCORE_CORRECTION_INITIAL_DELAY_MS:180000}
+    # Upcoming fixtures are user-facing; keep the worst-case freshness under
+    # one hour instead of the previous six-hour window.
+    upcoming-fixed-delay-ms: ${CRAWLER_UPCOMING_FIXED_DELAY_MS:3600000}
+    upcoming-startup-delay-ms: ${CRAWLER_UPCOMING_STARTUP_DELAY_MS:3600000}
+    upcoming-cron: ${CRAWLER_UPCOMING_CRON:0 0 3 * * ?}
+    standings-cron: ${CRAWLER_STANDINGS_CRON:0 0 2 * * ?}
+    standings-fixed-rate-ms: ${CRAWLER_STANDINGS_FIXED_RATE_MS:1800000}
+    standings-startup-delay-ms: ${CRAWLER_STANDINGS_STARTUP_DELAY_MS:1800000}
+    time-zone: ${CRAWLER_TASK_TIME_ZONE:Asia/Shanghai}
+    startup-warmup-enabled: ${CRAWLER_STARTUP_WARMUP_ENABLED:true}
+  proxy:
+    # Java/Reactor Netty 不会自动继承 Windows 的 Internet 代理设置。
+    # 默认复用资讯采集使用的本地代理；没有代理时保持空值即可直连。
+    enabled: ${CRAWLER_PROXY_ENABLED:true}
+    host: ${CRAWLER_PROXY_HOST:${CONTENT_NEWS_PROXY_HOST:}}
+    port: ${CRAWLER_PROXY_PORT:${CONTENT_NEWS_PROXY_PORT:0}}
+  bbc:
+    enabled: ${BBC_CRAWLER_ENABLED:true}
+    base-url: ${BBC_CRAWLER_BASE_URL:https://www.bbc.com}
+    scores-path: ${BBC_CRAWLER_SCORES_PATH:/sport/football/scores-fixtures}
+    timeout-ms: ${BBC_CRAWLER_TIMEOUT_MS:10000}
+    user-agent: ${BBC_CRAWLER_USER_AGENT:ChenFootball/1.0 (+https://www.bbc.com/sport/football/scores-fixtures)}
+  espn:
+    # 球队阵容详情使用 ESPN 公开球队页；只在用户打开球队资料时按需请求。
+    enabled: ${ESPN_SQUAD_CRAWLER_ENABLED:true}
+    base-url: ${ESPN_CRAWLER_BASE_URL:https://www.espn.com}
+    timeout-ms: ${ESPN_CRAWLER_TIMEOUT_MS:15000}
+    user-agent: ${ESPN_CRAWLER_USER_AGENT:ChenFootball/1.0 (public team roster crawler)}
+  transfermarkt:
+    # 仅用于补充真实球员头像，不参与比赛和积分榜采集。
+    enabled: ${TRANSFERMARKT_SQUAD_PHOTO_ENABLED:true}
+    base-url: ${TRANSFERMARKT_CRAWLER_BASE_URL:https://www.transfermarkt.com}
+    timeout-ms: ${TRANSFERMARKT_CRAWLER_TIMEOUT_MS:15000}
+    user-agent: ${TRANSFERMARKT_CRAWLER_USER_AGENT:ChenFootball/1.0 (public team roster crawler)}
+  world-football:
+    # 旧站点当前会返回 403，保留配置但默认不参与比赛采集。
+    enabled: ${WORLD_FOOTBALL_CRAWLER_ENABLED:false}
+historical:
+  # 仅用于赛前特征回溯，不会写入 crawler_matches，也不会调用外部 API。
+  match-cache-path: ${HISTORICAL_MATCH_CACHE_PATH:football-ml-service/data_cache}
+data-integrity:
+  # 启动时清理同源重复比赛并补齐唯一索引；没有 DDL 权限时仅记录告警。
+  match-identity-auto-repair: ${MATCH_IDENTITY_AUTO_REPAIR:true}
+card-workshop:
+  enabled: ${CARD_WORKSHOP_ENABLED:false}
+  # 卡牌同步是全实例互斥任务；缓存上限仅用于保护数据库，不代表实际覆盖上限。
+  # 真实球员卡暂时隐藏；重新完成授权、统计和评分校准后再通过环境变量开启。
+  real-players-enabled: ${CARD_WORKSHOP_REAL_PLAYERS_ENABLED:false}
+  max-team-caches: ${CARD_WORKSHOP_MAX_TEAM_CACHES:500}
+  wiki-cache-ttl-seconds: ${CARD_WORKSHOP_WIKI_CACHE_TTL_SECONDS:900}
+card-rogue:
+  enabled: ${CARD_ROGUE_ENABLED:false}
+user-service:
+  base-url: ${USER_SERVICE_BASE_URL:http://127.0.0.1:9001}
+python:
+  inference:
+    enabled: ${PYTHON_INFERENCE_ENABLED:true}
+    url: ${PYTHON_INFERENCE_URL:http://127.0.0.1:5001}
+    token: ${PYTHON_INFERENCE_TOKEN:}
+agent:
+  rate-limit:
+    authenticated-per-minute: ${AGENT_AUTHENTICATED_LIMIT_PER_MINUTE:30}
+    anonymous-per-minute: ${AGENT_ANONYMOUS_LIMIT_PER_MINUTE:8}
+    daily-token-budget: ${AGENT_DAILY_TOKEN_BUDGET:20000}
+    fail-closed: ${AGENT_RATE_LIMIT_FAIL_CLOSED:true}
+prediction:
+  # 每 15 分钟生成一次未来 7 日的可审计赛前特征快照；预测请求缺快照时仍会按需补齐。
+  prematch-enrichment-fixed-delay-ms: ${PREMATCH_ENRICHMENT_FIXED_DELAY_MS:900000}
+  prematch-details-enabled: ${PREMATCH_DETAILS_ENABLED:true}
+  prematch-details-initial-delay-ms: ${PREMATCH_DETAILS_INITIAL_DELAY_MS:30000}
+  prematch-details-fixed-delay-ms: ${PREMATCH_DETAILS_FIXED_DELAY_MS:1800000}
+  prematch-details-max-fixtures-per-run: ${PREMATCH_DETAILS_MAX_FIXTURES_PER_RUN:18}
+  prematch-details-max-historical-per-run: ${PREMATCH_DETAILS_MAX_HISTORICAL_PER_RUN:5}
+  # Primary BBC matches have no API-Football fixture id. Resolve a bounded
+  # number by team/date for metadata enrichment only; no alternate fixture is
+  # written to crawler_matches.
+  prematch-details-max-primary-per-run: ${PREMATCH_DETAILS_MAX_PRIMARY_PER_RUN:12}
+  prematch-details-max-primary-historical-per-run: ${PREMATCH_DETAILS_MAX_PRIMARY_HISTORICAL_PER_RUN:5}
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-v4-pro}
+  models: ${DEEPSEEK_MODELS:}
+  team-analysis-enabled: ${DEEPSEEK_TEAM_ANALYSIS_ENABLED:false}
+openrouter:
+  # 密钥只从环境变量注入，不再硬编码到源码
+  api-key: ${OPENROUTER_API_KEY:}
+  base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+  model: ${OPENROUTER_MODEL:google/gemini-2.0-flash-exp:free}
+scnet:
+  # SCNet 是 OpenAI 兼容接口；密钥只从环境变量注入，不写入数据库
+  api-key: ${SCNET_API_KEY:}
+  base-url: ${SCNET_BASE_URL:https://api.scnet.cn/api/llm/v1}
+  model: ${SCNET_MODEL:GLM-5-Base}
+  models: ${SCNET_MODELS:GLM-5-Base}
+api-football:
+  # 密钥只从环境变量注入，不再硬编码到源码
+  api-key: ${API_FOOTBALL_KEY:}
+  base-url: ${API_FOOTBALL_BASE_URL:https://v3.football.api-sports.io}
+  cache-ttl-seconds: ${API_FOOTBALL_CACHE_TTL:300}
+  max-daily-requests: ${API_FOOTBALL_MAX_DAILY_REQUESTS:90}
+  # 球队阵容只在用户主动打开球队资料时按需请求，不参与比赛主采集链路。
+  squad-enabled: ${API_FOOTBALL_SQUAD_ENABLED:true}
+understat:
+  # Understat 仅补充历史逐场 xG，不写入 crawler_matches，也不改变主爬虫身份。
+  enabled: ${UNDERSTAT_ENRICHMENT_ENABLED:true}
+  base-url: ${UNDERSTAT_BASE_URL:https://understat.com}
+  timeout-ms: ${UNDERSTAT_TIMEOUT_MS:15000}
+  cache-ttl-hours: ${UNDERSTAT_CACHE_TTL_HOURS:720}
+  max-requests-per-run: ${UNDERSTAT_MAX_REQUESTS_PER_RUN:15}
+  max-rows-per-season: ${UNDERSTAT_MAX_ROWS_PER_SEASON:1200}
+  initial-delay-ms: ${UNDERSTAT_INITIAL_DELAY_MS:120000}
+  fixed-delay-ms: ${UNDERSTAT_FIXED_DELAY_MS:21600000}
+  # 六个赛季的逐场 xG 缓存；请求仍受 max-requests-per-run 限制，按调度窗口渐进补齐。
+  seasons: ${UNDERSTAT_SEASONS:2020,2021,2022,2023,2024,2025}
+football-data:
+  base-url: ${FOOTBALL_DATA_BASE_URL:https://api.football-data.org/v4}
+  token: ${FOOTBALL_DATA_TOKEN:}
+juhe-football:
+  # 密钥只从环境变量注入，不再硬编码到源码
+  api-key: ${JUHE_API_KEY:}
+  base-url: ${JUHE_BASE_URL:http://apis.juhe.cn/fapig/football/query}
+  rank-url: ${JUHE_RANK_URL:http://apis.juhe.cn/fapig/football/rank}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoint:
+    health:
+      # Do not expose datasource/Redis/Nacos details on a public port.
+      show-details: when-authorized
+
+logging:
+  level:
+    com.chen.football: INFO

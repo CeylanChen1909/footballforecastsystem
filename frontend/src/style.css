@@ -1,9 +1,106 @@
+:root {
+  color-scheme: light;
+  /* ChenFootball interface tokens: quiet workspace + one deliberate accent. */
+  --ff-bg: #f7f8f7;
+  --ff-bg-alt: #f1f4f2;
+  --ff-surface: #ffffff;
+  --ff-surface-strong: #ffffff;
+  --ff-surface-soft: #fbfcfb;
+  --ff-surface-quiet: #f3f6f4;
+  --ff-surface-elevated: #ffffff;
+  --ff-border: #dfe5e1;
+  --ff-border-strong: #c4cec7;
+  --ff-text: #344139;
+  --ff-text-strong: #202a24;
+  --ff-text-muted: #69766e;
+  --ff-text-faint: #9aa69f;
+  --ff-primary: #126b50;
+  --ff-primary-hover: #0d5c44;
+  --ff-primary-active: #094936;
+  --ff-primary-soft: #e6f1eb;
+  --ff-accent: #126b50;
+  --ff-accent-2: #0d5c44;
+  --ff-success: #237a53;
+  --ff-warning: #a97020;
+  --ff-danger: #bd4b43;
+  --ff-live: #c84f46;
+  --ff-attention: #a97020;
+  --ff-info: #3d6f8f;
+  --ff-focus: #1b2a22;
+  --ff-focus-muted: #aebbb4;
+  --ff-gold: #a97020;
+  --ff-gold-soft: #f7eedf;
+  --ff-ink: #18241d;
+  --ff-grid-line: transparent;
+  --ff-space-1: 4px;
+  --ff-space-2: 8px;
+  --ff-space-3: 12px;
+  --ff-space-4: 16px;
+  --ff-space-5: 20px;
+  --ff-space-6: 24px;
+  --ff-space-7: 32px;
+  --ff-radius-sm: 4px;
+  --ff-radius-md: 6px;
+  --ff-radius-lg: 8px;
+  --ff-radius-xl: 10px;
+  --ff-shadow-sm: 0 1px 2px rgba(31, 40, 34, 0.035);
+  --ff-shadow-md: 0 2px 5px rgba(31, 40, 34, 0.055);
+  --ff-shadow-lg: 0 5px 14px rgba(31, 40, 34, 0.08);
+  --ff-shadow-hover: 0 2px 7px rgba(31, 40, 34, 0.07);
+  --ff-gradient-primary: var(--ff-primary);
+  --ff-gradient-soft: var(--ff-surface);
+  --ff-gradient-page: var(--ff-bg);
+  /* 字体：Segoe UI 风格 */
+  --ff-mono: "Cascadia Code", Consolas, "SF Mono", "Liberation Mono", monospace;
+  /* 动效：Fluent 利落 150-200ms */
+  --ff-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --ff-transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Element Plus 适配 */
+  --el-color-primary: #126b50;
+  --el-color-primary-light-3: #4a9276;
+  --el-color-primary-light-5: #7bb29b;
+  --el-color-primary-light-7: #b4d2c2;
+  --el-color-primary-light-8: #d0e4d9;
+  --el-color-primary-light-9: #eaf3ed;
+  --el-color-primary-dark-2: #0b5b41;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f7f8f7;
+  --el-bg-color-overlay: #ffffff;
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-light: #f7f9f7;
+  --el-fill-color-lighter: #edf1ee;
+  --el-fill-color-extra-light: #fafcfb;
+  --el-fill-color-dark: #d8dfda;
+  --el-fill-color-darker: #b7c4bb;
+  --el-border-color: #d8dfda;
+  --el-border-color-light: #e4e9e5;
+  --el-border-color-lighter: #edf1ee;
+  --el-border-color-extra-light: #f3f6f3;
+  --el-border-color-dark: #b7c4bb;
+  --el-border-color-darker: #98a39b;
+  --el-text-color-primary: #2f3732;
+  --el-text-color-regular: #2f3732;
+  --el-text-color-secondary: #66716a;
+  --el-text-color-placeholder: #98a39b;
+  --el-text-color-disabled: #b7c4bb;
+  --el-mask-color: rgba(0, 0, 0, 0.45);
+  --el-box-shadow: 0 3px 10px rgba(31, 40, 34, 0.08);
+  --el-box-shadow-light: 0 1px 4px rgba(31, 40, 34, 0.06);
+}
+
 html, body, #app {
   margin: 0;
   min-height: 100%;
-  background: #f5f7fb;
-  color: #0f172a;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--ff-bg);
+  color: var(--ff-text);
+  font-family: "Segoe UI", "Segoe UI Variable Text", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  overflow-x: hidden;
 }
 
 * {
@@ -13,8 +110,409 @@ html, body, #app {
 a {
   color: inherit;
   text-decoration: none;
+  transition: color var(--ff-transition-fast);
+}
+
+a:hover {
+  color: var(--ff-primary);
 }
 
 button, input, textarea, select {
   font: inherit;
+}
+
+::selection {
+  background: rgba(15, 107, 77, 0.18);
+}
+
+/* Scrollbar refinements */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 159, 157, 0.5);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 94, 92, 0.6);
+}
+
+/* Focus ring：Fluent 必带 focus ring + offset */
+:focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}
+[role="button"]:focus-visible,
+[role="link"]:focus-visible {
+  border-radius: var(--ff-radius-sm);
+}
+
+.ff-page-shell {
+  min-height: 100vh;
+  background: var(--ff-bg-alt);
+}
+
+/* 同意条固定在视口底部时，为页面尾部留出安全区，避免盖住最后一个操作。 */
+body:has(.consent-banner) .ff-page-shell { padding-bottom: 128px; }
+@media (max-width: 680px) { body:has(.consent-banner) .ff-page-shell { padding-bottom: 224px; } }
+
+/* Fluent 亚克力（选择性使用，不铺满） */
+.ff-surface {
+  background: var(--ff-surface);
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-radius-md);
+  box-shadow: var(--ff-shadow-sm);
+}
+
+.ff-panel {
+  background: var(--ff-gradient-soft);
+  border: 1px solid var(--ff-border);
+  border-radius: var(--ff-radius-md);
+  box-shadow: var(--ff-shadow-sm);
+  transition: border-color var(--ff-transition-fast), background-color var(--ff-transition-fast);
+}
+
+.ff-panel:hover {
+  border-color: var(--ff-border-strong);
+}
+
+.ff-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ff-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.ff-section-subtitle {
+  color: var(--ff-text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ff-kicker {
+  color: var(--ff-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.ff-data-value {
+  color: var(--ff-text-strong);
+  font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+}
+
+.ff-appear {
+  animation: none;
+}
+
+@keyframes ffAppear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ff-muted {
+  color: var(--ff-text-muted);
+}
+
+.ff-card-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.ff-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ff-brand-accent {
+  background: var(--ff-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.ff-divider {
+  height: 1px;
+  background: var(--ff-border);
+  border: none;
+  margin: 16px 0;
+}
+
+.ff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--ff-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast), color var(--ff-transition-fast);
+}
+
+/* 等宽数字（数据感：比分/时间/数值） */
+.ff-num {
+  font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 微标签（Fluent 不鼓励大写字距 eyebrow，保持常规大小写） */
+.ff-tag-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ff-text-muted);
+}
+
+/* 高亮描边卡片（Reveal 效果） */
+.ff-glow {
+  border-color: var(--ff-primary-soft);
+  box-shadow: var(--ff-shadow-md);
+}
+
+/* 强调文字 */
+.ff-neon {
+  color: var(--ff-primary);
+}
+
+/* Reveal animation */
+.reveal {
+  animation: none;
+}
+
+@keyframes ffReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered children reveal helper */
+.reveal-stagger > * {
+  animation: none;
+}
+
+.reveal-stagger > *:nth-child(1) { animation-delay: 0.01s; }
+.reveal-stagger > *:nth-child(2) { animation-delay: 0.04s; }
+.reveal-stagger > *:nth-child(3) { animation-delay: 0.07s; }
+.reveal-stagger > *:nth-child(4) { animation-delay: 0.10s; }
+.reveal-stagger > *:nth-child(5) { animation-delay: 0.13s; }
+.reveal-stagger > *:nth-child(6) { animation-delay: 0.16s; }
+
+/* Element Plus 细节微调 */
+.el-card {
+  --el-card-bg-color: #ffffff;
+  border-color: #e1e1e1;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: #faf9f8;
+  --el-table-border-color: #f3f2f1;
+  --el-table-row-hover-bg-color: rgba(15, 107, 77, 0.06);
+}
+.el-dialog {
+  --el-dialog-bg-color: #ffffff;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+}
+.el-message-box {
+  --el-messagebox-bg-color: #ffffff;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+}
+.el-popper.is-light {
+  --el-bg-color-overlay: #ffffff;
+  border-color: #e1e1e1 !important;
+  border-radius: 8px;
+}
+
+/* Interaction contract: feedback comes from state and contrast, not decorative motion. */
+.el-button {
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast), color var(--ff-transition-fast), box-shadow var(--ff-transition-fast);
+}
+.el-button:active {
+  box-shadow: none;
+}
+.el-button.is-disabled, .el-button:disabled { cursor: not-allowed; }
+.el-button:focus-visible,
+.el-input__wrapper:focus-within,
+.el-select__wrapper:focus-within,
+.el-textarea__inner:focus-visible {
+  outline: 2px solid rgba(18, 107, 80, 0.32);
+  outline-offset: 2px;
+}
+
+/* Fluent 按钮物理反馈（触觉按压） */
+.ff-btn-press {
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast), color var(--ff-transition-fast);
+}
+
+/* ===== Fluent 五大元素工具类 ===== */
+/* 1. Light 光效：Reveal 高亮（hover 时表面提亮 + 边框发光） */
+.ff-reveal {
+  transition: border-color var(--ff-transition), background-color var(--ff-transition);
+}
+.ff-reveal:hover {
+  border-color: rgba(15, 107, 77, 0.35);
+}
+.ff-reveal-soft {
+  transition: background-color var(--ff-transition), border-color var(--ff-transition);
+}
+.ff-reveal-soft:hover {
+  background-color: rgba(15, 107, 77, 0.06);
+  border-color: rgba(15, 107, 77, 0.3);
+}
+/* Reveal 光斑（跟随指针的光效，用于 hero/大卡片） */
+.ff-spotlight {
+  position: relative;
+  overflow: hidden;
+}
+.ff-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 107, 77, 0.04);
+  opacity: 0;
+  transition: opacity var(--ff-transition-fast);
+  pointer-events: none;
+}
+.ff-spotlight:hover::after {
+  opacity: 1;
+}
+
+/* 2. Depth 深度：层级浮起 */
+.ff-depth-1 { box-shadow: var(--ff-shadow-sm); }
+.ff-depth-2 { box-shadow: var(--ff-shadow-md); }
+.ff-depth-3 { box-shadow: var(--ff-shadow-lg); }
+.ff-lift {
+  transition: border-color var(--ff-transition-fast), background-color var(--ff-transition-fast);
+}
+.ff-lift:hover {
+  border-color: var(--ff-border-strong);
+}
+
+/* 3. Motion 动效：入场 */
+.ff-enter {
+  animation: none;
+}
+.ff-fade {
+  transition: opacity 0.2s ease-out;
+}
+.ff-fade:hover {
+  opacity: 0.92;
+}
+
+/* 4. Material 材质：亚克力（选择性） */
+.ff-acrylic {
+  background: rgba(255, 255, 255, 0.7);
+}
+.ff-acrylic-strong {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+/* Respect the prompt's reduced-motion requirement without hiding state changes. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 5. Scale 缩放：微交互 */
+.ff-scale {
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast);
+}
+.ff-scale-105 {
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast);
+}
+.ff-press {
+  transition: background-color var(--ff-transition-fast), border-color var(--ff-transition-fast);
+}
+
+/* 页面路由切换过渡 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease-out;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-stagger > * {
+    animation: none;
+  }
+}
+
+/* Shared component baseline. Page styles may specialize layout, but not the
+   visual contract of controls and overlays. */
+.el-button { --el-button-border-radius: var(--ff-radius-md); font-weight: 600; letter-spacing: 0; }
+.el-button--primary { --el-button-bg-color: var(--ff-primary); --el-button-border-color: var(--ff-primary); --el-button-hover-bg-color: var(--ff-primary-hover); --el-button-hover-border-color: var(--ff-primary-hover); --el-button-active-bg-color: var(--ff-primary-active); --el-button-active-border-color: var(--ff-primary-active); }
+.el-button.is-text, .el-button.is-link { font-weight: 600; }
+.el-input__wrapper, .el-select__wrapper { min-height: 34px; border-radius: var(--ff-radius-md); background: var(--ff-surface); box-shadow: inset 0 0 0 1px var(--ff-border); transition: box-shadow var(--ff-transition-fast), background-color var(--ff-transition-fast); }
+.el-input__wrapper:hover, .el-select__wrapper:hover { box-shadow: inset 0 0 0 1px var(--ff-border-strong); }
+.el-input__wrapper.is-focus, .el-select__wrapper.is-focused { box-shadow: inset 0 0 0 1px var(--ff-primary), 0 0 0 3px rgba(18, 107, 80, .10); }
+.el-textarea__inner { border-color: var(--ff-border); border-radius: var(--ff-radius-md); box-shadow: none; }
+.el-textarea__inner:focus { border-color: var(--ff-primary); box-shadow: 0 0 0 3px rgba(18, 107, 80, .10); }
+.el-tag { border-radius: var(--ff-radius-sm); font-weight: 600; }
+.el-card { border-color: var(--ff-border); border-radius: var(--ff-radius-lg); box-shadow: none; }
+.el-dialog { border-color: var(--ff-border); border-radius: var(--ff-radius-lg); box-shadow: 0 12px 36px rgba(31, 40, 34, .14); }
+.el-dialog__header { margin-right: 0; padding: 20px 22px 12px; border-bottom: 1px solid var(--ff-border); }
+.el-dialog__title { color: var(--ff-text-strong); font-size: 16px; font-weight: 700; }
+.el-dialog__body { padding: 18px 22px; }
+.el-dialog__footer { padding: 12px 22px 18px; border-top: 1px solid var(--ff-border); }
+.el-table { --el-table-header-bg-color: var(--ff-surface-soft); --el-table-row-hover-bg-color: var(--ff-primary-soft); --el-table-border-color: var(--ff-border); }
+.el-table th.el-table__cell { color: var(--ff-text-muted); font-size: 11px; font-weight: 700; }
+.el-table td.el-table__cell { color: var(--ff-text); }
+.el-popper.is-light, .el-message-box { border-color: var(--ff-border); border-radius: var(--ff-radius-lg); }
+.el-menu--horizontal { border-bottom: 0; }
+
+/* Shared state contract: every interactive surface exposes the same focus,
+   disabled and empty-state language across pages. */
+button:disabled,
+[aria-disabled="true"] { cursor: not-allowed; }
+.ff-empty { display: grid; place-items: center; min-height: 140px; padding: var(--ff-space-6); color: var(--ff-text-muted); text-align: center; }
+.ff-status { display: inline-flex; align-items: center; gap: 6px; color: var(--ff-text-muted); font-size: 12px; }
+.ff-status::before { content: ''; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--ff-text-faint); }
+.ff-status.is-success::before { background: var(--ff-success); }
+.ff-status.is-warning::before { background: var(--ff-warning); }
+.ff-status.is-danger::before { background: var(--ff-danger); }
+.el-empty { padding: 24px 12px; }
+.el-alert { border-radius: var(--ff-radius-md); }
+.el-pagination { --el-pagination-button-bg-color: var(--ff-surface); --el-pagination-hover-color: var(--ff-primary); }
+.el-loading-mask { background: rgba(255, 255, 255, .78); }
+
+@media (max-width: 680px) {
+  .el-dialog { width: calc(100vw - 24px) !important; margin: 12px auto; }
+  .el-dialog__header { padding: 16px 16px 10px; }
+  .el-dialog__body { padding: 14px 16px; }
+  .el-dialog__footer { padding: 10px 16px 14px; }
+  .el-drawer { width: min(92vw, 460px) !important; }
+  .el-table { font-size: 12px; }
 }

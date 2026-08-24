@@ -34,7 +34,7 @@ public class JuheFootballClient {
         LEAGUE_TYPE_MAP.put(135, "yijia");    // 意甲
         LEAGUE_TYPE_MAP.put(78, "dejia");     // 德甲
         LEAGUE_TYPE_MAP.put(61, "fajia");     // 法甲
-        LEAGUE_TYPE_MAP.put(0, "yingchao");    // 默认英超
+        LEAGUE_TYPE_MAP.put(1, "zhongchao");   // 中超（若接口不支持则回退为空）
     }
 
     // 联赛ID映射 (名称 -> ID)
@@ -64,7 +64,10 @@ public class JuheFootballClient {
      */
     @SuppressWarnings("unchecked")
     public Mono<Map<String, Object>> getFixturesByDate(String date, int leagueId) {
-        String leagueType = LEAGUE_TYPE_MAP.getOrDefault(leagueId, "yingchao");
+        String leagueType = LEAGUE_TYPE_MAP.get(leagueId);
+        if (leagueType == null) {
+            return Mono.just(emptyResult());
+        }
         
         return Mono.fromCallable(() -> {
             StringBuilder url = new StringBuilder(props.getBaseUrl())
@@ -88,7 +91,10 @@ public class JuheFootballClient {
      */
     @SuppressWarnings("unchecked")
     public Mono<Map<String, Object>> getStandings(int leagueId) {
-        String leagueType = LEAGUE_TYPE_MAP.getOrDefault(leagueId, "yingchao");
+        String leagueType = LEAGUE_TYPE_MAP.get(leagueId);
+        if (leagueType == null) {
+            return Mono.just(emptyResult());
+        }
         
         return Mono.fromCallable(() -> {
             String url = props.getRankUrl() + "?key=" + props.getApiKey() + "&type=" + leagueType;
@@ -116,6 +122,13 @@ public class JuheFootballClient {
         result.put("response", leagues);
         result.put("results", leagues.size());
         return Mono.just(result);
+    }
+
+    private Map<String, Object> emptyResult() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("response", Collections.emptyList());
+        result.put("results", 0);
+        return result;
     }
 
     /**
@@ -151,6 +164,9 @@ public class JuheFootballClient {
                 String leagueName = (String) match.get("title");
                 int leagueId = getLeagueIdFromName(leagueName);
                 String normalizedLeagueName = normalizeLeagueName(leagueName);
+                if (leagueId == 0) {
+                    continue;
+                }
                 
                 // 联赛信息
                 Map<String, Object> league = new HashMap<>();
@@ -181,7 +197,8 @@ public class JuheFootballClient {
                         // 状态
                         Map<String, Object> status = new HashMap<>();
                         String statusCode = String.valueOf(game.get("status"));
-                        status.put("short", convertStatus(statusCode));
+                        String normalizedStatus = convertStatus(statusCode);
+                        status.put("short", normalizedStatus);
                         fixture.put("status", status);
                         standardMatch.put("fixture", fixture);
                         
@@ -202,10 +219,17 @@ public class JuheFootballClient {
                         teams.put("away", awayTeam);
                         standardMatch.put("teams", teams);
                         
-                        // 比分
+                        // 比分 — 未开赛时为 null，已完赛或进行中时才取值
                         Map<String, Object> goals = new HashMap<>();
-                        goals.put("home", safeParseInt(game.get("team1_score")));
-                        goals.put("away", safeParseInt(game.get("team2_score")));
+                        String matchStatusCode = String.valueOf(game.get("status"));
+                        String goalStatus = convertStatus(matchStatusCode);
+                        if ("FT".equals(goalStatus) || "LIVE".equals(goalStatus) || "HT".equals(goalStatus)) {
+                            goals.put("home", safeParseIntOrNull(game.get("team1_score")));
+                            goals.put("away", safeParseIntOrNull(game.get("team2_score")));
+                        } else {
+                            goals.put("home", null);
+                            goals.put("away", null);
+                        }
                         standardMatch.put("goals", goals);
                         
                         standardMatches.add(standardMatch);
@@ -267,6 +291,17 @@ public class JuheFootballClient {
             if (candidate.matches("\\d{4}-\\d{1,2}-\\d{1,2}")) {
                 try {
                     LocalDate date = LocalDate.parse(candidate, DateTimeFormatter.ofPattern("yyyy-M-d"));
+                    // 尽量保留时间部分（yyyy-M-d HH:mm[:ss]）
+                    String rest = raw.length() > 10 ? raw.substring(10).trim() : "";
+                    if (!rest.isEmpty() && rest.matches("(?i)(T|\\s+)\\d{1,2}:\\d{2}.*")) {
+                        String timePart = rest.replaceFirst("(?i)(T|\\s+)(\\d{1,2}:\\d{2}).*", "$2");
+                        String[] hm = timePart.split(":");
+                        int hh = Integer.parseInt(hm[0]);
+                        int mm = Integer.parseInt(hm[1]);
+                        if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+                            return date.atTime(hh, mm).toString();
+                        }
+                    }
                     return date.toString();
                 } catch (DateTimeParseException ignored) {
                     return null;
@@ -311,6 +346,17 @@ public class JuheFootballClient {
             return Integer.parseInt(str);
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    private Integer safeParseIntOrNull(Object value) {
+        if (value == null) return null;
+        try {
+            String str = String.valueOf(value);
+            if ("-".equals(str) || "".equals(str) || "null".equalsIgnoreCase(str)) return null;
+            return Integer.parseInt(str);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 

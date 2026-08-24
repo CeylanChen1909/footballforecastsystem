@@ -1,21 +1,37 @@
 <template>
   <router-view />
+  <AgentLauncher v-if="showAgentLauncher" />
+  <AuthDialog />
+  <ConsentBanner />
 </template>
 
 <script setup>
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useUserStore } from './stores/user'
+import AgentLauncher from './components/agent/AgentLauncher.vue'
+import AuthDialog from './components/auth/AuthDialog.vue'
+import ConsentBanner from './components/privacy/ConsentBanner.vue'
+import { analyticsApi } from './api'
+import { canTrackAnalytics } from './utils/privacyConsent'
+
+const route = useRoute()
+const userStore = useUserStore()
+const showAgentLauncher = computed(() => Boolean(userStore.token) && route.path !== '/agent' && route.path !== '/login' && !route.path.startsWith('/admin'))
+const handleAuthRequired = event => {
+  if (userStore.token) userStore.logout()
+  userStore.openAuthDialog(event?.detail?.redirect || '')
+}
+onMounted(() => window.addEventListener('football-auth-required', handleAuthRequired))
+onBeforeUnmount(() => window.removeEventListener('football-auth-required', handleAuthRequired))
+watch(() => route.fullPath, (path) => {
+  if (!canTrackAnalytics()) return
+  analyticsApi.track('page_view', { page: path }).catch(() => {})
+}, { immediate: true })
 </script>
 
 <style>
-:root {
-  color-scheme: light;
-  --ff-bg: #f5f7fb;
-  --ff-card: rgba(255, 255, 255, 0.88);
-  --ff-border: rgba(15, 23, 42, 0.08);
-  --ff-text: #172033;
-  --ff-muted: #6b7280;
-  --ff-primary: #3b82f6;
-  --ff-primary-2: #2563eb;
-}
+
 
 * {
   box-sizing: border-box;
@@ -28,13 +44,10 @@ html, body, #app {
 }
 
 body {
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.10), transparent 28%),
-    radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 24%),
-    var(--ff-bg);
+  background: var(--ff-bg);
   color: var(--ff-text);
 }
 
@@ -44,6 +57,6 @@ a {
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.18);
+  background: rgba(15, 107, 77, 0.18);
 }
 </style>

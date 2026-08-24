@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "juhe-football")
 public class JuheFootballProperties {
-    private String apiKey = "b509116906ee880c8482797e5e0e7345";
+    private String apiKey = System.getenv().getOrDefault("JUHE_API_KEY", "b509116906ee880c8482797e5e0e7345");
     private String baseUrl = "http://apis.juhe.cn/fapig/football/query";
     private String rankUrl = "http://apis.juhe.cn/fapig/football/rank";
 

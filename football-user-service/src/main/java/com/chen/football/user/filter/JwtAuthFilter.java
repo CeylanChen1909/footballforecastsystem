@@ -35,13 +35,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String token = auth.substring(7).trim();
                 try {
                     Long userId = jwtUtil.extractUserId(token);
-                    String username = jwtUtil.extractUsername(token);
-                    String role = jwtUtil.extractRole(token);
-                    if (username == null || username.isBlank()) {
-                        UserEntity u = userMapper.selectById(userId);
-                        username = u != null ? u.getUsername() : null;
+                    UserEntity u = userMapper.selectById(userId);
+                    if (u == null || !"ACTIVE".equalsIgnoreCase(u.getStatus())) {
+                        UserContext.clear();
+                    } else {
+                        String username = (u.getNickname() == null || u.getNickname().isBlank()) ? u.getUsername() : u.getNickname();
+                        String role = u.getRole() == null ? "USER" : u.getRole().trim().toUpperCase();
+                        UserContext.set(userId, username, role);
                     }
-                    UserContext.set(userId, username, role);
                 } catch (Exception ignored) {
                     UserContext.clear();
                 }

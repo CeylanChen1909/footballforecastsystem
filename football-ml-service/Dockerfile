@@ -15,6 +15,10 @@ COPY train.py .
 # Create models directory (will be mounted or populated by train)
 RUN mkdir -p /app/models
 
+RUN useradd --system --uid 10001 --home-dir /nonexistent --shell /usr/sbin/nologin football \
+    && chown -R football:football /app
+USER 10001
+
 EXPOSE 5001
 
 # Run with gunicorn for production

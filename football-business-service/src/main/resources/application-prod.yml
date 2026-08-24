@@ -1,0 +1,25 @@
+app:
+  security:
+    production-guard:
+      enabled: true
+  runtime-ddl-enabled: ${APP_RUNTIME_DDL_ENABLED:false}
+  schema:
+    require-migrations: ${APP_SCHEMA_REQUIRE_MIGRATIONS:true}
+    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event}
+
+agent:
+  rate-limit:
+    daily-token-budget: ${AGENT_DAILY_TOKEN_BUDGET:20000}
+    fail-closed: ${AGENT_RATE_LIMIT_FAIL_CLOSED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  endpoint:
+    health:
+      show-details: when-authorized

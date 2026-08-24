@@ -112,6 +112,11 @@ public class FootballDataClient {
     }
 
     private Map<String, Object> request(String url) {
+        // 未配置 token 时直接跳过，避免定时任务反复刷 ERROR 日志
+        if (props.getToken() == null || props.getToken().isBlank()) {
+            log.warn("football-data token 未配置，跳过外部请求: {}", url);
+            return emptyResult("football-data token 未配置");
+        }
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-Auth-Token", props.getToken());
@@ -121,7 +126,7 @@ public class FootballDataClient {
             byte[] bytes = restTemplate.exchange(url, HttpMethod.GET, entity, byte[].class).getBody();
             if (bytes == null) {
                 log.warn("football-data 响应为空: {}", url);
-                return emptyResult();
+                return emptyResult("响应为空");
             }
             String json = new String(bytes, StandardCharsets.UTF_8);
             log.info("football-data 响应长度: {}, 前300字符: {}", json.length(), snippet(json));
@@ -131,14 +136,14 @@ public class FootballDataClient {
             return converted;
         } catch (Exception e) {
             log.error("football-data 请求失败: {}, 错误: {}", url, e.getMessage());
-            return emptyResult();
+            return emptyResult(e.getMessage());
         }
     }
 
     private Map<String, Object> convertMatches(Map<String, Object> data) {
         Object matchesObj = data.get("matches");
         if (!(matchesObj instanceof List<?> list)) {
-            return emptyResult();
+            return emptyResult("响应缺少 matches 数组");
         }
         List<Map<String, Object>> response = new java.util.ArrayList<>();
         for (Object item : list) {
@@ -152,24 +157,38 @@ public class FootballDataClient {
             Map<String, Object> away = asMap(raw.get("awayTeam"));
             Map<String, Object> score = asMap(raw.get("score"));
             Map<String, Object> fullTime = score == null ? null : asMap(score.get("fullTime"));
-            match.put("fixture", Map.of(
-                    "id", raw.get("id"),
-                    "date", raw.get("utcDate"),
-                    "status", Map.of("short", raw.get("status"))
-            ));
-            match.put("league", Map.of(
-                    "id", competition == null ? "" : String.valueOf(competition.getOrDefault("code", competition.getOrDefault("id", ""))),
-                    "name", competition == null ? "" : String.valueOf(competition.getOrDefault("name", "")),
-                    "logo", competition == null ? "" : String.valueOf(competition.getOrDefault("emblem", ""))
-            ));
-            match.put("teams", Map.of(
-                    "home", Map.of("id", home == null ? "" : home.get("id"), "name", home == null ? "" : home.get("name"), "logo", home == null ? "" : home.getOrDefault("crest", "")),
-                    "away", Map.of("id", away == null ? "" : away.get("id"), "name", away == null ? "" : away.get("name"), "logo", away == null ? "" : away.getOrDefault("crest", ""))
-            ));
-            match.put("goals", Map.of(
-                    "home", fullTime == null ? null : fullTime.get("home"),
-                    "away", fullTime == null ? null : fullTime.get("away")
-            ));
+            Map<String, Object> fixture = new HashMap<>();
+            fixture.put("id", raw.get("id"));
+            fixture.put("date", raw.get("utcDate"));
+            Map<String, Object> fixtureStatus = new HashMap<>();
+            fixtureStatus.put("short", raw.get("status"));
+            fixture.put("status", fixtureStatus);
+            match.put("fixture", fixture);
+
+            Map<String, Object> normalizedLeague = new HashMap<>();
+            normalizedLeague.put("id", competition == null ? "" : competition.getOrDefault("code", competition.getOrDefault("id", "")));
+            normalizedLeague.put("name", competition == null ? "" : competition.get("name"));
+            normalizedLeague.put("logo", competition == null ? "" : competition.get("emblem"));
+            match.put("league", normalizedLeague);
+
+            Map<String, Object> normalizedHome = new HashMap<>();
+            normalizedHome.put("id", home == null ? "" : home.get("id"));
+            normalizedHome.put("name", home == null ? "" : home.get("name"));
+            normalizedHome.put("logo", home == null ? "" : home.get("crest"));
+            Map<String, Object> normalizedAway = new HashMap<>();
+            normalizedAway.put("id", away == null ? "" : away.get("id"));
+            normalizedAway.put("name", away == null ? "" : away.get("name"));
+            normalizedAway.put("logo", away == null ? "" : away.get("crest"));
+            Map<String, Object> normalizedTeams = new HashMap<>();
+            normalizedTeams.put("home", normalizedHome);
+            normalizedTeams.put("away", normalizedAway);
+            match.put("teams", normalizedTeams);
+            // 未开赛比赛的 fullTime/home/away 通常为 null，不能使用 Map.of（它拒绝 null 值）。
+            // 否则转换器会抛 NPE，整个请求被 catch 后伪装成空数据。
+            Map<String, Object> goals = new HashMap<>();
+            goals.put("home", fullTime == null ? null : fullTime.get("home"));
+            goals.put("away", fullTime == null ? null : fullTime.get("away"));
+            match.put("goals", goals);
             response.add(match);
         }
         Map<String, Object> result = new HashMap<>();
@@ -178,10 +197,13 @@ public class FootballDataClient {
         return result;
     }
 
-    private Map<String, Object> emptyResult() {
+    private Map<String, Object> emptyResult(String error) {
         Map<String, Object> result = new HashMap<>();
         result.put("response", Collections.emptyList());
         result.put("results", 0);
+        if (error != null && !error.isBlank()) {
+            result.put("error", error);
+        }
         return result;
     }
 

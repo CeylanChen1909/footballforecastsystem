@@ -1,20 +1,5 @@
 <template>
   <div class="overview-charts">
-    <section class="chart-card chart-card--wide hero-card">
-      <div class="hero-overlay"></div>
-      <div class="hero-content">
-        <div>
-          <div class="hero-kicker">Football Admin · Overview</div>
-          <div class="hero-title">运营态势总览</div>
-          <div class="hero-desc">从资讯生产、比赛维护到审计行为，全局掌握后台经营状态。</div>
-        </div>
-        <div class="hero-pills">
-          <el-tag effect="dark" type="primary">SaaS Ready</el-tag>
-          <el-tag effect="dark" type="success">Live Data</el-tag>
-        </div>
-      </div>
-    </section>
-
     <section class="chart-card chart-card--wide">
       <div class="chart-head">
         <div>
@@ -63,7 +48,12 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import { init, use } from 'echarts/core'
+import { LineChart, PieChart, RadarChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+use([LineChart, PieChart, RadarChart, GridComponent, TooltipComponent, LegendComponent, RadarComponent, CanvasRenderer])
 
 const props = defineProps({
   newsSeries: { type: Array, default: () => [] },
@@ -85,8 +75,8 @@ let radarChart = null
 const buildLineOption = (series, color) => ({
   grid: { left: 34, right: 18, top: 28, bottom: 28 },
   tooltip: { trigger: 'axis' },
-  xAxis: { type: 'category', data: props.xAxis, boundaryGap: false, axisLine: { lineStyle: { color: '#cbd5e1' } } },
-  yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#e2e8f0' } } },
+  xAxis: { type: 'category', data: props.xAxis, boundaryGap: false, axisLine: { lineStyle: { color: '#c8c6c4' } } },
+  yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#e1e1e1' } } },
   series: [{ data: series, type: 'line', smooth: true, areaStyle: { opacity: 0.18 }, symbol: 'circle', symbolSize: 8, lineStyle: { width: 3, color }, itemStyle: { color } }]
 })
 
@@ -117,8 +107,8 @@ const buildRadarOption = () => ({
       { name: '内容热度', max: 100 },
       { name: '赛事活跃', max: 100 }
     ],
-    splitLine: { lineStyle: { color: ['#e2e8f0'] } },
-    splitArea: { areaStyle: { color: ['rgba(37,99,235,0.03)', 'rgba(37,99,235,0.07)'] } },
+    splitLine: { lineStyle: { color: ['#e1e1e1'] } },
+    splitArea: { areaStyle: { color: ['rgba(15,107,77,0.03)', 'rgba(15,107,77,0.07)'] } },
     axisLine: { lineStyle: { color: '#dbe3ef' } }
   },
   series: [{
@@ -140,21 +130,22 @@ const resizeCharts = () => {
   radarChart?.resize()
 }
 
-onMounted(() => {
-  newsChart = echarts.init(newsChartEl.value)
-  logChart = echarts.init(logChartEl.value)
-  statusChart = echarts.init(statusChartEl.value)
-  radarChart = echarts.init(radarChartEl.value)
-  newsChart.setOption(buildLineOption(props.newsSeries, '#2563eb'))
-  logChart.setOption(buildLineOption(props.logSeries, '#f59e0b'))
+onMounted(async () => {
+  if (!newsChartEl.value) return
+  newsChart = init(newsChartEl.value)
+  logChart = init(logChartEl.value)
+  statusChart = init(statusChartEl.value)
+  radarChart = init(radarChartEl.value)
+  newsChart.setOption(buildLineOption(props.newsSeries, '#0f6b4d'))
+  logChart.setOption(buildLineOption(props.logSeries, '#ffb900'))
   statusChart.setOption(buildPieOption())
   radarChart.setOption(buildRadarOption())
   window.addEventListener('resize', resizeCharts)
 })
 
 watch(() => [props.newsSeries, props.logSeries, props.xAxis, props.statusSeries, props.radarData], () => {
-  newsChart?.setOption(buildLineOption(props.newsSeries, '#2563eb'))
-  logChart?.setOption(buildLineOption(props.logSeries, '#f59e0b'))
+  newsChart?.setOption(buildLineOption(props.newsSeries, '#0f6b4d'))
+  logChart?.setOption(buildLineOption(props.logSeries, '#ffb900'))
   statusChart?.setOption(buildPieOption())
   radarChart?.setOption(buildRadarOption())
 }, { deep: true })
@@ -178,18 +169,16 @@ onBeforeUnmount(() => {
 .chart-card {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 22px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  background: #ffffff;
+  border: 1px solid var(--ff-border);
+  border-radius: 8px;
+  box-shadow: none;
   padding: 18px;
-  transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+  transition: border-color .2s ease;
 }
 
 .chart-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.12);
-  border-color: rgba(37, 99, 235, 0.18);
+  border-color: rgba(15, 107, 77, 0.30);
 }
 
 .chart-card--wide {
@@ -197,16 +186,16 @@ onBeforeUnmount(() => {
 }
 
 .hero-card {
-  min-height: 190px;
-  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 48%, #0ea5e9 100%);
-  color: #fff;
-  border: none;
+  min-height: 132px;
+  background: var(--ff-surface-soft);
+  color: var(--ff-text-strong);
+  border: 1px solid var(--ff-border);
 }
 
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 38%), radial-gradient(circle at bottom left, rgba(255,255,255,0.10), transparent 34%);
+  background: none;
   pointer-events: none;
 }
 
@@ -217,7 +206,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 20px;
   align-items: flex-end;
-  min-height: 154px;
+  min-height: 96px;
 }
 
 .hero-kicker {
@@ -229,15 +218,15 @@ onBeforeUnmount(() => {
 }
 
 .hero-title {
-  font-size: 30px;
-  font-weight: 900;
+  font-size: 22px;
+  font-weight: 700;
   line-height: 1.05;
 }
 
 .hero-desc {
   margin-top: 12px;
   max-width: 560px;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--ff-text-muted);
   line-height: 1.8;
 }
 
@@ -253,22 +242,22 @@ onBeforeUnmount(() => {
 .chart-title {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--ff-text-strong);
 }
 
 .chart-subtitle {
   margin-top: 4px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--ff-text-muted);
 }
 
 .chart-box {
   width: 100%;
-  height: 300px;
+  height: 220px;
 }
 
 .chart-box--radar {
-  height: 340px;
+  height: 250px;
 }
 
 @media (max-width: 1200px) {

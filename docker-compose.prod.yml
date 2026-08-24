@@ -10,13 +10,53 @@ x-java-service-env: &java-service-env
   REDIS_HOST: redis
   REDIS_PORT: 6379
   REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-  FOOTBALL_NACOS_ADDR: nacos:8848
+  NACOS_ADDR: nacos:8848
   JWT_SECRET: ${JWT_SECRET}
-  API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY}
-  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-  CRAWLER_BASE_URL: http://football-crawler-service:9009
+  API_FOOTBALL_KEY: ${API_FOOTBALL_API_KEY:-}
+  JUHE_API_KEY: ${JUHE_FOOTBALL_API_KEY:-}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+  OPENROUTER_MODEL: ${OPENROUTER_MODEL:-google/gemini-2.0-flash-exp:free}
+  SCNET_API_KEY: ${SCNET_API_KEY:-}
+  SCNET_BASE_URL: ${SCNET_BASE_URL:-https://api.scnet.cn/api/llm/v1}
+  SCNET_MODEL: ${SCNET_MODEL:-GLM-5-Base}
+  SCNET_MODELS: ${SCNET_MODELS:-GLM-5-Base}
+  CRAWLER_BASE_URL: http://football-business-service:9000
+  USER_SERVICE_BASE_URL: http://football-user-service:9001
   PYTHON_INFERENCE_ENABLED: ${PYTHON_INFERENCE_ENABLED:-true}
   PYTHON_INFERENCE_URL: http://football-ml-service:5001
+  PYTHON_INFERENCE_TOKEN: ${ML_INTERNAL_TOKEN:-}
+  AGENT_AUTHENTICATED_LIMIT_PER_MINUTE: ${AGENT_AUTHENTICATED_LIMIT_PER_MINUTE:-20}
+  AGENT_ANONYMOUS_LIMIT_PER_MINUTE: ${AGENT_ANONYMOUS_LIMIT_PER_MINUTE:-3}
+  AGENT_DAILY_TOKEN_BUDGET: ${AGENT_DAILY_TOKEN_BUDGET:-20000}
+  AGENT_RATE_LIMIT_FAIL_CLOSED: ${AGENT_RATE_LIMIT_FAIL_CLOSED:-true}
+  AUTH_RATE_LIMIT_FAIL_CLOSED: ${AUTH_RATE_LIMIT_FAIL_CLOSED:-true}
+  SECURITY_REFRESH_TOKEN_COOKIE_ONLY: ${SECURITY_REFRESH_TOKEN_COOKIE_ONLY:-true}
+  # 默认不信任客户端可伪造的转发头；确认前置网关会清洗并重写后再显式设置为 true。
+  GATEWAY_TRUST_PROXY_HEADERS: ${GATEWAY_TRUST_PROXY_HEADERS:-false}
+  GATEWAY_CORS_ALLOWED_ORIGINS: ${GATEWAY_CORS_ALLOWED_ORIGINS:-https://football.example.com,https://www.football.example.com}
+  ANALYTICS_ENABLED: ${ANALYTICS_ENABLED:-true}
+  ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-180}
+  APP_RUNTIME_DDL_ENABLED: ${APP_RUNTIME_DDL_ENABLED:-false}
+  APP_SCHEMA_REQUIRE_MIGRATIONS: ${APP_SCHEMA_REQUIRE_MIGRATIONS:-true}
+  APP_SCHEMA_REQUIRED_TABLES: ${APP_SCHEMA_REQUIRED_TABLES:-t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event}
+  # SMTP：用于注册和密码找回验证码。MAIL_USERNAME 应与发件邮箱一致。
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-587}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+  MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-true}
+  MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_SMTP_STARTTLS_REQUIRED:-false}
+  MAIL_SMTP_SSL_ENABLE: ${MAIL_SMTP_SSL_ENABLE:-false}
+  MAIL_SMTP_CONNECTION_TIMEOUT: ${MAIL_SMTP_CONNECTION_TIMEOUT:-10000}
+  MAIL_SMTP_TIMEOUT: ${MAIL_SMTP_TIMEOUT:-10000}
+  MAIL_SMTP_WRITE_TIMEOUT: ${MAIL_SMTP_WRITE_TIMEOUT:-10000}
+  EMAIL_VERIFICATION_ENABLED: ${EMAIL_VERIFICATION_ENABLED:-true}
+  EMAIL_VERIFICATION_CONSOLE_MODE: ${EMAIL_VERIFICATION_CONSOLE_MODE:-false}
   TZ: Asia/Shanghai
 
 services:
@@ -39,8 +79,7 @@ services:
       - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./sql/football_forecast_schema.sql:/docker-entrypoint-initdb.d/01-football-forecast-schema.sql:ro
-      - ./football-crawler-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/02-crawler-schema.sql:ro
+      - ./sql/football_forecast.sql:/docker-entrypoint-initdb.d/01-football-forecast.sql:ro
     networks:
       - football-network
     healthcheck:
@@ -64,7 +103,7 @@ services:
     networks:
       - football-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -122,6 +161,8 @@ services:
     restart: unless-stopped
     environment:
       <<: *java-service-env
+      # Gmail SMTP 的 IPv4 地址轮换可能导致单个地址超时；允许通过 USER_JAVA_TOOL_OPTIONS 覆盖。
+      JAVA_TOOL_OPTIONS: ${USER_JAVA_TOOL_OPTIONS:--Djava.net.preferIPv6Addresses=true -Dsun.net.inetaddr.ttl=60}
     depends_on:
       mysql:
         condition: service_healthy
@@ -132,78 +173,15 @@ services:
     networks:
       - football-network
 
-  football-match-service:
+  football-business-service:
     build:
       context: .
       dockerfile: Dockerfile.spring
       args:
-        MODULE: football-match-service
-    container_name: football-match-service
+        MODULE: football-business-service
+    container_name: football-business-service
     restart: unless-stopped
-    environment:
-      <<: *java-service-env
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_healthy
-      football-crawler-service:
-        condition: service_started
-    networks:
-      - football-network
-
-  football-news-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.spring
-      args:
-        MODULE: football-news-service
-    container_name: football-news-service
-    restart: unless-stopped
-    environment:
-      <<: *java-service-env
-    depends_on:
-      mysql:
-        condition: service_healthy
-      nacos:
-        condition: service_healthy
-      football-crawler-service:
-        condition: service_started
-    networks:
-      - football-network
-
-  football-team-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.spring
-      args:
-        MODULE: football-team-service
-    container_name: football-team-service
-    restart: unless-stopped
-    environment:
-      <<: *java-service-env
-    depends_on:
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_healthy
-      football-crawler-service:
-        condition: service_started
-    networks:
-      - football-network
-
-  football-prediction-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.spring
-      args:
-        MODULE: football-prediction-service
-    container_name: football-prediction-service
-    restart: unless-stopped
-    environment:
-      <<: *java-service-env
+    environment: *java-service-env
     depends_on:
       mysql:
         condition: service_healthy
@@ -212,46 +190,6 @@ services:
       nacos:
         condition: service_healthy
       football-ml-service:
-        condition: service_started
-    networks:
-      - football-network
-
-  football-data-sync-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.spring
-      args:
-        MODULE: football-data-sync-service
-    container_name: football-data-sync-service
-    restart: unless-stopped
-    environment:
-      <<: *java-service-env
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
-        condition: service_healthy
-    networks:
-      - football-network
-
-  football-crawler-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.spring
-      args:
-        MODULE: football-crawler-service
-    container_name: football-crawler-service
-    restart: unless-stopped
-    environment:
-      <<: *java-service-env
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      nacos:
         condition: service_healthy
     networks:
       - football-network
@@ -262,12 +200,20 @@ services:
     container_name: football-ml-service
     restart: unless-stopped
     environment:
-      API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY}
+      API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY:-}
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-}
+      ML_REQUIRE_INTERNAL_AUTH: ${ML_REQUIRE_INTERNAL_AUTH:-true}
+      ML_MAX_REQUEST_BYTES: ${ML_MAX_REQUEST_BYTES:-65536}
       TZ: Asia/Shanghai
     volumes:
       - ./football-ml-service/models:/app/models:ro
     networks:
       - football-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   frontend:
     build:
@@ -286,7 +232,6 @@ volumes:
   mysql_data:
   redis_data:
   nacos_data:
-  ml_models:
 
 networks:
   football-network:

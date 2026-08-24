@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:smoke && npm run test:perf",
+    "test:smoke": "node scripts/smoke-routes.mjs",
+    "test:perf": "node scripts/perf-budget.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.0",

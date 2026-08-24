@@ -51,7 +51,9 @@ CREATE TABLE `crawler_matches`  (
   INDEX `idx_external_id`(`external_match_id`, `source`) USING BTREE,
   INDEX `idx_fixture_id`(`fixture_id`) USING BTREE,
   INDEX `idx_match_time_status`(`match_time`, `status`) USING BTREE,
-  INDEX `idx_league_time`(`league_id`, `match_time`) USING BTREE
+  INDEX `idx_league_time`(`league_id`, `match_time`) USING BTREE,
+  UNIQUE KEY `uk_match_source_external`(`source`, `external_match_id`) USING BTREE,
+  UNIQUE KEY `uk_match_source_fixture`(`source`, `fixture_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 154 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '爬取的比赛数据表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -528,6 +530,20 @@ INSERT INTO `t_news_article_tag` VALUES (21, '备战', 'preparation', '2026-05-2
 INSERT INTO `t_news_article_tag` VALUES (22, '国家队', 'national-team', '2026-05-28 14:24:40');
 
 -- ----------------------------
+-- Table structure for t_news_article_comment_like
+-- ----------------------------
+DROP TABLE IF EXISTS `t_news_article_comment_like`;
+CREATE TABLE IF NOT EXISTS `t_news_article_comment_like` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `comment_id` bigint(20) NOT NULL COMMENT '评论ID',
+  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_comment_user` (`comment_id`, `user_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论点赞记录表';
+
+-- ----------------------------
 -- Table structure for t_news_article_tag_rel
 -- ----------------------------
 DROP TABLE IF EXISTS `t_news_article_tag_rel`;
@@ -682,6 +698,9 @@ CREATE TABLE `t_prediction`  (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '预测时间',
   `verified_at` datetime NULL DEFAULT NULL COMMENT '验证时间(比赛结束后)',
   `model_version` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `match_time` datetime NULL DEFAULT NULL COMMENT '预测时的比赛时间快照',
+  `home_team_logo` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '主队Logo快照',
+  `away_team_logo` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '客队Logo快照',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_fixture_id`(`fixture_id`) USING BTREE,
   INDEX `idx_user_id`(`user_id`) USING BTREE,
@@ -692,13 +711,55 @@ CREATE TABLE `t_prediction`  (
 -- ----------------------------
 -- Records of t_prediction
 -- ----------------------------
-INSERT INTO `t_prediction` VALUES (14, 2, 104, 0, 0, '伊朗', '冈比亚', '国际友谊赛', 'HOME_WIN', 0.65, 0.25, 0.1, '结合公开赛程与近况样本，伊朗 vs 冈比亚 的最近交锋样本为 7 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-05-29 20:49:59', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (15, 2, 105, 0, 0, '安道尔', '伊拉克', '国际友谊赛', 'AWAY_WIN', 0.12, 0.23, 0.65, '结合公开赛程与近况样本，安道尔 vs 伊拉克 的最近交锋样本为 7 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-05-30 12:54:56', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (16, 2, 106, 0, 0, '南非', '尼加拉瓜', '国际友谊赛', 'HOME_WIN', 0.55, 0.25, 0.2, '结合公开赛程与近况样本，南非 vs 尼加拉瓜 的最近交锋样本为 8 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-05-30 12:56:29', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (17, 2, 152, 1028433534, 685622356, '威尼斯', '佛罗伦萨', '联赛', 'AWAY_WIN', 0.25, 0.3, 0.45, '结合公开赛程与近况样本，威尼斯 vs 佛罗伦萨 的最近交锋样本为 132 场；联赛/赛事：联赛。历史结果显示主队胜 0、平 3、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-06-07 11:18:10', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (18, 2, 2007, 0, 0, '墨西哥', '南非', '2026世界杯', 'HOME_WIN', 0.6, 0.25, 0.15, '结合公开赛程与近况样本，墨西哥 vs 南非 的最近交锋样本为 7 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-06-07 14:47:51', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (19, 2, 2008, 0, 0, '韩国', '捷克', '2026世界杯', 'HOME_WIN', 0.4, 0.3, 0.3, '结合公开赛程与近况样本，韩国 vs 捷克 的最近交锋样本为 6 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-06-07 14:48:32', NULL, 'xgboost-v2');
-INSERT INTO `t_prediction` VALUES (20, 2, 2008, 0, 0, '韩国', '捷克', '2026世界杯', 'HOME_WIN', 0.45, 0.3, 0.25, '结合公开赛程与近况样本，韩国 vs 捷克 的最近交锋样本为 6 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-06-07 14:50:00', NULL, 'xgboost-v2');
+INSERT INTO `t_prediction` VALUES (14, 2, 104, 0, 0, '伊朗', '冈比亚', '国际友谊赛', 'HOME_WIN', 0.65, 0.25, 0.1, '结合公开赛程与近况样本，伊朗 vs 冈比亚 的最近交锋样本为 7 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-05-29 20:49:59', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (15, 2, 105, 0, 0, '安道尔', '伊拉克', '国际友谊赛', 'AWAY_WIN', 0.12, 0.23, 0.65, '结合公开赛程与近况样本，安道尔 vs 伊拉克 的最近交锋样本为 7 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-05-30 12:54:56', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (16, 2, 106, 0, 0, '南非', '尼加拉瓜', '国际友谊赛', 'HOME_WIN', 0.55, 0.25, 0.2, '结合公开赛程与近况样本，南非 vs 尼加拉瓜 的最近交锋样本为 8 场；联赛/赛事：国际友谊赛。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-05-30 12:56:29', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (17, 2, 152, 1028433534, 685622356, '威尼斯', '佛罗伦萨', '联赛', 'AWAY_WIN', 0.25, 0.3, 0.45, '结合公开赛程与近况样本，威尼斯 vs 佛罗伦萨 的最近交锋样本为 132 场；联赛/赛事：联赛。历史结果显示主队胜 0、平 3、客队胜 0。当前模型结论：客队获胜。', NULL, NULL, '2026-06-07 11:18:10', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (18, 2, 2007, 0, 0, '墨西哥', '南非', '2026世界杯', 'HOME_WIN', 0.6, 0.25, 0.15, '结合公开赛程与近况样本，墨西哥 vs 南非 的最近交锋样本为 7 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-06-07 14:47:51', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (19, 2, 2008, 0, 0, '韩国', '捷克', '2026世界杯', 'HOME_WIN', 0.4, 0.3, 0.3, '结合公开赛程与近况样本，韩国 vs 捷克 的最近交锋样本为 6 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-06-07 14:48:32', NULL, 'xgboost-v2', NULL, NULL, NULL);
+INSERT INTO `t_prediction` VALUES (20, 2, 2008, 0, 0, '韩国', '捷克', '2026世界杯', 'HOME_WIN', 0.45, 0.3, 0.25, '结合公开赛程与近况样本，韩国 vs 捷克 的最近交锋样本为 6 场；联赛/赛事：2026世界杯。历史结果显示主队胜 0、平 0、客队胜 0。当前模型结论：主队获胜。', NULL, NULL, '2026-06-07 14:50:00', NULL, 'xgboost-v2', NULL, NULL, NULL);
+
+-- ----------------------------
+-- Table structure for t_match_prediction
+-- ----------------------------
+DROP TABLE IF EXISTS `t_match_prediction`;
+CREATE TABLE `t_match_prediction` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `fixture_id` bigint(20) NOT NULL,
+  `external_match_id` varchar(64) DEFAULT NULL,
+  `home_team_id` varchar(64) DEFAULT NULL,
+  `home_team_name` varchar(128) DEFAULT NULL,
+  `home_team_logo` varchar(512) DEFAULT NULL,
+  `away_team_id` varchar(64) DEFAULT NULL,
+  `away_team_name` varchar(128) DEFAULT NULL,
+  `away_team_logo` varchar(512) DEFAULT NULL,
+  `league_id` varchar(64) DEFAULT NULL,
+  `league_name` varchar(128) DEFAULT NULL,
+  `match_time` datetime DEFAULT NULL,
+  `status` varchar(16) NOT NULL DEFAULT 'PENDING',
+  `result_label` varchar(16) DEFAULT NULL,
+  `home_win_prob` double DEFAULT NULL,
+  `draw_prob` double DEFAULT NULL,
+  `away_win_prob` double DEFAULT NULL,
+  `model_version` varchar(64) NOT NULL,
+  `feature_version` varchar(64) NOT NULL,
+  `top_features_json` text,
+  `feature_meta_json` mediumtext,
+  `explanation` varchar(1024) DEFAULT NULL,
+  `feature_complete` tinyint(1) DEFAULT NULL,
+  `feature_status` varchar(32) DEFAULT NULL,
+  `fallback_reason` varchar(512) DEFAULT NULL,
+  `generated_at` datetime DEFAULT NULL,
+  `source_updated_at` datetime DEFAULT NULL,
+  `expires_at` datetime DEFAULT NULL,
+  `error_message` varchar(512) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_match_prediction_fixture_model` (`fixture_id`,`model_version`,`feature_version`),
+  KEY `idx_match_prediction_status_time` (`status`,`match_time`),
+  KEY `idx_match_prediction_generated` (`fixture_id`,`generated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='比赛级统一预测快照';
 
 -- ----------------------------
 -- Table structure for t_prediction_history
@@ -913,20 +974,89 @@ DROP TABLE IF EXISTS `t_user`;
 CREATE TABLE `t_user`  (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID',
   `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户名',
+  `email` varchar(254) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '邮箱登录账号',
+  `nickname` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '展示昵称',
+  `avatar_data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '头像 data URL',
+  `nickname_updated_at` datetime NULL COMMENT '最近一次修改昵称时间',
+  `email_verified` tinyint(1) NOT NULL DEFAULT 0 COMMENT '邮箱是否已验证',
   `password_hash` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密码哈希(SHA256)',
   `role` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'USER' COMMENT '角色:USER/ADMIN',
   `status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ACTIVE' COMMENT '状态:ACTIVE/DISABLED',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username`) USING BTREE,
+  UNIQUE INDEX `uk_email`(`email`) USING BTREE,
+  UNIQUE INDEX `uk_user_nickname`(`nickname`) USING BTREE,
   INDEX `idx_role`(`role`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of t_user
 -- ----------------------------
-INSERT INTO `t_user` VALUES (1, 'test', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'USER', 'ACTIVE', '2026-05-27 17:59:15');
-INSERT INTO `t_user` VALUES (2, 'admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'ADMIN', 'ACTIVE', '2026-05-27 17:59:15');
+-- 不再在初始化脚本中植入公开可猜测的 test/admin 账号。请通过注册接口创建普通账号，
+-- 再由受控的运维流程授予管理员角色（生产环境切勿把演示账号密码写入仓库）。
+
+CREATE TABLE IF NOT EXISTS `t_analytics_event` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `event_id` varchar(96) DEFAULT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `event_name` varchar(64) NOT NULL,
+  `page` varchar(128) DEFAULT NULL,
+  `entity_type` varchar(64) DEFAULT NULL,
+  `entity_id` varchar(128) DEFAULT NULL,
+  `properties_json` json DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_analytics_event_id` (`event_id`),
+  KEY `idx_analytics_event_name_time` (`event_name`,`created_at`),
+  KEY `idx_analytics_event_user_time` (`user_id`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='产品行为埋点';
+
+CREATE TABLE IF NOT EXISTS `t_agent_conversation` (
+  `session_id` varchar(64) NOT NULL,
+  `user_id` bigint NOT NULL,
+  `title` varchar(128) NOT NULL DEFAULT '新会话',
+  `preview` varchar(512) DEFAULT NULL,
+  `messages_json` mediumtext NOT NULL,
+  `metadata_json` mediumtext DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`session_id`),
+  KEY `idx_agent_conversation_user_updated` (`user_id`,`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 持久化会话';
+
+CREATE TABLE IF NOT EXISTS `t_user_preference` (
+  `user_id` bigint NOT NULL,
+  `preferences_json` json NOT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户提醒与个性化偏好';
+
+CREATE TABLE IF NOT EXISTS `t_user_notification` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `type` varchar(32) NOT NULL,
+  `title` varchar(160) NOT NULL,
+  `body` varchar(1000) DEFAULT NULL,
+  `link` varchar(255) DEFAULT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_notification_user_time` (`user_id`,`created_at`),
+  KEY `idx_user_notification_unread` (`user_id`,`read_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户服务端通知';
+
+CREATE TABLE IF NOT EXISTS `t_crawler_task_run` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `task_name` varchar(64) NOT NULL,
+  `result` varchar(16) NOT NULL,
+  `duration_ms` bigint NOT NULL DEFAULT 0,
+  `processed_count` int NOT NULL DEFAULT 0,
+  `error_message` varchar(1000) DEFAULT NULL,
+  `finished_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_crawler_task_finished` (`task_name`,`finished_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='爬虫任务运行历史';
 
 -- ----------------------------
 -- Table structure for t_user_favorite_match
@@ -1024,4 +1154,144 @@ INSERT INTO `t_video_hub_item` VALUES (5, '国米 vs AC米兰 - 米兰德比集�
 INSERT INTO `t_video_hub_item` VALUES (6, '日本 vs 韩国 - 亚洲杯回顾', '国家队赛事精选', '亚洲强队交锋集锦，突出比赛中的节奏变化和攻防转换。', 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80', 'https://www.youtube.com/', 'YouTube', '亚洲杯', '日本', '韩国', '2024-01-25 19:00:00', 'REPLAY', 0, 0, 50, 'PUBLISHED', 1, 1, '2026-05-30 14:48:31', '2026-05-30 14:48:31');
 INSERT INTO `t_video_hub_item` VALUES (7, '曼联 vs 切尔西 - 赛后采访', '赛后访谈内容', '比赛结束后的球员与教练采访合集，适合深度了解比赛背景。', 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80', 'https://www.bilibili.com/', 'B站', '英超', '曼联', '切尔西', '2024-10-05 22:00:00', 'INTERVIEW', 0, 1, 85, 'DRAFT', 1, 1, '2026-05-30 14:48:31', '2026-05-30 14:48:31');
 
+-- ----------------------------
+-- Table structure for t_match_detail_snapshot
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS `t_match_detail_snapshot` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '赛事详情快照ID',
+  `fixture_id` bigint(20) NOT NULL COMMENT '比赛ID',
+  `detail_type` varchar(32) NOT NULL COMMENT 'events/lineups/statistics/players/injuries/odds/xg',
+  `source` varchar(64) NOT NULL COMMENT '数据来源',
+  `payload_json` longtext NOT NULL COMMENT '原始响应中的 response JSON',
+  `status` varchar(32) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL/PARTIAL/EMPTY/QUOTA_LIMITED/REQUEST_FAILED/UNSUPPORTED',
+  `error_message` varchar(1000) DEFAULT NULL COMMENT '失败或降级原因',
+  `fetched_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '抓取时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_match_detail_source` (`fixture_id`,`detail_type`,`source`),
+  KEY `idx_match_detail_fixture` (`fixture_id`),
+  KEY `idx_match_detail_fetched` (`fetched_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='赛事详情数据快照';
+
+CREATE TABLE IF NOT EXISTS `t_understat_league_cache` (
+  `league_code` varchar(16) NOT NULL,
+  `season` int NOT NULL,
+  `payload_json` mediumtext DEFAULT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'EMPTY',
+  `error_message` varchar(1000) DEFAULT NULL,
+  `fetched_at` datetime NOT NULL,
+  PRIMARY KEY (`league_code`,`season`),
+  KEY `idx_understat_fetched` (`fetched_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Understat 公开赛季 xG 供应商缓存';
+
+CREATE TABLE IF NOT EXISTS `t_understat_team_xg_cache` (
+  `league_code` varchar(16) NOT NULL,
+  `season` int NOT NULL,
+  `source_match_id` varchar(32) NOT NULL,
+  `team_id` varchar(32) NOT NULL,
+  `team_name` varchar(255) NOT NULL,
+  `match_time` datetime NOT NULL,
+  `xg` decimal(8,4) NOT NULL,
+  `xga` decimal(8,4) NOT NULL,
+  `fetched_at` datetime NOT NULL,
+  PRIMARY KEY (`league_code`,`season`,`source_match_id`,`team_id`),
+  KEY `idx_understat_team_time` (`team_name`,`match_time`),
+  KEY `idx_understat_xg_time` (`match_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Understat 球队历史 xG/xGA 缓存';
+
+-- Point-in-time rolling feature snapshot used by prediction and training.
+CREATE TABLE IF NOT EXISTS `t_prematch_feature_snapshot` (
+  `fixture_id` bigint NOT NULL,
+  `feature_version` varchar(64) NOT NULL,
+  `cutoff_time` datetime DEFAULT NULL,
+  `source_updated_at` datetime DEFAULT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'NO_HISTORY',
+  `completeness` decimal(6,4) NOT NULL DEFAULT 0,
+  `source` varchar(64) NOT NULL DEFAULT 'local-history',
+  `payload_json` mediumtext,
+  `error_message` varchar(512) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`fixture_id`),
+  KEY `idx_prematch_cutoff` (`cutoff_time`),
+  KEY `idx_prematch_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='严格按开赛时间截断的赛前特征快照';
+
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- Source-independent team/league aliases. Provider IDs remain aliases; canonical_key is used for joins and dedupe.
+CREATE TABLE IF NOT EXISTS `t_identity_alias` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(16) NOT NULL,
+  `canonical_key` varchar(128) NOT NULL,
+  `source` varchar(64) NOT NULL,
+  `external_id` varchar(128) NOT NULL,
+  `source_name` varchar(128) DEFAULT NULL,
+  `canonical_name` varchar(128) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_identity_source` (`entity_type`,`source`,`external_id`),
+  KEY `idx_identity_canonical` (`entity_type`,`canonical_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Resumable historical match backfill checkpoint
+CREATE TABLE IF NOT EXISTS `t_crawler_backfill_job` (
+  `job_name` varchar(64) NOT NULL,
+  `from_date` date NOT NULL,
+  `to_date` date NOT NULL,
+  `next_date` date NOT NULL,
+  `status` varchar(16) NOT NULL,
+  `processed_days` int NOT NULL DEFAULT 0,
+  `processed_matches` int NOT NULL DEFAULT 0,
+  `last_error` varchar(512) DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`job_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Historical training/data quality audit. This is derived and can be rebuilt
+-- from crawler_matches plus the read-only historical cache.
+CREATE TABLE IF NOT EXISTS `t_match_data_quality` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `fixture_id` bigint DEFAULT NULL,
+  `source` varchar(64) NOT NULL,
+  `league_id` varchar(64) DEFAULT NULL,
+  `league_name` varchar(128) DEFAULT NULL,
+  `canonical_key` varchar(255) NOT NULL,
+  `quality_status` varchar(24) NOT NULL,
+  `quality_score` decimal(6,4) NOT NULL DEFAULT '0.0000',
+  `issue_codes` varchar(1000) DEFAULT NULL,
+  `home_sample_size` int NOT NULL DEFAULT '0',
+  `away_sample_size` int NOT NULL DEFAULT '0',
+  `xg_home_available` tinyint(1) NOT NULL DEFAULT '0',
+  `xg_away_available` tinyint(1) NOT NULL DEFAULT '0',
+  `checked_at` datetime NOT NULL,
+  `source_updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_match_quality_fixture_source` (`fixture_id`,`source`),
+  KEY `idx_match_quality_status` (`quality_status`,`checked_at`),
+  KEY `idx_match_quality_league` (`league_id`,`league_name`,`checked_at`),
+  KEY `idx_match_quality_canonical` (`canonical_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='历史比赛质量审计';
+
+CREATE TABLE IF NOT EXISTS `t_understat_match_join_audit` (
+  `league_code` varchar(16) NOT NULL,
+  `season` int NOT NULL,
+  `source_match_id` varchar(64) NOT NULL,
+  `home_team_name` varchar(255) DEFAULT NULL,
+  `away_team_name` varchar(255) DEFAULT NULL,
+  `match_time` datetime DEFAULT NULL,
+  `join_status` varchar(24) NOT NULL,
+  `fixture_id` bigint DEFAULT NULL,
+  `message` varchar(255) DEFAULT NULL,
+  `checked_at` datetime NOT NULL,
+  PRIMARY KEY (`league_code`,`season`,`source_match_id`),
+  KEY `idx_understat_join_status` (`join_status`,`checked_at`),
+  KEY `idx_understat_join_league` (`league_code`,`season`,`join_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Understat 与主比赛身份连接审计';
+
+-- Production starts in BBC-primary mode.  Keep this bootstrap dump from
+-- reintroducing rows written by disabled legacy providers when a fresh volume
+-- is created; historical provider rows belong in an explicit archive, not the
+-- active match table.
+DELETE FROM `crawler_matches`
+WHERE LOWER(COALESCE(`source`, '')) IN ('juhe', 'api-football', 'football-data', 'worldfootball', 'zq123');

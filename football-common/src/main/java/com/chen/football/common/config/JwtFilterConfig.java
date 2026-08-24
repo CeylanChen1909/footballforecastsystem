@@ -2,6 +2,7 @@ package com.chen.football.common.config;
 
 import com.chen.football.common.filter.JwtFilter;
 import com.chen.football.common.util.JwtUtil;
+import com.chen.football.common.service.UserSessionStateService;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,9 +11,9 @@ import org.springframework.context.annotation.Configuration;
 public class JwtFilterConfig {
 
     @Bean
-    public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtUtil jwtUtil) {
+    public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtUtil jwtUtil, UserSessionStateService sessionStateService) {
         FilterRegistrationBean<JwtFilter> bean = new FilterRegistrationBean<>();
-        bean.setFilter(new JwtFilter(jwtUtil));
+        bean.setFilter(new JwtFilter(jwtUtil, sessionStateService));
         bean.addUrlPatterns("/*");
         bean.setOrder(1);
         return bean;

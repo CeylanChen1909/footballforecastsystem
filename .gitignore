@@ -23,6 +23,8 @@ target/
 /nbproject/private/
 /nbbuild/
 /dist/
+/frontend/dist/
+**/node_modules/
 /nbdist/
 /.nb-gradle/
 build/
@@ -31,3 +33,22 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 环境变量与密钥（含真实密钥，禁止入库） ###
+.env
+.env.prod
+.env.next
+.env.rotated
+docker-compose.edge.yml
+/backups/
+
+### 日志 ###
+*.log
+gateway.err
+
+### 本地临时文件 ###
+*.local
+
+### 机器学习训练缓存与 Python 字节码 ###
+football-ml-service/data_cache/
+football-ml-service/__pycache__/

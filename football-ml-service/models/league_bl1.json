@@ -1,0 +1,157 @@
+{
+  "trained_at": "2026-08-24T01:44:01.861662",
+  "league": "BL1",
+  "dataset_size": 917,
+  "train_size": 440,
+  "validation_size": 306,
+  "test_size": 171,
+  "split": "2023,2024_to_2025_to_2026",
+  "strategy": "league-specialist-xgb-logistic-elo-v1",
+  "accuracy": 0.5205,
+  "baseline_accuracy": 0.5614,
+  "balanced_accuracy": 0.4744,
+  "log_loss": 0.9873,
+  "baseline_log_loss": 0.9889,
+  "brier_score": 0.5884,
+  "baseline_brier_score": 0.5861,
+  "draw_recall": 0.0667,
+  "validation_metrics": {
+    "accuracy": 0.5196,
+    "balanced_accuracy": 0.4796,
+    "log_loss": 1.0179,
+    "brier_score": 0.6094,
+    "expected_calibration_error": 0.0565
+  },
+  "test_metrics": {
+    "accuracy": 0.5205,
+    "balanced_accuracy": 0.4744,
+    "log_loss": 0.9873,
+    "brier_score": 0.5884,
+    "expected_calibration_error": 0.0798
+  },
+  "baseline_metrics": {
+    "accuracy": 0.5614,
+    "balanced_accuracy": 0.4934,
+    "log_loss": 0.9889,
+    "brier_score": 0.5861,
+    "expected_calibration_error": 0.0513
+  },
+  "blend_weight_xgboost": 0.5,
+  "blend_weight_elo": 0.7,
+  "blend_weight_model": 0.3,
+  "calibration_temperature": 1.1,
+  "class_bias": [
+    -0.12,
+    0.18,
+    0.0
+  ],
+  "feature_names": [
+    "home_elo",
+    "away_elo",
+    "elo_diff",
+    "home_win_rate",
+    "away_win_rate",
+    "home_avg_goals",
+    "away_avg_goals",
+    "home_avg_loss",
+    "away_avg_loss",
+    "home_avg_cards",
+    "away_avg_cards",
+    "home_days_rest",
+    "away_days_rest",
+    "h2h_home_wins",
+    "h2h_draws",
+    "h2h_away_wins",
+    "home_win_rate_diff",
+    "elo_sum",
+    "home_goal_diff",
+    "avg_total_goals",
+    "home_rank",
+    "away_rank",
+    "rank_diff",
+    "home_points_per_match",
+    "away_points_per_match",
+    "points_per_match_diff",
+    "home_goal_diff_per_match",
+    "away_goal_diff_per_match",
+    "goal_diff_per_match_diff",
+    "home_form_5",
+    "away_form_5",
+    "home_form_10",
+    "away_form_10",
+    "home_home_form_5",
+    "away_away_form_5",
+    "home_matches_14d",
+    "away_matches_14d",
+    "matches_14d_diff",
+    "home_xg_5",
+    "away_xg_5",
+    "home_xga_5",
+    "away_xga_5",
+    "home_shots_5",
+    "away_shots_5",
+    "home_shots_on_target_5",
+    "away_shots_on_target_5",
+    "home_lineup_stability",
+    "away_lineup_stability",
+    "home_injury_impact",
+    "away_injury_impact",
+    "market_home_prob",
+    "market_draw_prob",
+    "market_away_prob"
+  ],
+  "data_quality": {
+    "rows": 917,
+    "date_min": "2023-08-18",
+    "date_max": "2026-05-16",
+    "duplicates": 0,
+    "invalid": 0,
+    "xg_complete_rows": 52,
+    "xg_coverage": 0.0567,
+    "team_count": 21,
+    "team_sample_tiers": {
+      "thresholds": {
+        "robust": 10,
+        "ready": 5,
+        "limited": 3
+      },
+      "robust": 21,
+      "ready": 0,
+      "limited": 0,
+      "insufficient": 0
+    },
+    "by_competition": {
+      "BL1": {
+        "matches": 917,
+        "date_min": "2023-08-18",
+        "date_max": "2026-05-16",
+        "xg_complete": 52,
+        "xg_coverage": 0.0567,
+        "duplicate_rows": 0
+      }
+    }
+  },
+  "model_scope": {
+    "competition": "BL1",
+    "seasons": [
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "warning": "仅在本联赛最新赛季滚动留出集通过门槛后启用"
+  },
+  "promotion": {
+    "accepted": false,
+    "checks": {
+      "accuracy_vs_league_elo": false,
+      "balanced_accuracy_vs_league_elo": false,
+      "log_loss_vs_league_elo": true,
+      "draw_recall": false
+    },
+    "decision": "REJECTED",
+    "reason": "league holdout did not beat baseline"
+  }
+}

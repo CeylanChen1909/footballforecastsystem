@@ -1,15 +1,21 @@
 package com.chen.football.common.client;
 
 import com.chen.football.common.config.ApiFootballProperties;
+import io.netty.channel.ChannelOption;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * API-Football API 客户端
@@ -19,30 +25,70 @@ import java.util.*;
 public class ApiFootballClient {
 
     private final WebClient webClient;
+    private final int maxDailyRequests;
+    private final AtomicInteger dailyRequests = new AtomicInteger();
+    private volatile LocalDate requestDay = LocalDate.now(ZoneOffset.UTC);
 
     public ApiFootballClient(ApiFootballProperties props) {
+        // 网络健壮性：连接/响应/TLS 握手超时都调大，避免被网络干扰时秒挂
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
+                .responseTimeout(Duration.ofSeconds(30));
         this.webClient = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(props.getBaseUrl())
                 .defaultHeader("x-apisports-key", props.getApiKey())
                 .build();
+        this.maxDailyRequests = Math.max(0, props.getMaxDailyRequests());
     }
 
     private <T> Mono<T> get(String path, Map<String, Object> params, Class<T> clazz) {
         MultiValueMap<String, String> queryParams = toMultiValueMap(params);
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder.path(path).queryParams(queryParams).build())
-                .retrieve()
-                .bodyToMono(clazz)
-                .timeout(Duration.ofSeconds(15));
+        return Mono.defer(() -> {
+            if (!tryAcquire()) return Mono.error(new IllegalStateException("API_FOOTBALL_DAILY_BUDGET_EXCEEDED"));
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(path).queryParams(queryParams).build())
+                    .retrieve()
+                    .bodyToMono(clazz)
+                    .timeout(Duration.ofSeconds(15));
+        });
     }
 
     private <T> Mono<T> get(String path, Map<String, Object> params, ParameterizedTypeReference<T> typeRef) {
         MultiValueMap<String, String> queryParams = toMultiValueMap(params);
-        return webClient.get()
-                .uri(uriBuilder -> uriBuilder.path(path).queryParams(queryParams).build())
-                .retrieve()
-                .bodyToMono(typeRef)
-                .timeout(Duration.ofSeconds(15));
+        return Mono.defer(() -> {
+            if (!tryAcquire()) return Mono.error(new IllegalStateException("API_FOOTBALL_DAILY_BUDGET_EXCEEDED"));
+            return webClient.get()
+                    .uri(uriBuilder -> uriBuilder.path(path).queryParams(queryParams).build())
+                    .retrieve()
+                    .bodyToMono(typeRef)
+                    .timeout(Duration.ofSeconds(15));
+        });
+    }
+
+    /** A bounded client-side circuit prevents scheduled enrichment from exhausting the API key. */
+    private synchronized boolean tryAcquire() {
+        if (maxDailyRequests <= 0) return true;
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        if (!today.equals(requestDay)) {
+            requestDay = today;
+            dailyRequests.set(0);
+        }
+        return dailyRequests.incrementAndGet() <= maxDailyRequests;
+    }
+
+    public Map<String, Object> budgetSnapshot() {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        if (!today.equals(requestDay)) {
+            synchronized (this) {
+                if (!today.equals(requestDay)) {
+                    requestDay = today;
+                    dailyRequests.set(0);
+                }
+            }
+        }
+        return Map.of("maxDailyRequests", maxDailyRequests, "usedToday", dailyRequests.get(), "remaining",
+                maxDailyRequests <= 0 ? -1 : Math.max(0, maxDailyRequests - dailyRequests.get()));
     }
 
     private MultiValueMap<String, String> toMultiValueMap(Map<String, Object> params) {
@@ -89,6 +135,12 @@ public class ApiFootballClient {
                 new ParameterizedTypeReference<Map<String, Object>>() {});
     }
 
+    /** 按球队名称搜索球队，用于按需补充注册阵容时解析第三方球队 ID。 */
+    public Mono<Map<String, Object>> searchTeams(String name) {
+        return get("/teams", Map.of("search", name),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
     /**
      * 按联赛获取球队列表(别名)
      */
@@ -121,6 +173,42 @@ public class ApiFootballClient {
      */
     public Mono<Map<String, Object>> getFixture(long fixtureId) {
         return get("/fixtures", Map.of("id", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 比赛事件：进球、牌、换人、VAR 等时间线数据。 */
+    public Mono<Map<String, Object>> getFixtureEvents(long fixtureId) {
+        return get("/fixtures/events", Map.of("fixture", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 比赛阵容：首发、替补、阵型和教练。 */
+    public Mono<Map<String, Object>> getFixtureLineups(long fixtureId) {
+        return get("/fixtures/lineups", Map.of("fixture", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 比赛技术统计：控球、射门、角球、犯规等。 */
+    public Mono<Map<String, Object>> getFixtureStatistics(long fixtureId) {
+        return get("/fixtures/statistics", Map.of("fixture", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 完赛后的球员表现和评分。 */
+    public Mono<Map<String, Object>> getFixturePlayers(long fixtureId) {
+        return get("/fixtures/players", Map.of("fixture", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 赛前伤停/停赛名单（API-Football v3）。 */
+    public Mono<Map<String, Object>> getFixtureInjuries(long fixtureId) {
+        return get("/injuries", Map.of("fixture", fixtureId),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /** 赛前盘口/赔率快照（API-Football v3）。 */
+    public Mono<Map<String, Object>> getFixtureOdds(long fixtureId) {
+        return get("/odds", Map.of("fixture", fixtureId),
                 new ParameterizedTypeReference<Map<String, Object>>() {});
     }
 

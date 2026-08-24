@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class FootballDataProperties {
 
     private String baseUrl = "https://api.football-data.org/v4";
-    private String token = "713cc15a646f47a8b66f3db70d3d0623";
+    private String token = System.getenv().getOrDefault("FOOTBALL_DATA_TOKEN", "");
 
     public String getBaseUrl() {
         return baseUrl;
