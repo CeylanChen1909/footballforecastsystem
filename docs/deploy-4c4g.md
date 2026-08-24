@@ -241,6 +241,25 @@ docker compose -f docker-compose.prod.yml -f docker-compose.4c4g.yml exec -T mys
   "SELECT source, COUNT(*) AS total FROM crawler_matches GROUP BY source;"
 ```
 
+### 上传历史预测缓存
+
+历史比赛 JSON 不写入 Git，也不包含在 Java 镜像中；它们是生产预测构造近期样本的只读数据。部署前必须把训练机或本机的 `football-ml-service/data_cache/` 上传到服务器项目目录：
+
+```bash
+mkdir -p /srv/footballforecastsystem/football-ml-service/data_cache
+# 在本机执行，将路径替换为服务器 SSH 用户、地址和项目目录
+scp -r football-ml-service/data_cache/. user@SERVER:/srv/footballforecastsystem/football-ml-service/data_cache/
+```
+
+上传后检查文件数量和大小：
+
+```bash
+find football-ml-service/data_cache -type f -name 'football-data-*.json' | wc -l
+du -sh football-ml-service/data_cache
+```
+
+生产 Compose 会把该目录挂载为 `/app/historical-cache`。目录不存在或为空时，业务服务会主动拒绝启动，避免所有比赛悄悄变成“历史样本不足”。
+
 ## 8. 构建并启动业务服务
 
 第一次构建会下载 Maven、Node、Python 依赖，4G 服务器可能需要数分钟：

@@ -181,7 +181,13 @@ services:
         MODULE: football-business-service
     container_name: football-business-service
     restart: unless-stopped
-    environment: *java-service-env
+    environment:
+      <<: *java-service-env
+      # 历史比赛缓存不进入 Git 和 Java 镜像，部署前需从训练/数据归档机上传到该目录。
+      HISTORICAL_MATCH_CACHE_PATH: /app/historical-cache
+      HISTORICAL_MATCH_CACHE_REQUIRED: ${HISTORICAL_MATCH_CACHE_REQUIRED:-true}
+    volumes:
+      - ./football-ml-service/data_cache:/app/historical-cache:ro
     depends_on:
       mysql:
         condition: service_healthy

@@ -49,13 +49,16 @@ public class HistoricalMatchCacheService {
 
     private final ObjectMapper objectMapper;
     private final String configuredPath;
+    private final boolean required;
     private volatile List<CachedMatch> matches = List.of();
 
     public HistoricalMatchCacheService(
             ObjectMapper objectMapper,
-            @Value("${historical.match-cache-path:football-ml-service/data_cache}") String configuredPath) {
+            @Value("${historical.match-cache-path:football-ml-service/data_cache}") String configuredPath,
+            @Value("${historical.match-cache-required:false}") boolean required) {
         this.objectMapper = objectMapper;
         this.configuredPath = configuredPath;
+        this.required = required;
     }
 
     @PostConstruct
@@ -71,7 +74,9 @@ public class HistoricalMatchCacheService {
     public synchronized void reload() {
         Path directory = resolvePath(configuredPath);
         if (!Files.isDirectory(directory)) {
-            log.warn("历史比赛缓存目录不存在，预测将只使用数据库: {}", directory.toAbsolutePath());
+            String message = "历史比赛缓存目录不存在: " + directory.toAbsolutePath();
+            if (required) throw new IllegalStateException(message + "；生产预测需要先上传 football-data 历史缓存");
+            log.warn("{}，预测将只使用数据库", message);
             matches = List.of();
             return;
         }
@@ -86,6 +91,10 @@ public class HistoricalMatchCacheService {
         }
         List<CachedMatch> snapshot = new ArrayList<>(loaded.values());
         snapshot.sort(Comparator.comparing(CachedMatch::matchTime, Comparator.nullsLast(Comparator.naturalOrder())));
+        if (required && snapshot.isEmpty()) {
+            throw new IllegalStateException("历史比赛缓存为空: " + directory.toAbsolutePath()
+                    + "；生产预测需要先上传 football-data 历史缓存");
+        }
         matches = List.copyOf(snapshot);
         log.info("历史比赛缓存已加载: path={}, finishedMatches={}", directory.toAbsolutePath(), matches.size());
     }
