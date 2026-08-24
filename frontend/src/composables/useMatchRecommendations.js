@@ -1,19 +1,19 @@
 import { computed, ref } from 'vue'
 import { crawlerApi } from '../api'
 
-const cacheKey = date => `match-focus:${date || 'today'}`
+const cacheKey = () => 'match-focus:rolling'
 
-const readCache = date => {
+const readCache = () => {
   try {
-    const value = JSON.parse(sessionStorage.getItem(cacheKey(date)) || 'null')
+    const value = JSON.parse(sessionStorage.getItem(cacheKey()) || 'null')
     return value && Array.isArray(value.items) ? value : null
   } catch {
     return null
   }
 }
 
-const writeCache = (date, value) => {
-  try { sessionStorage.setItem(cacheKey(date), JSON.stringify({ ...value, savedAt: Date.now() })) } catch { /* storage may be disabled */ }
+const writeCache = value => {
+  try { sessionStorage.setItem(cacheKey(), JSON.stringify({ ...value, savedAt: Date.now() })) } catch { /* storage may be disabled */ }
 }
 
 export function useMatchRecommendations({ limit = 6 } = {}) {
@@ -23,7 +23,6 @@ export function useMatchRecommendations({ limit = 6 } = {}) {
   const error = ref('')
   const stale = ref(false)
   let requestSerial = 0
-  let activeDate = ''
 
   const hasItems = computed(() => items.value.length > 0)
   const lastUpdated = computed(() => meta.value?.generatedAt || '')
@@ -37,28 +36,17 @@ export function useMatchRecommendations({ limit = 6 } = {}) {
     stale.value = isStale
   }
 
-  const load = async (date, { silent = false } = {}) => {
+  const load = async (_date, { silent = false } = {}) => {
     const serial = ++requestSerial
-    const cached = readCache(date)
-    // Never leave the previous date's cards under a newly selected date.
-    // Prefer a date-scoped cache for instant continuity; otherwise show the
-    // loading state with an empty list until the new result arrives.
-    if (activeDate !== date) {
-      activeDate = date || ''
-      if (cached) apply(cached, { isStale: true })
-      else {
-        items.value = []
-        meta.value = {}
-        stale.value = false
-      }
-    } else if (cached && !items.value.length) apply(cached, { isStale: true })
+    const cached = readCache()
+    if (cached && !items.value.length) apply(cached, { isStale: true })
     if (!silent) loading.value = true
     error.value = ''
     try {
-      const response = await crawlerApi.getRecommendations({ date, mode: 'focus', limit })
+      const response = await crawlerApi.getRecommendations({ mode: 'focus', limit })
       if (serial !== requestSerial) return
       apply(response)
-      writeCache(date, response)
+      writeCache(response)
     } catch (requestError) {
       if (serial !== requestSerial) return
       if (cached) {

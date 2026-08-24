@@ -26,14 +26,13 @@
             <MatchFocusRail
               :items="hotMatches"
               :meta="hotMeta"
-              :date="selectedDate || todayDate"
               :loading="hotLoading"
               :error="hotError"
               :stale="hotStale"
               :team-name-mode="teamNameMode"
               @open="openFocusMatch"
               @predict="goPredict"
-              @retry="loadHotMatches(selectedDate || todayDate)"
+              @retry="loadHotMatches()"
               @view-all="scrollToMatchList"
             />
           </aside>
@@ -225,6 +224,7 @@ const onlyFavorites = ref(false)
 const remindersEnabled = ref(localStorage.getItem('football_match_reminders_enabled') === '1')
 const remindersChanging = ref(false)
 let reminderTimer = null
+let focusTimer = null
 
 // 历史交锋
 const h2hVisible = ref(false)
@@ -391,7 +391,6 @@ const dateRail = computed(() => {
 const selectRailDate = async (date) => {
   selectedDate.value = date
   await loadMatchesByDate(date)
-  await loadHotMatches(date)
 }
 const shiftDate = async (delta) => {
   const base = selectedDate.value || todayDate.value
@@ -835,7 +834,8 @@ onMounted(async () => {
   onlyFavorites.value = route.query.returnFavorites === '1'
   currentPage.value = Number(route.query.returnPage) || 1
   await Promise.all([loadMatchesByDate(selectedDate.value), loadDateCounts()])
-  loadHotMatches(selectedDate.value || todayDate.value)
+  loadHotMatches()
+  focusTimer = window.setInterval(() => loadHotMatches('', { silent: true }), 60 * 1000)
   loadFavorites()
   if (userStore.token) {
     userApi.getPreferences().then(res => {
@@ -854,7 +854,10 @@ onMounted(async () => {
   reminderTimer = window.setInterval(checkMatchReminders, 60 * 1000)
 })
 
-onBeforeUnmount(() => { if (reminderTimer) window.clearInterval(reminderTimer) })
+onBeforeUnmount(() => {
+  if (reminderTimer) window.clearInterval(reminderTimer)
+  if (focusTimer) window.clearInterval(focusTimer)
+})
 
 // 比赛页固定展示今天前后 7 天窗口。
 </script>

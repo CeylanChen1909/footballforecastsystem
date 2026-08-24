@@ -33,11 +33,13 @@ public class FavoriteController {
     public ApiResponse<?> addTeam(@RequestBody Map<String, Object> body) {
         String teamId = body.get("teamId") == null ? "" : String.valueOf(body.get("teamId")).trim();
         String teamName = body.get("teamName") == null ? "" : String.valueOf(body.get("teamName")).trim();
+        String teamLogo = body.get("teamLogo") == null ? "" : String.valueOf(body.get("teamLogo")).trim();
+        String leagueName = body.get("leagueName") == null ? "" : String.valueOf(body.get("leagueName")).trim();
         if (teamId.isBlank()) {
             throw new BusinessException("teamId 不能为空");
         }
-        favoriteService.addTeam(currentUserId(), teamId, teamName);
-        return ApiResponse.ok(Map.of("teamId", teamId, "teamName", teamName));
+        favoriteService.addTeam(currentUserId(), teamId, teamName, teamLogo, leagueName);
+        return ApiResponse.ok(Map.of("teamId", teamId, "teamName", teamName, "teamLogo", teamLogo, "leagueName", leagueName));
     }
 
     @DeleteMapping("/{teamId}")

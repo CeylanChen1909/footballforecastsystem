@@ -63,7 +63,7 @@ assert(auth.includes('requestPasswordReset') && auth.includes('重置密码') &&
 assert(squad.includes('playerKeyword') && squad.includes('positionFilter') && squad.includes('sessionStorage'), 'squad filtering/cache controls are missing')
 assert(card.includes('getDisplayStatusKey') && card.includes('getMatchId') && card.includes('时间待同步'), 'match card lifecycle display is missing')
 assert(profile.includes('onHistoryKeydown') && profile.includes('moveProfileTab') && profile.includes('profile-panel-history'), 'profile keyboard interaction is missing')
-assert(competition.includes('积分数据尚未形成') && competition.includes('standingSort'), 'competition incomplete standings handling is missing')
+assert(competition.includes('积分数据尚未形成') && !competition.includes('standingSort'), 'competition incomplete standings handling or redundant sort control is present')
 assert(agent.includes('globalModelLabel') && agent.includes('没有读取到的数据会明确标注'), 'agent model and data-boundary disclosure is missing')
 assert(privacy.includes('privacy-toc') && privacy.includes('privacy-rights'), 'privacy page navigation is missing')
 assert(admin.includes('lastReloadAt') && admin.includes('最近刷新') && admin.includes('管理后台导航'), 'admin freshness or landmark is missing')

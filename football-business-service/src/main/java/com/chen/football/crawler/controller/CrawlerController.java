@@ -558,8 +558,9 @@ public class CrawlerController {
 
 
     /**
-     * 当前日期上下文中的可解释比赛焦点。旧 /matches/hot 继续保留，内部
-     * 复用同一套推荐服务，避免比赛列表与推荐列表各自维护过滤规则。
+     * Rolling window of explainable match highlights. The date parameter is
+     * retained for older clients but the ranking is intentionally stable when
+     * users move across the date rail. The old /matches/hot alias remains.
      */
     @GetMapping("/matches/recommendations")
     public Map<String, Object> getMatchRecommendations(

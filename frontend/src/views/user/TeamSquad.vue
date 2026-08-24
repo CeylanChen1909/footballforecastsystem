@@ -109,6 +109,7 @@ const playerKeyword = ref('')
 const positionFilter = ref('all')
 const favorited = ref(false)
 const favorites = ref([])
+const favoriteRecords = computed(() => favorites.value.filter(item => isCurrentFavorite(item)))
 
 const seasonLabel = computed(() => season.value || '当前赛季')
 const sourceLabel = computed(() => ({ 'espn-squad': 'ESPN 公开球队页', 'espn-squad+transfermarkt-photos': 'ESPN 阵容 + Transfermarkt 头像', 'api-football': 'API-Football' }[squadSource.value] || squadSource.value || '待确认'))
@@ -180,7 +181,10 @@ const loadTeamLogo = async () => {
 const syncRouteState = () => {
   teamName.value = String(route.query.name || route.params.teamId || '').trim()
   try { teamName.value = decodeURIComponent(teamName.value) } catch (_) {}
-  teamId.value = String(route.query.teamId || route.params.teamId || '')
+  // The route param is a name fallback, not a canonical favorite id. Using
+  // it as the id made removal send an encoded team name while the row had
+  // been stored under a provider id (or vice versa).
+  teamId.value = String(route.query.teamId || '').trim()
   teamLogo.value = String(route.query.logo || '')
   league.value = String(route.query.league || '英超')
   season.value = String(route.query.season || '')
@@ -226,14 +230,26 @@ const loadSquad = async (force = false) => {
 const loadFavorites = async () => {
   if (!userStore.token) { favorites.value = []; favorited.value = false; return }
   favorites.value = await favoriteApi.list().then(value => Array.isArray(value) ? value : value?.data || []).catch(() => [])
-  favorited.value = favorites.value.some(item => String(item.teamId) === String(teamId.value) || item.teamName === teamName.value)
+  favorited.value = favoriteRecords.value.length > 0
+}
+const normalizeFavoriteIdentity = value => String(value || '').trim().toLowerCase()
+const isCurrentFavorite = item => {
+  const currentIds = [teamId.value, teamName.value].map(normalizeFavoriteIdentity).filter(Boolean)
+  return [item?.teamId, item?.teamName].map(normalizeFavoriteIdentity).some(value => value && currentIds.includes(value))
 }
 const toggleFavorite = async () => {
   if (!userStore.token) { userStore.openAuthDialog(route.fullPath); return }
   try {
-    const id = teamId.value || teamName.value
-    if (favorited.value) { await favoriteApi.remove(id); ElMessage.success('已取消关注') }
-    else { await favoriteApi.add(id, teamName.value); ElMessage.success('已关注球队') }
+    if (favorited.value && favoriteRecords.value.length) {
+      // Clean up both legacy name-keyed rows and newer provider-id rows so a
+      // previous identity migration cannot leave the button stuck on “已关注”.
+      await Promise.all(favoriteRecords.value.map(item => favoriteApi.remove(item.teamId || item.teamName || teamName.value)))
+      ElMessage.success('已取消关注')
+    } else {
+      const id = teamId.value || teamName.value
+      await favoriteApi.add(id, teamName.value, { teamLogo: teamLogo.value, leagueName: league.value })
+      ElMessage.success('已关注球队')
+    }
     await loadFavorites()
   } catch (err) { ElMessage.warning(err?.message || '关注操作失败') }
 }

@@ -316,8 +316,8 @@ export const cardRogueApi = {
 }
 
 export const favoriteApi = {
-  add(teamId, teamName, config = {}) { return api.post('/users/favorites', { teamId, teamName }, config) },
-  remove(teamId, config = {}) { return api.delete('/users/favorites/' + teamId, config) },
+  add(teamId, teamName, metadata = {}, config = {}) { return api.post('/users/favorites', { teamId, teamName, teamLogo: metadata.teamLogo || '', leagueName: metadata.leagueName || '' }, config) },
+  remove(teamId, config = {}) { return api.delete('/users/favorites/' + encodeURIComponent(String(teamId || '')), config) },
   list(config = {}) { return api.get('/users/favorites', config) },
   addMatch(fixtureId, matchLabel, metadata = {}, config = {}) { return api.post('/users/favorites/matches', { fixtureId: String(fixtureId), matchLabel, leagueName: metadata.leagueName || '', matchTime: metadata.matchTime || '' }, config) },
   removeMatch(fixtureId, config = {}) { return api.delete('/users/favorites/matches/' + fixtureId, config) },

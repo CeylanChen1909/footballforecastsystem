@@ -27,16 +27,17 @@ import java.util.Objects;
 /**
  * Provides an explainable, source-consistent match-focus ranking.
  *
- * <p>This deliberately calls the result "focus" internally. Until real
- * engagement signals are available, the service must not claim that a score
- * represents public popularity.</p>
+ * <p>The focus rail is a rolling, date-independent shortlist. Its score is a
+ * ranking signal rather than a prediction: league relevance, kickoff
+ * proximity, live state and follower counts are combined into an explainable
+ * score.</p>
  */
 @Slf4j
 @Service
 public class MatchRecommendationService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
-    private static final String ALGORITHM_VERSION = "focus-v2";
+    private static final String ALGORITHM_VERSION = "focus-v3-popularity";
     private static final long CACHE_TTL_SECONDS = 45L;
     private static final Set<String> TERMINAL_OR_INVALID = Set.of(
             "CANC", "CANCELED", "CANCELLED", "PST", "POSTPONED", "PPD", "ABD", "AWD", "WO",
@@ -45,20 +46,27 @@ public class MatchRecommendationService {
     private final CrawlerMatchMapper crawlerMatchMapper;
     private final DataSourceManager dataSourceManager;
     private final RedisCacheService redisCacheService;
+    private final FavoriteService favoriteService;
+    private volatile Map<String, Integer> followerSnapshot = Map.of();
+    private volatile long followerSnapshotAt;
 
     public MatchRecommendationService(CrawlerMatchMapper crawlerMatchMapper,
                                       DataSourceManager dataSourceManager,
-                                      RedisCacheService redisCacheService) {
+                                      RedisCacheService redisCacheService,
+                                      FavoriteService favoriteService) {
         this.crawlerMatchMapper = crawlerMatchMapper;
         this.dataSourceManager = dataSourceManager;
         this.redisCacheService = redisCacheService;
+        this.favoriteService = favoriteService;
     }
 
     public RecommendationResult recommend(LocalDate requestedDate, String requestedMode, int requestedLimit) {
-        LocalDate date = requestedDate == null ? LocalDate.now(BUSINESS_ZONE) : requestedDate;
+        // Keep the request parameter for backwards compatibility, but do not
+        // make the focus list jump when the user changes the date rail.
+        LocalDate date = LocalDate.now(BUSINESS_ZONE);
         String mode = requestedMode == null || requestedMode.isBlank() ? "focus" : requestedMode.trim().toLowerCase(Locale.ROOT);
         int limit = Math.max(1, Math.min(requestedLimit <= 0 ? 6 : requestedLimit, 10));
-        String cacheKey = "match-recommendations:" + ALGORITHM_VERSION + ":" + date + ":" + mode + ":" + limit;
+        String cacheKey = "match-recommendations:" + ALGORITHM_VERSION + ":rolling:" + mode + ":" + limit;
 
         RecommendationResult cached = redisCacheService.get(cacheKey, RecommendationResult.class);
         if (cached != null && cached.items != null) {
@@ -68,11 +76,11 @@ public class MatchRecommendationService {
         }
 
         LocalDateTime now = LocalDateTime.now(BUSINESS_ZONE);
-        // Include the selected date and a small surrounding window so a user
-        // can see a match that is just before/after midnight without exposing
-        // a noisy two-week list.
-        LocalDateTime windowStart = date.minusDays(1).atStartOfDay();
-        LocalDateTime windowEnd = date.plusDays(2).atStartOfDay();
+        // One stable rolling window gives every date-rail position the same
+        // focus shortlist: live matches, the last few hours of results, and
+        // the next three days of fixtures.
+        LocalDateTime windowStart = now.minusHours(6);
+        LocalDateTime windowEnd = now.plusHours(72);
         List<CrawlerMatch> candidates = crawlerMatchMapper.selectList(Wrappers.<CrawlerMatch>lambdaQuery()
                 .ge(CrawlerMatch::getMatchTime, windowStart)
                 .lt(CrawlerMatch::getMatchTime, windowEnd)
@@ -87,8 +95,9 @@ public class MatchRecommendationService {
                 .filter(match -> !TERMINAL_OR_INVALID.contains(normalizeStatus(match.getStatus())))
                 .toList();
         List<CrawlerMatch> unique = deduplicate(visible);
+        Map<String, Integer> followerCounts = currentFollowerSnapshot();
         List<ScoredMatch> scored = unique.stream()
-                .map(match -> score(match, now, date))
+                .map(match -> score(match, now, followerCounts))
                 .sorted(Comparator.comparingInt(ScoredMatch::score).reversed()
                         .thenComparing(item -> kickoff(item.match), Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(item -> item.match.getId(), Comparator.nullsLast(Comparator.naturalOrder())))
@@ -101,6 +110,8 @@ public class MatchRecommendationService {
         InstantPair times = new InstantPair(generatedAt, generatedAt.plusSeconds(CACHE_TTL_SECONDS));
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("date", date.toString());
+        meta.put("scope", "rolling");
+        meta.put("dateIndependent", true);
         meta.put("mode", mode);
         meta.put("candidateCount", candidateCount);
         meta.put("visibleCandidateCount", visible.size());
@@ -126,7 +137,20 @@ public class MatchRecommendationService {
 
     /** Score used by legacy match payloads as a stable display hint. */
     public int displayScore(CrawlerMatch match) {
-        return score(match, LocalDateTime.now(BUSINESS_ZONE), LocalDate.now(BUSINESS_ZONE)).score;
+        return score(match, LocalDateTime.now(BUSINESS_ZONE), currentFollowerSnapshot()).score;
+    }
+
+    private Map<String, Integer> currentFollowerSnapshot() {
+        long now = System.currentTimeMillis();
+        if (now - followerSnapshotAt < CACHE_TTL_SECONDS * 1000L) return followerSnapshot;
+        synchronized (this) {
+            if (now - followerSnapshotAt >= CACHE_TTL_SECONDS * 1000L) {
+                Map<String, Integer> fresh = favoriteService.allFollowerCounts();
+                followerSnapshot = fresh == null ? Map.of() : Map.copyOf(fresh);
+                followerSnapshotAt = now;
+            }
+        }
+        return followerSnapshot;
     }
 
     private List<CrawlerMatch> deduplicate(List<CrawlerMatch> matches) {
@@ -140,7 +164,7 @@ public class MatchRecommendationService {
         return new ArrayList<>(byIdentity.values());
     }
 
-    private ScoredMatch score(CrawlerMatch match, LocalDateTime now, LocalDate selectedDate) {
+    private ScoredMatch score(CrawlerMatch match, LocalDateTime now, Map<String, Integer> followerCounts) {
         String status = normalizeStatus(match.getStatus());
         int score = 0;
         List<String> codes = new ArrayList<>();
@@ -178,7 +202,6 @@ public class MatchRecommendationService {
             } else if (absoluteMinutes <= 720) {
                 score += 6;
             }
-            if (selectedDate.equals(match.getMatchTime().toLocalDate())) score += 6;
         }
 
         int leagueScore = leagueWeight(match.getLeagueId(), match.getLeagueName());
@@ -195,9 +218,32 @@ public class MatchRecommendationService {
                 texts.add("关键轮次");
             }
         }
+        int followers = Math.max(
+                followerCount(followerCounts, match.getHomeTeamId(), match.getHomeTeamName()),
+                followerCount(followerCounts, match.getAwayTeamId(), match.getAwayTeamName()));
+        int popularityScore = popularityWeight(followers);
+        if (popularityScore > 0) {
+            score += popularityScore;
+            codes.add("POPULAR_TEAM");
+            texts.add("热门球队" + (followers > 0 ? " · " + followers + "人关注" : ""));
+        }
         if (match.getHomeScore() != null || match.getAwayScore() != null) score += 2;
         if (hasText(match.getHomeTeamLogo()) && hasText(match.getAwayTeamLogo())) score += 2;
         return new ScoredMatch(match, Math.min(100, score), tier, codes, texts);
+    }
+
+    private int followerCount(Map<String, Integer> counts, String id, String name) {
+        if (counts == null || counts.isEmpty()) return 0;
+        return Math.max(counts.getOrDefault(normalizeIdentity(id), 0), counts.getOrDefault(normalizeIdentity(name), 0));
+    }
+
+    private int popularityWeight(int followers) {
+        if (followers >= 20) return 18;
+        if (followers >= 10) return 15;
+        if (followers >= 5) return 11;
+        if (followers >= 2) return 7;
+        if (followers >= 1) return 3;
+        return 0;
     }
 
     private List<ScoredMatch> diversify(List<ScoredMatch> sorted, int limit) {
@@ -256,6 +302,7 @@ public class MatchRecommendationService {
 
     private String normalizeStatus(String value) { return normalize(value).toUpperCase(Locale.ROOT); }
     private String normalize(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-]+", ""); }
+    private String normalizeIdentity(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT); }
     private boolean hasText(String value) { return value != null && !value.isBlank(); }
     private LocalDateTime kickoff(CrawlerMatch match) { return match == null ? null : match.getMatchTime(); }
     private LocalDateTime updatedAt(CrawlerMatch match) { return match.getUpdatedAt() == null ? LocalDateTime.MIN : match.getUpdatedAt(); }

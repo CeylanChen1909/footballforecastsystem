@@ -60,7 +60,6 @@ import { getMediaAssetUrl } from '../../utils/mediaAsset'
 const props = defineProps({
   items: { type: Array, default: () => [] },
   meta: { type: Object, default: () => ({}) },
-  date: { type: String, default: '' },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   stale: { type: Boolean, default: false },
@@ -68,7 +67,7 @@ const props = defineProps({
 })
 defineEmits(['open', 'predict', 'retry', 'view-all'])
 
-const contextLabel = computed(() => props.date ? `${props.date} 的重点比赛` : '正在进行、即将开始或值得关注的比赛')
+const contextLabel = computed(() => '按联赛、开赛距离和球队关注度计算')
 const emptyTitle = computed(() => props.meta?.emptyReason === 'NO_MATCHES_IN_WINDOW' ? '当前日期没有比赛' : '暂无重点比赛')
 const emptyDescription = computed(() => props.meta?.emptyReason === 'NO_VISIBLE_FOCUS_MATCHES' ? '当前数据已读取，但没有符合焦点规则的赛事。' : '当前没有正在进行或临近开赛的重点赛事。')
 const team = (match, side) => match?.teams?.[side] || {}
@@ -81,7 +80,15 @@ const initial = name => String(name || '?').trim().slice(0, 1).toUpperCase()
 const recommendationKey = (match, index) => match?.matchId || match?.id || match?.fixtureId || `${homeName(match)}-${awayName(match)}-${index}`
 const tier = match => String(match?.recommendation?.tier || (isLiveMatch(match) ? 'LIVE' : isFinishedMatch(match) ? 'RECENT' : 'UPCOMING')).toUpperCase()
 const statusText = match => getStatusText(match) || (tier(match) === 'LIVE' ? '进行中' : tier(match) === 'RECENT' ? '已结束' : '未开始')
-const reasons = match => Array.isArray(match?.recommendation?.reasonTexts) && match.recommendation.reasonTexts.length ? match.recommendation.reasonTexts : ['当前赛程焦点']
+const reasons = match => {
+  const texts = Array.isArray(match?.recommendation?.reasonTexts) ? match.recommendation.reasonTexts : []
+  const codes = Array.isArray(match?.recommendation?.reasonCodes) ? match.recommendation.reasonCodes : []
+  if (!texts.length) return ['当前赛程焦点']
+  const priority = { POPULAR_TEAM: 0, LIVE_NOW: 0, KICKOFF_SOON: 1, TOP_LEAGUE: 2, KEY_ROUND: 3, KICKOFF_TODAY: 4 }
+  return texts.map((text, index) => ({ text, code: codes[index] || '' }))
+    .sort((a, b) => (priority[a.code] ?? 9) - (priority[b.code] ?? 9))
+    .map(item => item.text)
+}
 const timestamp = match => getMatchTimestamp(match)
 const kickoffLabel = match => timestamp(match) ? formatMatchTime(match) : '时间待同步'
 const scoreOrTime = match => {
