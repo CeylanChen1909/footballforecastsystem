@@ -12,6 +12,7 @@ import com.chen.football.crawler.mapper.CrawlerTeamMapper;
 import com.chen.football.crawler.service.MatchCrawlerService;
 import com.chen.football.crawler.service.MatchRecommendationService;
 import com.chen.football.crawler.service.StandingCrawlerService;
+import com.chen.football.crawler.service.StandingZoneRules;
 import com.chen.football.crawler.service.IdentityMappingService;
 import com.chen.football.crawler.service.EspnSquadCrawlerService;
 import com.chen.football.prediction.service.MatchPredictionPrecomputeService;
@@ -1590,6 +1591,18 @@ public class CrawlerController {
     private List<Map<String, Object>> formatStandings(List<CrawlerStanding> standings) {
         List<Map<String, Object>> result = new ArrayList<>();
         int total = standings == null ? 0 : standings.size();
+        String leagueName = standings == null ? "" : standings.stream()
+                .map(CrawlerStanding::getLeagueName)
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
+        String season = standings == null ? "" : standings.stream()
+                .map(CrawlerStanding::getSeason)
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
 
         for (CrawlerStanding standing : standings == null ? List.<CrawlerStanding>of() : standings) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -1603,7 +1616,9 @@ public class CrawlerController {
                     "logo", standing.getTeamLogo() != null ? standing.getTeamLogo() : ""
             ));
             item.put("canonicalKey", identityMappingService.teamKey(teamId, teamName));
-            item.put("zone", competitionZone(standing.getRank(), total));
+            StandingZoneRules.Zone zone = StandingZoneRules.resolve(leagueName, season, standing.getRank(), total);
+            item.put("zone", zone.code());
+            item.put("zoneLabel", zone.label());
             item.put("played", standing.getPlayed());
             item.put("win", standing.getWins());
             item.put("draw", standing.getDraws());
@@ -1627,20 +1642,26 @@ public class CrawlerController {
         return result;
     }
 
-    private String competitionZone(Integer rank, int total) {
-        if (rank == null || rank <= 0 || total <= 0) return "";
-        if (rank <= Math.min(4, total)) return "CHAMPIONS_LEAGUE";
-        if (rank <= Math.min(6, total)) return "EUROPA";
-        if (rank > Math.max(0, total - 3)) return "RELEGATION";
-        return "";
-    }
-
     private Map<String, Object> buildStandingsResponse(List<CrawlerStanding> standings) {
-        List<Map<String, Object>> rows = formatStandings(standings == null ? List.of() : standings);
+        List<CrawlerStanding> safeStandings = standings == null ? List.of() : standings;
+        List<Map<String, Object>> rows = formatStandings(safeStandings);
+        String leagueName = safeStandings.stream()
+                .map(CrawlerStanding::getLeagueName)
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
+        String season = safeStandings.stream()
+                .map(CrawlerStanding::getSeason)
+                .filter(Objects::nonNull)
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("response", rows);
         data.put("results", rows.size());
-        data.put("dataQuality", standingQuality(standings));
+        data.put("dataQuality", standingQuality(safeStandings));
+        data.put("zoneRules", StandingZoneRules.describe(leagueName, season, rows.size()));
         return Map.of("success", true, "message", "获取成功", "data", data);
     }
 

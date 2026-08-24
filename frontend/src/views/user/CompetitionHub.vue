@@ -27,12 +27,19 @@
           <PageState v-else-if="loadError" type="error" title="积分榜加载失败" :description="loadError" action-text="重试" @action="loadLeagueData" />
           <div v-else-if="standings.length && standingDataState !== 'INCOMPLETE'" class="standings-data-wrap">
             <el-alert v-if="standingDataState !== 'READY'" :title="standingDataState === 'PRESEASON' ? '赛季尚未产生积分' : '积分数据不完整'" :description="qualityMessage || '当前仅显示参赛名单或缓存快照，积分列不会被当作真实成绩。'" type="info" :closable="false" show-icon />
+            <div v-if="zoneRules.zones?.length" class="zone-legend" aria-label="积分榜区域说明">
+              <span v-for="rule in zoneRules.zones" :key="`${rule.code}-${rule.from}-${rule.to}`" class="zone-legend-item">
+                <span class="zone-label" :class="`zone-${String(rule.code || '').toLowerCase()}`">{{ rule.label }}</span>
+                <span class="zone-range">{{ rule.from === rule.to ? `第 ${rule.from} 名` : `第 ${rule.from}–${rule.to} 名` }}</span>
+              </span>
+              <span v-if="zoneRules.note" class="zone-note">{{ zoneRules.note }}</span>
+            </div>
             <el-table :data="sortedStandings" class="standings-table" size="small" row-key="rank">
             <el-table-column prop="rank" label="#" width="48" align="center">
-              <template #default="scope"><span class="rank-number" :class="rankClass(scope.row.rank)">{{ scope.row.rank }}</span></template>
+              <template #default="scope"><span class="rank-number" :class="rankClass(scope.row)">{{ scope.row.rank }}</span></template>
             </el-table-column>
-            <el-table-column label="区域" width="82" align="center">
-              <template #default="scope"><span v-if="scope.row.zone" class="zone-label" :class="`zone-${scope.row.zone.toLowerCase()}`">{{ zoneLabel(scope.row.zone) }}</span><span v-else class="zone-label is-empty">—</span></template>
+            <el-table-column label="区域" width="112" align="center">
+              <template #default="scope"><span v-if="scope.row.zone" class="zone-label" :class="`zone-${String(scope.row.zone).toLowerCase()}`">{{ scope.row.zoneLabel || zoneLabel(scope.row.zone) }}</span><span v-else class="zone-label is-empty">—</span></template>
             </el-table-column>
             <el-table-column label="球队" min-width="180">
               <template #default="scope">
@@ -116,6 +123,7 @@ const standings = ref([])
 const standingSort = ref('points')
 const clubsFromApi = ref([])
 const clubKeyword = ref('')
+const zoneRules = ref({ zones: [], note: '' })
 const quality = ref({ status: 'UNKNOWN', statusText: '', message: '', source: '', lastSyncedAt: '', ageMinutes: -1 })
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(userStore.role))
 
@@ -174,8 +182,27 @@ const standingDataState = computed(() => {
 const qualityMessage = computed(() => quality.value.message || '')
 const qualityTagType = computed(() => ({ PRESEASON: 'warning', STALE: 'warning', AVAILABLE: 'success', NORMAL: 'success' }[String(quality.value.status || '').toUpperCase()] || 'info'))
 
-const rankClass = rank => Number(rank) <= 4 ? 'rank-top' : Number(rank) >= 18 ? 'rank-bottom' : ''
-const zoneLabel = zone => ({ CHAMPIONS_LEAGUE: '欧冠区', EUROPA: '欧战区', RELEGATION: '降级区' }[zone] || '')
+const rankClass = row => {
+  const zone = String(row?.zone || '').toUpperCase()
+  if (zone.startsWith('CHAMPIONS_') || zone.startsWith('EUROPA_') || zone.startsWith('CONFERENCE_') || zone === 'PROMOTION' || zone === 'PROMOTION_PLAYOFF') return 'rank-top'
+  if (zone.startsWith('RELEGATION')) return 'rank-bottom'
+  return ''
+}
+const zoneLabel = zone => ({
+  CHAMPIONS_LEAGUE: '欧冠正赛',
+  CHAMPIONS_LEAGUE_QUALIFYING: '欧冠资格赛',
+  EUROPA_LEAGUE: '欧联正赛',
+  EUROPA_LEAGUE_QUALIFYING: '欧联资格赛',
+  CONFERENCE_LEAGUE: '欧协联正赛',
+  CONFERENCE_LEAGUE_QUALIFYING: '欧协联资格赛',
+  CONFERENCE_PLAYOFF: '欧协联附加赛',
+  PROMOTION: '直接升级',
+  PROMOTION_PLAYOFF: '升级附加赛',
+  RELEGATION_PLAYOFF: '降级附加赛',
+  RELEGATION: '降级',
+  // Compatibility with snapshots produced by older API instances.
+  EUROPA: '欧战区'
+}[zone] || '')
 const firstLetter = name => String(name || '?').trim().slice(0, 1).toUpperCase()
 const clubKey = club => `${club.id || 'name'}-${club.name}`
 const clubRank = club => club.rank || standings.value.find(row => row.team?.name === club.name)?.rank || 0
@@ -202,10 +229,14 @@ const loadLeagueData = async () => {
     quality.value = standingsResult.status === 'fulfilled'
       ? (standingsResult.value?.dataQuality || standingsResult.value?.data?.dataQuality || quality.value)
       : { status: 'SYNC_FAILED', statusText: '同步失败', message: standingsResult.reason?.message || '积分榜请求失败', source: '' }
+    zoneRules.value = standingsResult.status === 'fulfilled'
+      ? (standingsResult.value?.zoneRules || standingsResult.value?.data?.zoneRules || { zones: [], note: '' })
+      : { zones: [], note: '' }
     analyticsApi.track('competition_viewed', { page: '/competitions', entityType: 'league', entityId: selectedLeague.value, properties: { season: selectedSeason.value, standings: nextStandings.length, clubs: nextClubs.length, dataStatus: quality.value.status } }).catch(() => {})
   } catch (error) {
     standings.value = []
     clubsFromApi.value = []
+    zoneRules.value = { zones: [], note: '' }
     loadError.value = error?.message || '请检查后端服务或数据同步状态'
     quality.value = { status: 'SYNC_FAILED', statusText: '同步失败', message: loadError.value, source: '' }
   } finally {
@@ -262,7 +293,18 @@ onMounted(loadLeagueData)
 .standings-table :deep(.el-table__inner-wrapper::before) { display:none; }
 .rank-number { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:6px; color:var(--ff-text-muted); font-family:var(--ff-mono); font-size:12px; }
 .rank-number.rank-top { color:var(--ff-primary); background:var(--ff-primary-soft); }.rank-number.rank-bottom { color:var(--ff-danger); background:rgba(220,72,72,.08); }
-.zone-label { display:inline-flex; align-items:center; justify-content:center; padding:2px 6px; border-radius:999px; color:var(--ff-primary); background:var(--ff-primary-soft); font-size:10px; white-space:nowrap; }.zone-label.zone-relegation { color:var(--ff-danger); background:rgba(220,72,72,.08); }.zone-label.zone-europa { color:#8a641b; background:rgba(191,145,51,.12); }.zone-label.is-empty { color:var(--ff-text-faint); background:transparent; }
+.zone-label { display:inline-flex; align-items:center; justify-content:center; padding:2px 6px; border-radius:999px; color:var(--ff-primary); background:var(--ff-primary-soft); font-size:10px; white-space:nowrap; }
+.zone-label.zone-champions_league_qualifying { color:#3a69a3; background:rgba(58,105,163,.1); }
+.zone-label.zone-europa, .zone-label.zone-europa_league, .zone-label.zone-europa_league_qualifying { color:#8a641b; background:rgba(191,145,51,.12); }
+.zone-label.zone-conference_league, .zone-label.zone-conference_league_qualifying, .zone-label.zone-conference_playoff { color:#5f6b88; background:rgba(95,107,136,.12); }
+.zone-label.zone-promotion, .zone-label.zone-promotion_playoff { color:var(--ff-primary); background:var(--ff-primary-soft); }
+.zone-label.zone-relegation_playoff { color:#a15c26; background:rgba(161,92,38,.1); }
+.zone-label.zone-relegation { color:var(--ff-danger); background:rgba(220,72,72,.08); }
+.zone-label.is-empty { color:var(--ff-text-faint); background:transparent; }
+.zone-legend { display:flex; align-items:center; flex-wrap:wrap; gap:7px 12px; padding:2px 2px 0; color:var(--ff-text-muted); font-size:11px; }
+.zone-legend-item { display:inline-flex; align-items:center; gap:5px; }
+.zone-range { color:var(--ff-text-faint); white-space:nowrap; }
+.zone-note { flex:1 0 100%; color:var(--ff-text-faint); line-height:1.5; }
 .form-strip { display:inline-flex; max-width:100%; overflow:hidden; color:var(--ff-text-muted); font-family:var(--ff-mono); font-size:11px; letter-spacing:1px; white-space:nowrap; }
 .team-cell { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; color:var(--ff-text); font-weight:600; text-align:left; cursor:pointer; }
 .team-cell:hover { color:var(--ff-primary); }.team-cell img,.mini-logo { width:26px; height:26px; object-fit:contain; flex:none; }.mini-logo { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--ff-primary-soft); color:var(--ff-primary); font-size:11px; }
