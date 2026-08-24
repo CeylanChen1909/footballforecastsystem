@@ -33,6 +33,12 @@ x-java-service-env: &java-service-env
   AGENT_ANONYMOUS_LIMIT_PER_MINUTE: ${AGENT_ANONYMOUS_LIMIT_PER_MINUTE:-3}
   AGENT_DAILY_TOKEN_BUDGET: ${AGENT_DAILY_TOKEN_BUDGET:-20000}
   AGENT_RATE_LIMIT_FAIL_CLOSED: ${AGENT_RATE_LIMIT_FAIL_CLOSED:-true}
+  MEDIA_PROXY_ENABLED: ${MEDIA_PROXY_ENABLED:-true}
+  MEDIA_PROXY_CACHE_DIR: /data/football/media-cache
+  MEDIA_PROXY_DISK_TTL_HOURS: ${MEDIA_PROXY_DISK_TTL_HOURS:-720}
+  MEDIA_PROXY_MAX_DISK_BYTES: ${MEDIA_PROXY_MAX_DISK_BYTES:-1073741824}
+  MEDIA_PROXY_WARMUP_ENABLED: ${MEDIA_PROXY_WARMUP_ENABLED:-true}
+  MEDIA_PROXY_WARMUP_MAX_PER_RUN: ${MEDIA_PROXY_WARMUP_MAX_PER_RUN:-100}
   AUTH_RATE_LIMIT_FAIL_CLOSED: ${AUTH_RATE_LIMIT_FAIL_CLOSED:-true}
   SECURITY_REFRESH_TOKEN_COOKIE_ONLY: ${SECURITY_REFRESH_TOKEN_COOKIE_ONLY:-true}
   # 默认不信任客户端可伪造的转发头；确认前置网关会清洗并重写后再显式设置为 true。
@@ -188,6 +194,7 @@ services:
       HISTORICAL_MATCH_CACHE_REQUIRED: ${HISTORICAL_MATCH_CACHE_REQUIRED:-true}
     volumes:
       - ./football-ml-service/data_cache:/app/historical-cache:ro
+      - media_cache:/data/football/media-cache
     depends_on:
       mysql:
         condition: service_healthy
@@ -238,6 +245,7 @@ volumes:
   mysql_data:
   redis_data:
   nacos_data:
+  media_cache:
 
 networks:
   football-network:

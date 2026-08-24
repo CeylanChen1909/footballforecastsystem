@@ -982,6 +982,7 @@ public class CrawlerController {
             data.put("status", status);
             data.put("message", message);
             data.put("teamId", row.getOrDefault("external_team_id", ""));
+            ensureSquadPhotoFallbacks(players);
             data.put("response", players);
             data.put("results", players.size());
             data.put("lastSyncedAt", row.get("fetched_at"));
@@ -1079,6 +1080,20 @@ public class CrawlerController {
         long ttl = "AVAILABLE".equals(status) || "EMPTY".equals(status) ? 12 * 60 * 60 * 1000L
                 : "QUOTA_LIMITED".equals(status) ? 30 * 60 * 1000L : 5 * 60 * 1000L;
         return System.currentTimeMillis() + ttl;
+    }
+
+    /** Add portrait URLs to old cached ESPN rows created before avatar support. */
+    private void ensureSquadPhotoFallbacks(List<Map<String, Object>> players) {
+        if (players == null) return;
+        for (Map<String, Object> player : players) {
+            if (player == null) continue;
+            String existing = Objects.toString(player.get("photo"), "").trim();
+            String id = Objects.toString(player.get("id"), "").trim();
+            if (existing.isBlank() && !id.isBlank()) {
+                player.put("photo", "https://a.espncdn.com/i/headshots/soccer/players/full/" + id + ".png");
+                player.put("photoSource", "espn-headshot");
+            }
+        }
     }
 
     private Long parsePositiveLong(String value) {

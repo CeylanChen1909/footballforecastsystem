@@ -108,6 +108,10 @@ spring:
           uri: lb://football-business-service
           predicates: [ Path=/api/crawler/** ]
 
+        - id: media-service
+          uri: lb://football-business-service
+          predicates: [ Path=/api/media/** ]
+
         - id: card-workshop-service
           uri: lb://football-business-service
           predicates: [ Path=/api/card-workshop/** ]

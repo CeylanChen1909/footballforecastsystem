@@ -104,10 +104,11 @@ public class EspnSquadParser {
                         player.put("number", athlete.path("jersey").asText(""));
                         player.put("age", athlete.path("age").asText(""));
                         player.put("nationality", athlete.path("ctz").asText(""));
-                        // ESPN 当前 squad 页面只提供球员 ID，不再提供可用的
-                        // headshot URL；头像由 Transfermarkt 补充服务按姓名匹配，
-                        // 匹配不到时前端使用稳定的首字母头像，不生成 404 图片。
-                        player.put("photo", "");
+                        // ESPN 的公开 roster JSON 通常只提供球员 ID。该 ID
+                        // 对应 ESPN CDN 的标准头像路径；个别球员若没有头像，
+                        // 前端会在 404 后稳定回退到首字母占位，不会显示破图。
+                        player.put("photo", id.isBlank() ? "" : "https://a.espncdn.com/i/headshots/soccer/players/full/" + id + ".png");
+                        player.put("photoSource", id.isBlank() ? "" : "espn-headshot");
                         player.put("source", "espn-squad");
                         players.add(player);
                     }

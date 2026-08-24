@@ -57,13 +57,13 @@
       </el-table-column>
       <el-table-column label="主队头像" width="80">
         <template #default="{ row }">
-          <el-avatar :size="32" :src="row.homeTeamLogo || ''">{{ row.homeTeamName?.slice(0, 1) || 'H' }}</el-avatar>
+          <el-avatar :size="32" :src="getMediaAssetUrl(row.homeTeamLogo)">{{ row.homeTeamName?.slice(0, 1) || 'H' }}</el-avatar>
         </template>
       </el-table-column>
       <el-table-column prop="homeTeamName" label="主队" min-width="150" />
       <el-table-column label="客队头像" width="80">
         <template #default="{ row }">
-          <el-avatar :size="32" :src="row.awayTeamLogo || ''">{{ row.awayTeamName?.slice(0, 1) || 'A' }}</el-avatar>
+          <el-avatar :size="32" :src="getMediaAssetUrl(row.awayTeamLogo)">{{ row.awayTeamName?.slice(0, 1) || 'A' }}</el-avatar>
         </template>
       </el-table-column>
       <el-table-column prop="awayTeamName" label="客队" min-width="150" />
@@ -101,6 +101,7 @@
 <script setup>
 import { computed } from 'vue'
 import PageState from '../../components/layout/PageState.vue'
+import { getMediaAssetUrl } from '../../utils/mediaAsset'
 
 const props = defineProps({
   matches: { type: Array, default: () => [] },

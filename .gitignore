@@ -52,3 +52,6 @@ gateway.err
 ### 机器学习训练缓存与 Python 字节码 ###
 football-ml-service/data_cache/
 football-ml-service/__pycache__/
+
+### 运行时媒体缓存（由服务生成，不进入版本库） ###
+data/media-cache/

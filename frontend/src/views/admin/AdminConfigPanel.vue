@@ -50,10 +50,10 @@
           <el-input v-model="config['agent.model.scnet.models']" placeholder="多个模型用英文逗号分隔；留空使用 GLM-5-Base" />
         </el-descriptions-item>
         <el-descriptions-item label="允许模型思考摘要">
-          <el-switch v-model="config['agent.model.thinking.enabled']" active-value="true" inactive-value="false" />
+          <el-switch v-model="thinkingEnabled" active-value="true" inactive-value="false" />
         </el-descriptions-item>
         <el-descriptions-item label="通道故障自动切换">
-          <el-switch v-model="config['agent.model.fallback.enabled']" active-value="true" inactive-value="false" />
+          <el-switch v-model="fallbackEnabled" active-value="true" inactive-value="false" />
         </el-descriptions-item>
         <el-descriptions-item label="Temperature">
           <el-input v-model="config['agent.model.temperature']" placeholder="0.4" />
@@ -67,13 +67,24 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import PageState from '../../components/layout/PageState.vue'
 
-defineProps({
+const props = defineProps({
   config: { type: Object, required: true },
   error: { type: String, default: '' }
 })
 defineEmits(['save', 'retry'])
+
+// The configuration API historically returned both booleans and the string
+// values "true"/"false".  Element Plus requires model-value to match the
+// switch values exactly, so bridge the external config to a stable string.
+const switchValue = (key) => computed({
+  get: () => String(props.config[key] ?? 'false') === 'true' ? 'true' : 'false',
+  set: value => { props.config[key] = value === 'true' ? 'true' : 'false' }
+})
+const thinkingEnabled = switchValue('agent.model.thinking.enabled')
+const fallbackEnabled = switchValue('agent.model.fallback.enabled')
 </script>
 
 <style scoped>

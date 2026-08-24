@@ -74,6 +74,7 @@ import { computed, ref, watch } from 'vue'
 import { ChatLineSquare, DataLine, MoreFilled, Star, StarFilled, TrendCharts } from '@element-plus/icons-vue'
 import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatchId, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../utils/match'
 import { getTeamDisplayName } from '../utils/teamNames'
+import { getMediaAssetUrl } from '../utils/mediaAsset'
 
 const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
 const emit = defineEmits(['predict', 'teamClick', 'h2h', 'agent', 'details', 'favorite-match'])
@@ -106,8 +107,8 @@ const normalizeLogoUrl = (url) => {
   if (value.includes('upload.wikimedia.org') && wikiMatch?.[1]) return `https://commons.wikimedia.org/wiki/Special:FilePath/${wikiMatch[1]}`
   return value
 }
-const homeLogoSrc = computed(() => normalizeLogoUrl(homeTeam.value?.logo))
-const awayLogoSrc = computed(() => normalizeLogoUrl(awayTeam.value?.logo))
+const homeLogoSrc = computed(() => getMediaAssetUrl(normalizeLogoUrl(homeTeam.value?.logo)))
+const awayLogoSrc = computed(() => getMediaAssetUrl(normalizeLogoUrl(awayTeam.value?.logo)))
 const homeLogoVisible = computed(() => !!homeLogoSrc.value && !homeLogoBroken.value)
 const awayLogoVisible = computed(() => !!awayLogoSrc.value && !awayLogoBroken.value)
 watch(homeLogoSrc, () => { homeLogoBroken.value = false })

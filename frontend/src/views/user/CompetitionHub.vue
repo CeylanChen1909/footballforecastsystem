@@ -11,17 +11,28 @@
       <section class="hub-grid">
         <PageSection class="standings-panel" title="联赛积分榜" subtitle="以当前已采集赛季为准，点击球队查看资料">
           <template #actions>
-            <el-select v-model="selectedLeague" class="league-select" size="small" aria-label="选择联赛" @change="loadLeagueData">
-              <el-option v-for="league in leagueOptions" :key="league.value" :label="league.label" :value="league.value" />
-            </el-select>
-            <el-select v-model="selectedSeason" class="season-select" size="small" aria-label="选择赛季" :disabled="!seasonOptions.length" @change="loadLeagueData">
-              <el-option v-for="season in seasonOptions" :key="season" :label="season" :value="season" />
-            </el-select>
-            <el-button :icon="Refresh" circle aria-label="重新读取积分榜" title="重新读取积分榜快照" :loading="loading" @click="loadLeagueData" />
-            <el-button v-if="isAdmin" text type="primary" size="small" :loading="loading" @click="refreshStandings">管理员同步</el-button>
-            <el-select v-model="standingSort" size="small" aria-label="积分榜排序"><el-option label="按积分" value="points" /><el-option label="按排名" value="rank" /></el-select>
-            <el-tag size="small" effect="plain" type="info">{{ standings.length }} 队</el-tag>
-            <el-tag v-if="quality.statusText" size="small" effect="plain" :type="qualityTagType">{{ quality.statusText }}</el-tag>
+            <div class="standings-toolbar" aria-label="积分榜筛选与操作">
+              <div class="toolbar-group toolbar-primary">
+                <label class="control-field">
+                  <span>联赛</span>
+                  <el-select v-model="selectedLeague" class="league-select" size="small" aria-label="选择联赛" @change="loadLeagueData">
+                    <el-option v-for="league in leagueOptions" :key="league.value" :label="league.label" :value="league.value" />
+                  </el-select>
+                </label>
+                <label class="control-field">
+                  <span>赛季</span>
+                  <el-select v-model="selectedSeason" class="season-select" size="small" aria-label="选择赛季" :disabled="!seasonOptions.length" @change="loadLeagueData">
+                    <el-option v-for="season in seasonOptions" :key="season" :label="season" :value="season" />
+                  </el-select>
+                </label>
+              </div>
+              <div class="toolbar-group toolbar-secondary">
+                <el-tag size="small" effect="plain" type="info">{{ standings.length }} 队</el-tag>
+                <el-tag v-if="quality.statusText" size="small" effect="plain" :type="qualityTagType">{{ quality.statusText }}</el-tag>
+                <el-button :icon="Refresh" circle aria-label="重新读取积分榜" title="重新读取积分榜快照" :loading="loading" @click="loadLeagueData" />
+                <el-button v-if="isAdmin" text type="primary" size="small" :loading="loading" @click="refreshStandings">管理员同步</el-button>
+              </div>
+            </div>
           </template>
           <PageState v-if="loading" type="loading" title="正在加载积分榜..." :size="36" />
           <PageState v-else-if="loadError" type="error" title="积分榜加载失败" :description="loadError" action-text="重试" @action="loadLeagueData" />
@@ -34,7 +45,7 @@
               </span>
               <span v-if="zoneRules.note" class="zone-note">{{ zoneRules.note }}</span>
             </div>
-            <el-table :data="sortedStandings" class="standings-table" size="small" row-key="rank">
+            <el-table :data="standings" class="standings-table" size="small" row-key="rank">
             <el-table-column prop="rank" label="#" width="48" align="center">
               <template #default="scope"><span class="rank-number" :class="rankClass(scope.row)">{{ scope.row.rank }}</span></template>
             </el-table-column>
@@ -44,7 +55,7 @@
             <el-table-column label="球队" min-width="180">
               <template #default="scope">
                 <button type="button" class="team-cell" :aria-label="`查看${scope.row.team?.name || '未知球队'}资料`" @click="openTeam(scope.row.team)">
-                  <img v-if="scope.row.team?.logo" :src="scope.row.team.logo" alt="" aria-hidden="true" @error="markLogoBroken(scope.row.team)" />
+                  <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" @error="markLogoBroken(scope.row.team)" />
                   <span v-else class="mini-logo">{{ firstLetter(scope.row.team?.name) }}</span>
                   <span>{{ scope.row.team?.name || '未知球队' }}</span>
                 </button>
@@ -73,7 +84,7 @@
           </template>
           <div v-if="filteredClubs.length" class="club-grid">
             <button v-for="club in filteredClubs" :key="clubKey(club)" type="button" class="club-card" :title="club.name" :aria-label="`查看${club.name}球队资料`" @click="openTeam(club)">
-              <img v-if="club.logo && !club.logoBroken" :src="club.logo" alt="" aria-hidden="true" @error="markLogoBroken(club)" />
+              <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" @error="markLogoBroken(club)" />
               <span v-else class="club-logo-placeholder">{{ firstLetter(club.name) }}</span>
               <span class="club-name">{{ club.name }}</span>
               <span class="club-meta">{{ clubRank(club) ? `第 ${clubRank(club)} 名` : '查看球队资料' }}</span>
@@ -98,6 +109,7 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import { analyticsApi, crawlerApi } from '../../api'
 import { useUserStore } from '../../stores/user'
+import { getMediaAssetUrl } from '../../utils/mediaAsset'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -120,7 +132,6 @@ const seasonOptions = ref([])
 const loading = ref(false)
 const loadError = ref('')
 const standings = ref([])
-const standingSort = ref('points')
 const clubsFromApi = ref([])
 const clubKeyword = ref('')
 const zoneRules = ref({ zones: [], note: '' })
@@ -165,9 +176,6 @@ const filteredClubs = computed(() => {
   const keyword = clubKeyword.value.trim().toLowerCase()
   return keyword ? clubs.value.filter(club => club.name.toLowerCase().includes(keyword)) : clubs.value
 })
-const sortedStandings = computed(() => [...standings.value].sort((a, b) => standingSort.value === 'rank'
-  ? Number(a.rank || 999) - Number(b.rank || 999)
-  : Number(b.points || 0) - Number(a.points || 0) || Number(a.rank || 999) - Number(b.rank || 999)))
 const standingDataState = computed(() => {
   if (!standings.value.length) return 'EMPTY'
   const hasPlayedData = standings.value.some(row => Number(row.played || 0) > 0 || Number(row.points || 0) > 0 || Number(row.win || 0) > 0 || Number(row.draw || 0) > 0 || Number(row.loss || 0) > 0)
@@ -273,21 +281,36 @@ onMounted(loadLeagueData)
 </script>
 
 <style scoped>
-.main-content { max-width: 1440px; margin: 0 auto; padding: 24px; }
-.competition-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding:20px 22px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-lg); background:var(--ff-surface); }
-.hero-copy { max-width:720px; }
-.hero-copy h1 { margin:8px 0 8px; color:var(--ff-ink); font-size:clamp(28px,4vw,46px); letter-spacing:-.06em; }
-.hero-copy p { margin:0; color:var(--ff-text-muted); line-height:1.7; }
-.hero-controls { display:flex; gap:10px; flex-wrap:wrap; min-width:270px; }
-.hero-controls label { display:flex; flex-direction:column; gap:6px; color:var(--ff-text-faint); font-size:11px; }
-.league-select { width:150px; }
-.season-select { width:130px; }
-.overview-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:16px 0; }
-.overview-card { display:flex; flex-direction:column; gap:5px; padding:16px 18px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface); box-shadow:var(--ff-shadow-sm); }
-.overview-card span,.overview-card small { color:var(--ff-text-muted); font-size:12px; }
-.overview-card strong { color:var(--ff-text-strong); font-size:24px; font-family:var(--ff-mono); }
-.overview-card strong.is-good { color:var(--ff-primary); }.overview-card strong.is-bad { color:var(--ff-danger); }.overview-card strong.is-muted { color:var(--ff-text-muted); }.overview-card strong.is-stale { color:var(--ff-warning); }
-.hub-grid { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(360px,.75fr); gap:16px; align-items:start; }
+.main-content { max-width: 1360px; margin: 0 auto; padding: clamp(16px, 2.5vw, 28px); }
+.hub-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(320px,.75fr); gap:20px; align-items:start; }
+.standings-panel :deep(.section-actions), .clubs-panel :deep(.section-actions) { flex:1; min-width:0; }
+.clubs-panel :deep(.section-actions) { justify-content:flex-end; }
+.standings-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; width:100%; flex-wrap:wrap; }
+.toolbar-group { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+.toolbar-secondary { margin-left:auto; justify-content:flex-end; }
+.control-field { display:flex; flex-direction:column; align-items:flex-start; gap:4px; color:var(--ff-text-faint); font-size:10px; line-height:1; letter-spacing:.04em; white-space:nowrap; }
+.control-field .el-select { width:100%; }
+.control-field .league-select { width:146px; min-width:146px; }
+.control-field .season-select { width:126px; min-width:126px; }
+.league-select :deep(.el-select__wrapper), .season-select :deep(.el-select__wrapper) {
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid var(--ff-border);
+  background:var(--ff-surface);
+  box-shadow:inset 0 0 0 1px transparent;
+}
+.league-select :deep(.el-select__wrapper:hover), .season-select :deep(.el-select__wrapper:hover) { border-color:var(--ff-border-strong); }
+.league-select :deep(.el-select__wrapper.is-focused), .season-select :deep(.el-select__wrapper.is-focused) { border-color:var(--ff-primary); box-shadow:0 0 0 3px rgba(18,107,80,.1); }
+.league-select :deep(.el-select__selected-item), .season-select :deep(.el-select__selected-item) {
+  overflow:hidden;
+  color:var(--ff-text-strong) !important;
+  font-size:13px;
+  font-weight:700;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.league-select :deep(.el-select__placeholder), .season-select :deep(.el-select__placeholder) { color:var(--ff-text-muted); }
+.league-select :deep(.el-select__suffix), .season-select :deep(.el-select__suffix) { color:var(--ff-primary); }
 .standings-table { width:100%; }
 .standings-data-wrap { display:flex; flex-direction:column; gap:12px; }
 .standings-table :deep(.el-table__inner-wrapper::before) { display:none; }
@@ -308,17 +331,22 @@ onMounted(loadLeagueData)
 .form-strip { display:inline-flex; max-width:100%; overflow:hidden; color:var(--ff-text-muted); font-family:var(--ff-mono); font-size:11px; letter-spacing:1px; white-space:nowrap; }
 .team-cell { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; color:var(--ff-text); font-weight:600; text-align:left; cursor:pointer; }
 .team-cell:hover { color:var(--ff-primary); }.team-cell img,.mini-logo { width:26px; height:26px; object-fit:contain; flex:none; }.mini-logo { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--ff-primary-soft); color:var(--ff-primary); font-size:11px; }
-.club-search { width:150px; }.club-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.club-search { width:180px; }.club-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 .club-card { display:flex; align-items:center; gap:9px; min-width:0; padding:10px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer; transition:border-color var(--ff-transition-fast),background var(--ff-transition-fast); }
 .club-card:hover,.club-card:focus-visible { border-color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }.club-card img,.club-logo-placeholder { width:32px; height:32px; object-fit:contain; flex:none; }.club-logo-placeholder { display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:var(--ff-bg-alt); color:var(--ff-primary); font-weight:700; }.club-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:700; }.club-meta { margin-left:auto; color:var(--ff-text-faint); font-size:10px; white-space:nowrap; }.club-arrow { margin-left:auto; color:var(--ff-primary); font-size:18px; opacity:.6; transition:opacity var(--ff-transition-fast); }.club-card:hover .club-arrow,.club-card:focus-visible .club-arrow { opacity:1; }
 @media (max-width: 980px) { .hub-grid { grid-template-columns:1fr; } }
-@media (max-width: 680px) { .main-content { padding:12px; }.competition-hero { align-items:flex-start; flex-direction:column; padding:20px; }.hero-controls { width:100%; }.hero-controls label,.league-select,.season-select { flex:1; width:auto; }.overview-grid { grid-template-columns:1fr; }.club-grid { grid-template-columns:1fr; }.club-meta { display:none; } }
-.competition-hero { padding: 20px 24px; align-items: center; }
-.hero-copy h1 { font-size: clamp(25px, 3.2vw, 38px); }
-.overview-grid { margin: 12px 0; }
+@media (max-width: 680px) {
+  .main-content { padding:12px; }
+  .standings-toolbar, .toolbar-group { align-items:stretch; }
+  .standings-toolbar { flex-direction:column; gap:12px; }
+  .toolbar-group { width:100%; }
+  .toolbar-secondary { margin-left:0; align-items:center; }
+  .control-field { flex:1; }
+  .control-field .league-select, .control-field .season-select { width:100%; min-width:0; }
+  .club-grid { grid-template-columns:1fr; }
+  .club-meta { display:none; }
+}
 .club-card { min-height: 54px; }
 .club-name { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.3; }
-@media (max-width: 680px) { .competition-hero { padding: 16px; } .overview-card strong { font-size: 21px; } }
-
-/* 赛事资料页头只呈现当前联赛、赛季和必要筛选。 */
+@media (max-width: 680px) { .toolbar-secondary .el-tag { display:none; } }
 </style>

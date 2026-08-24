@@ -21,7 +21,7 @@
       <template v-else>
         <section class="team-page-head ff-appear" aria-labelledby="team-page-title">
           <div class="team-identity">
-            <img v-if="teamLogo" :src="teamLogo" :alt="teamName" class="team-logo" @error="handleTeamLogoError" />
+            <img v-if="teamLogo" :src="getMediaAssetUrl(teamLogo)" :alt="teamName" class="team-logo" @error="handleTeamLogoError" />
             <span v-else class="team-logo placeholder">{{ firstLetter(teamName) }}</span>
             <div>
               <span class="ff-kicker">{{ league }} · {{ seasonLabel }}</span>
@@ -52,7 +52,7 @@
               <div class="group-heading"><strong>{{ group.label }}</strong><span>{{ group.items.length }} 人</span></div>
               <div class="player-grid">
                 <article v-for="player in group.items" :key="playerKey(player)" class="player-card">
-                  <img v-if="player.photo && !player.photoBroken" :src="player.photo" :alt="player.name" @error="handlePlayerPhotoError(player)" />
+                  <img v-if="player.photo && !player.photoBroken" :src="getMediaAssetUrl(player.photo)" :alt="player.name" @error="handlePlayerPhotoError(player)" />
                   <span v-else class="player-avatar">{{ firstLetter(player.name) }}</span>
                   <div class="player-copy">
                     <strong>{{ player.name || '未知球员' }}<b v-if="player.number" class="player-number">#{{ player.number }}</b></strong>
@@ -87,6 +87,7 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import { crawlerApi, favoriteApi } from '../../api'
 import { useUserStore } from '../../stores/user'
+import { getMediaAssetUrl } from '../../utils/mediaAsset'
 
 const route = useRoute()
 const router = useRouter()

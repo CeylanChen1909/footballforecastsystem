@@ -55,6 +55,7 @@
 import { computed } from 'vue'
 import { formatMatchTime, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../../utils/match'
 import { getTeamDisplayName } from '../../utils/teamNames'
+import { getMediaAssetUrl } from '../../utils/mediaAsset'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -74,8 +75,8 @@ const team = (match, side) => match?.teams?.[side] || {}
 const homeName = match => getTeamDisplayName(team(match, 'home').name || match?.homeTeamName || '主队', props.teamNameMode)
 const awayName = match => getTeamDisplayName(team(match, 'away').name || match?.awayTeamName || '客队', props.teamNameMode)
 const leagueName = match => match?.league?.name || match?.leagueName || '其他赛事'
-const homeLogo = match => team(match, 'home').logo || match?.homeTeamLogo || ''
-const awayLogo = match => team(match, 'away').logo || match?.awayTeamLogo || ''
+const homeLogo = match => getMediaAssetUrl(team(match, 'home').logo || match?.homeTeamLogo || '')
+const awayLogo = match => getMediaAssetUrl(team(match, 'away').logo || match?.awayTeamLogo || '')
 const initial = name => String(name || '?').trim().slice(0, 1).toUpperCase()
 const recommendationKey = (match, index) => match?.matchId || match?.id || match?.fixtureId || `${homeName(match)}-${awayName(match)}-${index}`
 const tier = match => String(match?.recommendation?.tier || (isLiveMatch(match) ? 'LIVE' : isFinishedMatch(match) ? 'RECENT' : 'UPCOMING')).toUpperCase()

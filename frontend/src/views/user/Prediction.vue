@@ -100,9 +100,9 @@
             <div class="card-header"><span>比赛信息</span><div class="header-actions"><el-tag v-if="loading" size="small" type="info">读取中…</el-tag><el-button size="small" text @click="showH2H"><el-icon><DataLine /></el-icon>查看交锋</el-button></div></div>
           </template>
           <div class="match-detail">
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.home?.name || '主队'}阵容`" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="fixtureData.teams.home.logo" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">主</div><div class="team-name-lg">{{ fixtureData?.teams?.home?.name || '主队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.home?.name || '主队'}阵容`" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">主</div><div class="team-name-lg">{{ fixtureData?.teams?.home?.name || '主队' }}</div><small>查看阵容</small></div>
             <div class="vs-block"><div v-if="hasScore" class="final-score">{{ fixtureData.goals.home }} - {{ fixtureData.goals.away }}</div><div class="vs-label">VS</div><div class="match-date">{{ formatDate(fixtureData?.fixture?.date) }}</div><div class="match-venue" v-if="fixtureData?.fixture?.venue?.name">{{ fixtureData.fixture.venue.name }}</div></div>
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.away?.name || '客队'}阵容`" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="fixtureData.teams.away.logo" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">客</div><div class="team-name-lg">{{ fixtureData?.teams?.away?.name || '客队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.away?.name || '客队'}阵容`" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">客</div><div class="team-name-lg">{{ fixtureData?.teams?.away?.name || '客队' }}</div><small>查看阵容</small></div>
           </div>
         </el-card>
 
@@ -114,7 +114,7 @@
             <div v-else-if="h2hData" class="h2h-content">
               <div class="h2h-summary">
                 <div class="summary-team home">
-                  <img v-if="fixtureData?.teams?.home?.logo" :src="fixtureData.teams.home.logo" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="summary-logo" />
+                  <img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="summary-logo" />
                   <span>{{ fixtureData?.teams?.home?.name }}</span>
                 </div>
                 <div class="summary-stats">
@@ -132,7 +132,7 @@
                   </div>
                 </div>
                 <div class="summary-team away">
-                  <img v-if="fixtureData?.teams?.away?.logo" :src="fixtureData.teams.away.logo" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="summary-logo" />
+                  <img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="summary-logo" />
                   <span>{{ fixtureData?.teams?.away?.name }}</span>
                 </div>
               </div>
@@ -170,6 +170,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { analyticsApi, crawlerApi, favoriteApi, predictionApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { normalizeProbability, normalizeProbabilities, parseFeatureString } from '../../utils/prediction'
+import { getMediaAssetUrl } from '../../utils/mediaAsset'
 import { ElMessage } from 'element-plus'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PredictionProbabilityPanel from '../../components/prediction/PredictionProbabilityPanel.vue'
