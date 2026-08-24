@@ -35,7 +35,7 @@ app:
   runtime-ddl-enabled: ${APP_RUNTIME_DDL_ENABLED:true}
   schema:
     require-migrations: ${APP_SCHEMA_REQUIRE_MIGRATIONS:false}
-    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event}
+    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event,t_user_legal_consent}
 legacy:
   prediction-proxy:
     enabled: ${LEGACY_PREDICTION_PROXY_ENABLED:false}

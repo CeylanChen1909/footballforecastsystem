@@ -177,7 +177,7 @@ public class CrawlerController {
     @GetMapping("/matches/db/page")
     public Map<String, Object> getMatchesPage(@RequestParam(name = "keyword", required = false) String keyword,
                                               @RequestParam(name = "status", required = false) String status,
-                                              @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date date,
+                                              @RequestParam(name = "date", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
                                               @RequestParam(name = "page", defaultValue = "1") int page,
                                               @RequestParam(name = "size", defaultValue = "20") int size) {
         try {
@@ -202,9 +202,11 @@ public class CrawlerController {
                 query.eq(CrawlerMatch::getStatus, status);
             }
             if (date != null) {
-                LocalDate requestedDate = date.toInstant().atZone(BUSINESS_ZONE).toLocalDate();
-                query.ge(CrawlerMatch::getMatchTime, requestedDate.atStartOfDay())
-                        .lt(CrawlerMatch::getMatchTime, requestedDate.plusDays(1).atStartOfDay());
+                // Parse the calendar date directly. Converting yyyy-MM-dd to
+                // java.util.Date first makes the result depend on the cloud
+                // server's default timezone and can move today's boundary.
+                query.ge(CrawlerMatch::getMatchTime, date.atStartOfDay())
+                        .lt(CrawlerMatch::getMatchTime, date.plusDays(1).atStartOfDay());
             }
             List<CrawlerMatch> all = visibleSourceMatches(crawlerMatchMapper.selectList(query));
             List<CrawlerMatch> pageItems = all.stream().skip(offset).limit(safeSize).toList();

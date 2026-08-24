@@ -61,7 +61,7 @@ app:
   runtime-ddl-enabled: ${APP_RUNTIME_DDL_ENABLED:true}
   schema:
     require-migrations: ${APP_SCHEMA_REQUIRE_MIGRATIONS:false}
-    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user}
+    required-tables: ${APP_SCHEMA_REQUIRED_TABLES:t_user,t_user_legal_consent}
 
 management:
   endpoints:

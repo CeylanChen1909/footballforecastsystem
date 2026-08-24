@@ -153,9 +153,12 @@ export async function refreshAuthSession() {
 }
 
 export const userApi = {
-  register(email, nickname, password, verificationCode) { return api.post('/users/register', { email, nickname, password, verificationCode }) },
-  sendEmailCode(email, scene = 'REGISTER') { return api.post('/users/email/verification-code', { email, scene }) },
+  register(email, nickname, password, verificationCode, captchaId = '', captchaAnswer = '') { return api.post('/users/register', { email, nickname, password, verificationCode, captchaId, captchaAnswer }) },
+  sendEmailCode(email, scene = 'REGISTER', captchaId = '', captchaAnswer = '') { return api.post('/users/email/verification-code', { email, scene, captchaId, captchaAnswer }) },
   getCaptcha() { return api.get('/users/captcha') },
+  getRegistrationCaptcha() { return api.get('/users/register/captcha') },
+  getLegalConsentStatus(config = {}) { return api.get('/users/legal-consent/status', { ...config, notifyOnError: false }) },
+  acceptLegalConsent() { return api.post('/users/legal-consent/accept', {}) },
   requestPasswordReset(email) { return api.post('/users/password/reset-request', { email }) },
   resetPassword(email, verificationCode, newPassword) { return api.post('/users/password/reset', { email, verificationCode, newPassword }) },
   login(account, password, captchaId, captchaAnswer) { return api.post('/users/login', { account, password, captchaId, captchaAnswer }) },

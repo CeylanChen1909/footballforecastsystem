@@ -42,7 +42,7 @@ x-java-service-env: &java-service-env
   ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-180}
   APP_RUNTIME_DDL_ENABLED: ${APP_RUNTIME_DDL_ENABLED:-false}
   APP_SCHEMA_REQUIRE_MIGRATIONS: ${APP_SCHEMA_REQUIRE_MIGRATIONS:-true}
-  APP_SCHEMA_REQUIRED_TABLES: ${APP_SCHEMA_REQUIRED_TABLES:-t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event}
+  APP_SCHEMA_REQUIRED_TABLES: ${APP_SCHEMA_REQUIRED_TABLES:-t_user,crawler_matches,t_match_prediction,t_prematch_feature_snapshot,t_agent_conversation,t_analytics_event,t_user_legal_consent}
   # SMTP：用于注册和密码找回验证码。MAIL_USERNAME 应与发件邮箱一致。
   MAIL_HOST: ${MAIL_HOST:-}
   MAIL_PORT: ${MAIL_PORT:-587}

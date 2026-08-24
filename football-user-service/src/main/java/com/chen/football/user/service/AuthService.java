@@ -404,6 +404,7 @@ public class AuthService {
                 "DELETE FROM t_user_favorite_team WHERE user_id = ?",
                 "DELETE FROM t_user_notification WHERE user_id = ?",
                 "DELETE FROM t_analytics_event WHERE user_id = ?",
+                "DELETE FROM t_user_legal_consent WHERE user_id = ?",
                 "DELETE FROM t_news_article_favorite WHERE user_id = ?",
                 "DELETE FROM t_news_article_like WHERE user_id = ?",
                 "DELETE FROM t_news_article_comment WHERE user_id = ?"

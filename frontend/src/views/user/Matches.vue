@@ -355,9 +355,18 @@ const filteredMatches = computed(() => {
 const matchCount = computed(() => filteredMatches.value.length)
 const dateCounts = computed(() => {
   const counts = new Map(dateCountsCache.value)
+  // `rawMatches` is the currently selected day's result.  That date is
+  // already written into `dateCountsCache` by loadMatchesByDate(), so adding
+  // it again here used to turn 6 matches into 12 after clicking the rail.
+  // Only hydrate dates that are not present in the cache (for example when a
+  // selected date falls outside the initial 7-day window).
+  const currentDateCounts = new Map()
   ;(rawMatches.value || []).forEach(match => {
     const date = getMatchDate(match)
-    if (date) counts.set(date, (counts.get(date) || 0) + 1)
+    if (date) currentDateCounts.set(date, (currentDateCounts.get(date) || 0) + 1)
+  })
+  currentDateCounts.forEach((count, date) => {
+    if (!counts.has(date)) counts.set(date, count)
   })
   return counts
 })

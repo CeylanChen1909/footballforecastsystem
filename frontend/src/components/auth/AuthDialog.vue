@@ -44,6 +44,9 @@
           <el-form-item label="昵称" prop="nickname">
             <el-input v-model="registerForm.nickname" placeholder="对外展示的昵称" prefix-icon="User" clearable size="large" />
           </el-form-item>
+          <el-form-item label="图形验证" prop="captchaAnswer">
+            <ImageCaptcha :image="registerCaptchaImage" v-model:answer="registerForm.captchaAnswer" @refresh="refreshRegisterCaptcha" />
+          </el-form-item>
           <el-form-item label="邮箱验证码" prop="verificationCode">
             <div class="code-row"><el-input v-model="registerForm.verificationCode" placeholder="6 位验证码" /><el-button :disabled="codeCountdown > 0" @click="sendRegisterCode">{{ codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码' }}</el-button></div>
           </el-form-item>
@@ -80,6 +83,7 @@ import { ElMessage } from 'element-plus'
 import { Football } from '@element-plus/icons-vue'
 import { useUserStore } from '../../stores/user'
 import { userApi } from '../../api'
+import ImageCaptcha from './ImageCaptcha.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -93,7 +97,8 @@ const loginFormRef = ref()
 const registerFormRef = ref()
 const resetFormRef = ref()
 const loginForm = reactive({ account: '', password: '', captchaAnswer: '' })
-const registerForm = reactive({ email: '', nickname: '', password: '', confirmPassword: '', verificationCode: '' })
+const registerForm = reactive({ email: '', nickname: '', password: '', confirmPassword: '', verificationCode: '', captchaId: '', captchaAnswer: '' })
+const registerCaptchaImage = ref('')
 const resetForm = reactive({ email: '', verificationCode: '', password: '', confirmPassword: '' })
 const codeCountdown = ref(0)
 const resetCodeCountdown = ref(0)
@@ -101,11 +106,13 @@ let codeTimer = null
 let resetCodeTimer = null
 
 watch(() => userStore.authDialogTab, value => { activeTab.value = value || 'login' })
+watch(activeTab, value => { if (value === 'register' && !registerCaptchaImage.value) refreshRegisterCaptcha() })
 watch(() => userStore.authDialogVisible, value => {
   if (value) {
     activeTab.value = userStore.authDialogTab || 'login'
     loginFormRef.value?.clearValidate()
     registerFormRef.value?.clearValidate()
+    if (activeTab.value === 'register') refreshRegisterCaptcha()
   }
 })
 
@@ -134,12 +141,28 @@ const resetRules = {
   confirmPassword: [{ required: true, message: '请确认新密码', trigger: 'blur' }, { validator: (rule, value, callback) => value !== resetForm.password ? callback(new Error('两次密码不一致')) : callback(), trigger: 'blur' }]
 }
 
+const refreshRegisterCaptcha = async () => {
+  registerForm.captchaAnswer = ''
+  registerCaptchaImage.value = ''
+  try {
+    const result = await userApi.getRegistrationCaptcha()
+    const data = result?.data ?? result
+    if (data?.ok === false) throw new Error(data.message || '图形验证码加载失败')
+    registerForm.captchaId = data?.captchaId || ''
+    registerCaptchaImage.value = data?.image || ''
+  } catch (error) {
+    ElMessage.error(error?.message || '图形验证码加载失败')
+  }
+}
+
 const sendRegisterCode = async () => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) { ElMessage.warning('请先输入有效邮箱'); return }
+  if (!registerForm.captchaId || !registerForm.captchaAnswer) { ElMessage.warning('请先完成图形验证'); return }
   try {
-    const result = await userApi.sendEmailCode(registerForm.email, 'REGISTER')
+    const result = await userApi.sendEmailCode(registerForm.email, 'REGISTER', registerForm.captchaId, registerForm.captchaAnswer)
     if (result?.ok === false) throw new Error(result.message || '验证码发送失败')
     ElMessage.success(result?.delivery === 'console' ? '验证码已写入后端开发日志' : '验证码已发送，请查收邮件')
+    await refreshRegisterCaptcha()
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
   } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
@@ -188,11 +211,11 @@ const handleRegister = async () => {
   if (!valid) return
   loading.value = true
   try {
-    if (await userStore.register(registerForm.email, registerForm.nickname, registerForm.password, registerForm.verificationCode)) {
+    if (await userStore.register(registerForm.email, registerForm.nickname, registerForm.password, registerForm.verificationCode, registerForm.captchaId, registerForm.captchaAnswer)) {
       activeTab.value = 'login'
       loginForm.account = registerForm.email
       loginForm.password = ''
-    }
+    } else await refreshRegisterCaptcha()
   } catch (error) {
     ElMessage.error(error?.message || '注册失败，请稍后重试')
   } finally {

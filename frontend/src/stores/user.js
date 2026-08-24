@@ -101,8 +101,8 @@ export const useUserStore = defineStore('user', {
         return false
       }
     },
-    async register(email, nickname, password, verificationCode) {
-      const res = await userApi.register(email, nickname, password, verificationCode)
+    async register(email, nickname, password, verificationCode, captchaId = '', captchaAnswer = '') {
+      const res = await userApi.register(email, nickname, password, verificationCode, captchaId, captchaAnswer)
       const data = res?.data ?? res
       if (data.ok) {
         ElMessage.success('注册成功，请登录')

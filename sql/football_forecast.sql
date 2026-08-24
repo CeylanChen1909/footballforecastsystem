@@ -1295,3 +1295,13 @@ CREATE TABLE IF NOT EXISTS `t_understat_match_join_audit` (
 -- active match table.
 DELETE FROM `crawler_matches`
 WHERE LOWER(COALESCE(`source`, '')) IN ('juhe', 'api-football', 'football-data', 'worldfootball', 'zq123');
+
+CREATE TABLE IF NOT EXISTS `t_user_legal_consent` (
+  `user_id` bigint NOT NULL,
+  `consent_version` varchar(32) NOT NULL,
+  `agreed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip_address` varchar(64) DEFAULT NULL,
+  `user_agent` varchar(512) DEFAULT NULL,
+  PRIMARY KEY (`user_id`),
+  KEY `idx_user_legal_consent_version` (`consent_version`,`agreed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

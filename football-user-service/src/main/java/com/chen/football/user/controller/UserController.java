@@ -17,6 +17,7 @@ import com.chen.football.user.service.AuthService;
 import com.chen.football.user.service.EmailVerificationService;
 import com.chen.football.user.service.FavoriteService;
 import com.chen.football.user.service.LoginCaptchaService;
+import com.chen.football.user.service.RegistrationCaptchaService;
 import com.chen.football.user.service.RateLimitService;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,6 +40,7 @@ import java.time.Duration;
 @RequestMapping("/api/users")
 public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
+    public static final String LEGAL_CONSENT_VERSION = "20260824-v1";
     private static final int MAX_USERNAME_LENGTH = 32;
     private static final int MAX_PASSWORD_LENGTH = 64;
 
@@ -49,6 +51,7 @@ public class UserController {
     private final RateLimitService rateLimitService;
     private final EmailVerificationService emailVerificationService;
     private final LoginCaptchaService loginCaptchaService;
+    private final RegistrationCaptchaService registrationCaptchaService;
     private final JdbcTemplate jdbcTemplate;
     private volatile boolean preferenceTableReady;
     private volatile boolean notificationTableReady;
@@ -60,7 +63,7 @@ public class UserController {
     @Value("${security.trust-proxy-headers:false}")
     private boolean trustProxyHeaders;
 
-    public UserController(AuthService authService, FavoriteService favoriteService, JwtUtil jwtUtil, UserMapper userMapper, RateLimitService rateLimitService, EmailVerificationService emailVerificationService, LoginCaptchaService loginCaptchaService, JdbcTemplate jdbcTemplate) {
+    public UserController(AuthService authService, FavoriteService favoriteService, JwtUtil jwtUtil, UserMapper userMapper, RateLimitService rateLimitService, EmailVerificationService emailVerificationService, LoginCaptchaService loginCaptchaService, RegistrationCaptchaService registrationCaptchaService, JdbcTemplate jdbcTemplate) {
         this.authService = authService;
         this.favoriteService = favoriteService;
         this.jwtUtil = jwtUtil;
@@ -68,6 +71,7 @@ public class UserController {
         this.rateLimitService = rateLimitService;
         this.emailVerificationService = emailVerificationService;
         this.loginCaptchaService = loginCaptchaService;
+        this.registrationCaptchaService = registrationCaptchaService;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -90,6 +94,9 @@ public class UserController {
         if (!StringUtils.hasText(password) || password.length() < 8 || password.length() > MAX_PASSWORD_LENGTH) {
             return ApiResponse.ok(AuthResponse.failure("密码长度需在8-64位之间"));
         }
+        if (!registrationCaptchaService.verifyAndConsume(body.get("captchaId"), body.get("captchaAnswer"), ip)) {
+            return ApiResponse.ok(AuthResponse.failure("图形验证码错误或已过期，请刷新后重试"));
+        }
         if (!emailVerificationService.verifyAndConsume(email, "REGISTER", verificationCode)) {
             return ApiResponse.ok(AuthResponse.failure("邮箱验证码错误或已过期"));
         }
@@ -98,12 +105,56 @@ public class UserController {
 
     @PostMapping("/email/verification-code")
     public ApiResponse<Map<String, Object>> sendEmailVerificationCode(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        String scene = body.get("scene");
+        if ("REGISTER".equalsIgnoreCase(scene)
+                && !registrationCaptchaService.verifyAndConsume(body.get("captchaId"), body.get("captchaAnswer"), clientIp(request))) {
+            return ApiResponse.ok(Map.of("ok", false, "message", "请先完成图形验证"));
+        }
         return ApiResponse.ok(emailVerificationService.sendCode(body.get("email"), body.get("scene"), clientIp(request)));
     }
 
     @GetMapping("/captcha")
     public ApiResponse<Map<String, Object>> captcha(HttpServletRequest request) {
         return ApiResponse.ok(loginCaptchaService.issue(clientIp(request)));
+    }
+
+    @GetMapping("/register/captcha")
+    public ApiResponse<Map<String, Object>> registrationCaptcha(HttpServletRequest request) {
+        return ApiResponse.ok(registrationCaptchaService.issue(clientIp(request)));
+    }
+
+    @GetMapping("/legal-consent/status")
+    public ApiResponse<Map<String, Object>> legalConsentStatus() {
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            return ApiResponse.ok(Map.of("required", true, "accepted", false, "version", LEGAL_CONSENT_VERSION));
+        }
+        try {
+            String version = jdbcTemplate.query(
+                    "SELECT consent_version FROM t_user_legal_consent WHERE user_id = ?",
+                    rs -> rs.next() ? rs.getString(1) : null, userId);
+            return ApiResponse.ok(Map.of("required", true, "accepted", LEGAL_CONSENT_VERSION.equals(version), "version", LEGAL_CONSENT_VERSION));
+        } catch (Exception ex) {
+            log.error("读取用户协议确认状态失败 userId={}: {}", userId, ex.getMessage());
+            return ApiResponse.ok(Map.of("required", true, "accepted", false, "version", LEGAL_CONSENT_VERSION));
+        }
+    }
+
+    @PostMapping("/legal-consent/accept")
+    public ApiResponse<Map<String, Object>> acceptLegalConsent(HttpServletRequest request) {
+        Long userId = UserContext.getUserId();
+        if (userId == null) throw new UnauthorizedException("请先登录");
+        String userAgent = request.getHeader("User-Agent");
+        if (userAgent != null && userAgent.length() > 512) userAgent = userAgent.substring(0, 512);
+        try {
+            jdbcTemplate.update("INSERT INTO t_user_legal_consent(user_id,consent_version,agreed_at,ip_address,user_agent) VALUES(?,?,NOW(),?,?) "
+                            + "ON DUPLICATE KEY UPDATE consent_version=VALUES(consent_version),agreed_at=NOW(),ip_address=VALUES(ip_address),user_agent=VALUES(user_agent)",
+                    userId, LEGAL_CONSENT_VERSION, clientIp(request), userAgent);
+            return ApiResponse.ok(Map.of("accepted", true, "version", LEGAL_CONSENT_VERSION));
+        } catch (Exception ex) {
+            log.error("保存用户协议确认失败 userId={}: {}", userId, ex.getMessage());
+            return ApiResponse.ok(Map.of("accepted", false, "message", "协议确认暂时无法保存，请稍后重试"));
+        }
     }
 
     @PostMapping("/login")
