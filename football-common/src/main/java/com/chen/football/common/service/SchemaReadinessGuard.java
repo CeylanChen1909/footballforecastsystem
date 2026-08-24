@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Fails fast when production is configured to rely on migrations but a table is missing. */
 @Component
@@ -26,7 +28,13 @@ public class SchemaReadinessGuard {
 
     @PostConstruct
     void verify() {
-        List<String> missing = Arrays.stream(requiredTables.split(","))
+        // Legal consent is part of the authentication contract.  Do not let
+        // an outdated APP_SCHEMA_REQUIRED_TABLES override silently disable
+        // this check; otherwise login succeeds but the mandatory consent gate
+        // can never be completed.
+        Set<String> tables = new LinkedHashSet<>(Arrays.asList(requiredTables.split(",")));
+        tables.add("t_user_legal_consent");
+        List<String> missing = tables.stream()
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .filter(table -> !exists(table))
