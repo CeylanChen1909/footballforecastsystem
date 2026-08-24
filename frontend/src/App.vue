@@ -3,7 +3,7 @@
   <AgentLauncher v-if="!legalGateVisible && showAgentLauncher" />
   <AuthDialog v-if="!legalGateVisible" />
   <ConsentBanner v-if="!legalGateVisible" />
-  <LegalConsentGate :visible="legalGateVisible" @accepted="legalGateVisible = false" />
+  <LegalConsentGate :visible="legalGateVisible" @accepted="handleLegalAccepted" />
 </template>
 
 <script setup>
@@ -24,6 +24,7 @@ const userStore = useUserStore()
 // status must be checked before rendering any route; anonymous sessions are
 // resolved synchronously from the versioned local consent record below.
 const legalGateVisible = ref(true)
+let legalConsentSyncSequence = 0
 const showAgentLauncher = computed(() => Boolean(userStore.token) && route.path !== '/agent' && route.path !== '/login' && !route.path.startsWith('/admin'))
 const handleAuthRequired = event => {
   if (userStore.token) userStore.logout()
@@ -32,12 +33,16 @@ const handleAuthRequired = event => {
 onMounted(() => window.addEventListener('football-auth-required', handleAuthRequired))
 onBeforeUnmount(() => window.removeEventListener('football-auth-required', handleAuthRequired))
 const syncLegalConsent = async token => {
+  const sequence = ++legalConsentSyncSequence
   if (!token) {
     legalGateVisible.value = !hasLegalConsent()
     return
   }
   try {
     const result = await userApi.getLegalConsentStatus()
+    // A user may confirm while this request is in flight. Its old
+    // accepted:false response must not reopen the gate after confirmation.
+    if (sequence !== legalConsentSyncSequence) return
     const data = result?.data ?? result
     if (data?.accepted) {
       saveLegalConsent()
@@ -46,9 +51,16 @@ const syncLegalConsent = async token => {
       legalGateVisible.value = true
     }
   } catch {
+    if (sequence !== legalConsentSyncSequence) return
     // A logged-in user cannot silently bypass a failed consent status check.
     legalGateVisible.value = true
   }
+}
+const handleLegalAccepted = () => {
+  // Invalidate any status request started by the login transition before
+  // allowing the application route to render.
+  legalConsentSyncSequence += 1
+  legalGateVisible.value = false
 }
 watch(() => userStore.token, syncLegalConsent, { immediate: true })
 watch(() => route.fullPath, (path) => {

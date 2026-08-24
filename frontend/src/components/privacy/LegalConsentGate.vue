@@ -75,7 +75,8 @@ const accept = async () => {
   try {
     if (userStore.token) {
       const result = await userApi.acceptLegalConsent()
-      if (result?.accepted === false || result?.ok === false) throw new Error(result.message || '协议确认保存失败')
+      const data = result?.data ?? result
+      if (data?.accepted === false || data?.ok === false) throw new Error(data?.message || '协议确认保存失败')
     }
     saveLegalConsent()
     emit('accepted')
