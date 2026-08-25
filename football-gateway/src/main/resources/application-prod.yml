@@ -62,6 +62,12 @@ spring:
           uri: lb://football-business-service
           predicates: [ Path=/api/news/** ]
 
+        - id: changelog-service
+          uri: lb://football-business-service
+          predicates:
+            - Path=/api/changelog
+            - Path=/api/changelog/**
+
         - id: content-service
           uri: lb://football-business-service
           predicates: [ Path=/api/content/** ]
@@ -69,6 +75,12 @@ spring:
         - id: admin-news-service
           uri: lb://football-business-service
           predicates: [ Path=/api/admin/news/** ]
+
+        - id: admin-changelog-service
+          uri: lb://football-business-service
+          predicates:
+            - Path=/api/admin/changelog
+            - Path=/api/admin/changelog/**
 
         - id: admin-content-source-service
           uri: lb://football-business-service

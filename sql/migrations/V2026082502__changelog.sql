@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS t_changelog (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    title VARCHAR(160) NOT NULL,
+    summary VARCHAR(500) NOT NULL,
+    details_text TEXT NULL,
+    tag VARCHAR(32) NOT NULL DEFAULT '赛程',
+    tone VARCHAR(32) NOT NULL DEFAULT 'match',
+    version_label VARCHAR(64) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    publish_at DATETIME NULL,
+    created_by BIGINT NULL,
+    created_by_name VARCHAR(128) NULL,
+    updated_by BIGINT NULL,
+    updated_by_name VARCHAR(128) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_changelog_public (status, publish_at, updated_at),
+    KEY idx_changelog_status (status, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

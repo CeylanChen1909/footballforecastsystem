@@ -235,6 +235,10 @@ export const contentApi = {
   types() { return api.get('/content/types') }
 }
 
+export const changelogApi = {
+  list(limit = 10, config = {}) { return api.get('/changelog', { ...config, params: { limit, ...(config.params || {}) }, notifyOnError: false }) }
+}
+
 export const systemApi = {
   getConfig() { return api.get('/admin/config') },
   saveConfig(data) { return api.put('/admin/config', data) },

@@ -3,7 +3,7 @@
     <el-container class="admin-layout">
       <el-aside class="admin-aside" width="270px">
         <div class="brand-block"><div class="brand-mark">FF</div><div><div class="brand-name">Football Admin</div><div class="brand-sub">赛事数据运营控制台</div></div></div>
-        <nav class="side-section" aria-label="管理后台导航"><div class="side-label">工作台</div><el-menu :default-active="activeMenu" class="admin-menu" aria-label="后台功能菜单" @select="activeMenu = $event"><el-menu-item index="dashboard">总览</el-menu-item><el-menu-item index="matches">比赛工作台</el-menu-item><el-menu-item index="sources">数据源控制台</el-menu-item><el-menu-item index="models">模型实验室</el-menu-item><el-menu-item index="analytics">行为分析</el-menu-item><el-menu-item index="users">用户运营</el-menu-item><el-menu-item index="config">系统配置</el-menu-item><el-menu-item index="logs">审计日志</el-menu-item></el-menu></nav>
+        <nav class="side-section" aria-label="管理后台导航"><div class="side-label">工作台</div><el-menu :default-active="activeMenu" class="admin-menu" aria-label="后台功能菜单" @select="activeMenu = $event"><el-menu-item index="dashboard">总览</el-menu-item><el-menu-item index="matches">比赛工作台</el-menu-item><el-menu-item index="changelog">更新日志</el-menu-item><el-menu-item index="sources">数据源控制台</el-menu-item><el-menu-item index="models">模型实验室</el-menu-item><el-menu-item index="analytics">行为分析</el-menu-item><el-menu-item index="users">用户运营</el-menu-item><el-menu-item index="config">系统配置</el-menu-item><el-menu-item index="logs">审计日志</el-menu-item></el-menu></nav>
         <div class="side-section side-meta"><div class="side-label">当前概览</div><div class="meta-item"><span>比赛维护</span><strong>{{ crawlerMatchTotal }}</strong></div><div class="meta-item"><span>用户</span><strong>{{ users.length }}</strong></div><div class="meta-item"><span>Agent 完成</span><strong>{{ agentMetrics?.completed ?? '—' }}</strong></div><div class="meta-item"><span>日志</span><strong>{{ logs.length }}</strong></div></div>
       </el-aside>
       <el-container>
@@ -41,6 +41,7 @@
             </el-card>
           </section>
           <section v-if="activeMenu === 'matches'"><MatchWorkbench v-model:keyword="crawlerMatchKeyword" v-model:status="crawlerMatchStatus" v-model:date="crawlerMatchDate" :matches="crawlerMatches" :total="crawlerMatchTotal" :page="crawlerMatchPage" :page-size="crawlerMatchPageSize" :error="sectionErrors.matches" @reload="loadMatches" @size-change="handleCrawlerMatchSizeChange" @create="openCrawlerMatchDialog()" @edit="openCrawlerMatchDialog" @delete="deleteCrawlerMatch" /></section>
+          <section v-if="activeMenu === 'changelog'"><AdminChangelogPanel /></section>
           <section v-if="activeMenu === 'users'" class="admin-panel-section"><AdminUsersPanel :users="users" v-model:role-filter="userRoleFilter" v-model:status-filter="userStatusFilter" :error="sectionErrors.users" @filter-change="loadUsers" @retry="loadUsers" @user-action="handleUserCommand" /></section>
           <section v-if="activeMenu === 'config'" class="admin-panel-section"><AdminConfigPanel :config="config" :error="sectionErrors.config" @save="saveConfig" @retry="loadConfig" /></section>
           <section v-if="activeMenu === 'logs'" class="admin-panel-section"><AdminLogPanel :logs="logs" v-model:module-filter="logModuleFilter" :error="sectionErrors.logs" @filter-change="loadLogs" @retry="loadLogs" @open-detail="openLogDetail" /></section>
@@ -61,6 +62,7 @@ import { InfoFilled } from '@element-plus/icons-vue'
 import { adminApi } from '../../api/admin'
 import { agentApi, crawlerApi, predictionApi } from '../../api'
 import AdminConfigPanel from './AdminConfigPanel.vue'
+import AdminChangelogPanel from './AdminChangelogPanel.vue'
 import AdminCrawlerMatchEditorDialog from './AdminCrawlerMatchEditorDialog.vue'
 import AdminLogPanel from './AdminLogPanel.vue'
 import AdminUsersPanel from './AdminUsersPanel.vue'
@@ -103,7 +105,7 @@ const currentLog = reactive({})
 const dashboardTodayMatches = ref([])
 const lastReloadAt = ref('')
 
-const pageTitle = computed(() => ({ dashboard: '管理总览', matches: '比赛维护工作台', sources: '数据源控制台', models: '模型实验室', analytics: '行为分析', users: '用户运营中心', config: '系统配置中心', logs: '审计与追踪' }[activeMenu.value]))
+const pageTitle = computed(() => ({ dashboard: '管理总览', matches: '比赛维护工作台', changelog: '更新日志', sources: '数据源控制台', models: '模型实验室', analytics: '行为分析', users: '用户运营中心', config: '系统配置中心', logs: '审计与追踪' }[activeMenu.value]))
 const activeUserCount = computed(() => users.value.filter(user => user.status === 'ACTIVE').length)
 const todaysMatchCount = computed(() => dashboardTodayMatches.value.length)
 const metrics = computed(() => [{ label: '今日比赛', value: todaysMatchCount.value, desc: '主爬虫今日采集' }, { label: '比赛总量', value: crawlerMatchTotal.value, desc: '当前生产赛事库' }, { label: '活跃用户', value: activeUserCount.value, desc: '账号状态为 ACTIVE' }, { label: '审计日志', value: logs.value.length, desc: '最近加载记录' }])

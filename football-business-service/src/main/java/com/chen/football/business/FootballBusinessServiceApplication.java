@@ -30,6 +30,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 "com.chen.football.analytics",
                 "com.chen.football.search",
                 "com.chen.football.card",
+                "com.chen.football.changelog",
                 "com.chen.football.media",
                 "com.chen.football.common"
         },

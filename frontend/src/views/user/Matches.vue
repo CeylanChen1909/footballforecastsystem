@@ -5,6 +5,10 @@
       subtitle="比赛"
       :brand-icon="Football"
       active-path="/matches"
+    >
+      <template #actions>
+        <ChangelogButton />
+      </template>
     </AppTopNav>
 
     <el-container class="matches-layout">
@@ -201,6 +205,7 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import MatchCard from '../../components/MatchCard.vue'
 import MatchFocusRail from '../../components/matches/MatchFocusRail.vue'
+import ChangelogButton from '../../components/matches/ChangelogButton.vue'
 import { getBusinessDate } from '../../utils/match'
 import { getTeamSearchTokens, normalizeTeamSearch } from '../../utils/teamNames'
 import { useMatchRecommendations } from '../../composables/useMatchRecommendations'
