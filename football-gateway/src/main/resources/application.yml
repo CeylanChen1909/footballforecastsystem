@@ -7,6 +7,9 @@ spring:
     import: optional:file:./.env[.properties]
   application:
     name: football-gateway
+  profiles:
+    # 本地直接启动时使用开发配置；生产容器必须显式设置 SPRING_PROFILES_ACTIVE=prod。
+    default: dev
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
