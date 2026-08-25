@@ -100,7 +100,8 @@ public class EmailVerificationService {
         return result;
     }
 
-    public boolean verifyAndConsume(String rawEmail, String scene, String rawCode) {
+    /** 验证验证码但不消费；业务校验全部通过后再调用 consume。 */
+    public boolean verify(String rawEmail, String scene, String rawCode) {
         String email = normalizeEmail(rawEmail);
         String code = rawCode == null ? "" : rawCode.trim();
         if (!isValidEmail(email) || !code.matches("\\d{6}")) return false;
@@ -113,16 +114,31 @@ public class EmailVerificationService {
         try {
             stored = redisTemplate.opsForValue().get(codeKey);
         } catch (RuntimeException unavailable) {
-            CodeEntry entry = localCodes.remove(codeKey);
-            stored = entry != null && !entry.expiresAt().isBefore(Instant.now()) ? entry.code() : null;
+            // 失败校验不能删除验证码，否则用户输错一次后正确验证码会被误判为过期。
+            CodeEntry entry = localCodes.get(codeKey);
+            if (entry != null && entry.expiresAt().isBefore(Instant.now())) {
+                localCodes.remove(codeKey, entry);
+                entry = null;
+            }
+            stored = entry == null ? null : entry.code();
         }
         if (stored == null) return false;
-        boolean matched = MessageDigest.isEqual(stored.getBytes(java.nio.charset.StandardCharsets.UTF_8), code.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        if (matched) {
-            try { redisTemplate.delete(codeKey); } catch (RuntimeException ignored) { }
-            localCodes.remove(codeKey);
-        }
-        return matched;
+        return MessageDigest.isEqual(stored.getBytes(java.nio.charset.StandardCharsets.UTF_8), code.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /** 消费已验证的验证码；重复调用安全。 */
+    public void consume(String rawEmail, String scene) {
+        String email = normalizeEmail(rawEmail);
+        if (!isValidEmail(email)) return;
+        String codeKey = key(normalizeScene(scene), email);
+        try { redisTemplate.delete(codeKey); } catch (RuntimeException ignored) { }
+        localCodes.remove(codeKey);
+    }
+
+    public boolean verifyAndConsume(String rawEmail, String scene, String rawCode) {
+        if (!verify(rawEmail, scene, rawCode)) return false;
+        consume(rawEmail, scene);
+        return true;
     }
 
     public static String normalizeEmail(String email) { return email == null ? "" : email.trim().toLowerCase(Locale.ROOT); }

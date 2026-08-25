@@ -211,6 +211,9 @@ const normalizeHistoryItem = item => ({ ...item, homeWinProb: item.homeWinProb, 
 const loadIdentity = async () => {
   const result = unwrap(await userApi.getCurrentUser())
   Object.assign(profileIdentity, { userId: result?.userId || userStore.userId, username: result?.username || userStore.username, nickname: result?.nickname || result?.username || userStore.username, email: result?.email || '', emailVerified: Boolean(result?.emailVerified), avatarData: result?.avatarData || '', nicknameUpdatedAt: result?.nicknameUpdatedAt || null, role: result?.role || userStore.role, createdAt: result?.createdAt || null })
+  userStore.email = profileIdentity.email
+  userStore.emailVerified = profileIdentity.emailVerified
+  userStore.avatarData = profileIdentity.avatarData
   avatarLoadFailed.value = false
   profileForm.nickname = profileIdentity.nickname
 }
@@ -299,6 +302,7 @@ const onAvatarSelected = event => {
       const result = unwrap(await userApi.updateAvatar(avatarData))
       if (result?.ok === false) throw new Error(result.message || '头像更新失败')
       profileIdentity.avatarData = avatarData
+      userStore.avatarData = avatarData
       avatarLoadFailed.value = false
       ElMessage.success('头像已更新')
     } catch (error) { ElMessage.error(error?.message || '头像更新失败') } finally { avatarSaving.value = false }

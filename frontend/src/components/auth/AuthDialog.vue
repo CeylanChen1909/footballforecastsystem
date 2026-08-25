@@ -45,7 +45,8 @@
             <el-input v-model="registerForm.nickname" placeholder="对外展示的昵称" prefix-icon="User" clearable size="large" />
           </el-form-item>
           <el-form-item label="图形验证" prop="captchaAnswer">
-            <ImageCaptcha :image="registerCaptchaImage" v-model:answer="registerForm.captchaAnswer" @refresh="refreshRegisterCaptcha" />
+            <div v-if="registerCaptchaVerified" class="captcha-verified"><span aria-hidden="true">✓</span> 图形验证已通过，可继续填写邮箱验证码</div>
+            <ImageCaptcha v-else :image="registerCaptchaImage" v-model:answer="registerForm.captchaAnswer" @refresh="refreshRegisterCaptcha" />
           </el-form-item>
           <el-form-item label="邮箱验证码" prop="verificationCode">
             <div class="code-row"><el-input v-model="registerForm.verificationCode" placeholder="6 位验证码" /><el-button :disabled="codeCountdown > 0" @click="sendRegisterCode">{{ codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码' }}</el-button></div>
@@ -99,6 +100,8 @@ const resetFormRef = ref()
 const loginForm = reactive({ account: '', password: '', captchaAnswer: '' })
 const registerForm = reactive({ email: '', nickname: '', password: '', confirmPassword: '', verificationCode: '', captchaId: '', captchaAnswer: '' })
 const registerCaptchaImage = ref('')
+const registerCaptchaVerified = ref(false)
+const registerCodeEmail = ref('')
 const resetForm = reactive({ email: '', verificationCode: '', password: '', confirmPassword: '' })
 const codeCountdown = ref(0)
 const resetCodeCountdown = ref(0)
@@ -107,6 +110,15 @@ let resetCodeTimer = null
 
 watch(() => userStore.authDialogTab, value => { activeTab.value = value || 'login' })
 watch(activeTab, value => { if (value === 'register' && !registerCaptchaImage.value) refreshRegisterCaptcha() })
+watch(() => registerForm.email, value => {
+  const email = String(value || '').trim().toLowerCase()
+  if (registerCodeEmail.value && email !== registerCodeEmail.value) {
+    registerCodeEmail.value = ''
+    registerForm.verificationCode = ''
+    registerCaptchaVerified.value = false
+    refreshRegisterCaptcha()
+  }
+})
 watch(() => userStore.authDialogVisible, value => {
   if (value) {
     activeTab.value = userStore.authDialogTab || 'login'
@@ -144,6 +156,7 @@ const resetRules = {
 const refreshRegisterCaptcha = async () => {
   registerForm.captchaAnswer = ''
   registerCaptchaImage.value = ''
+  registerCaptchaVerified.value = false
   try {
     const result = await userApi.getRegistrationCaptcha()
     const data = result?.data ?? result
@@ -157,12 +170,18 @@ const refreshRegisterCaptcha = async () => {
 
 const sendRegisterCode = async () => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) { ElMessage.warning('请先输入有效邮箱'); return }
+  if (registerCaptchaVerified.value) {
+    await refreshRegisterCaptcha()
+    ElMessage.info('请完成新的图形验证后再发送验证码')
+    return
+  }
   if (!registerForm.captchaId || !registerForm.captchaAnswer) { ElMessage.warning('请先完成图形验证'); return }
   try {
     const result = await userApi.sendEmailCode(registerForm.email, 'REGISTER', registerForm.captchaId, registerForm.captchaAnswer)
     if (result?.ok === false) throw new Error(result.message || '验证码发送失败')
     ElMessage.success(result?.delivery === 'console' ? '验证码已写入后端开发日志' : '验证码已发送，请查收邮件')
-    await refreshRegisterCaptcha()
+    registerCodeEmail.value = registerForm.email.trim().toLowerCase()
+    registerCaptchaVerified.value = true
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
   } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
@@ -215,7 +234,7 @@ const handleRegister = async () => {
       activeTab.value = 'login'
       loginForm.account = registerForm.email
       loginForm.password = ''
-    } else await refreshRegisterCaptcha()
+    }
   } catch (error) {
     ElMessage.error(error?.message || '注册失败，请稍后重试')
   } finally {
@@ -247,6 +266,7 @@ const handleReset = async () => {
 .submit-btn { width:100%; margin-top:4px; }
 .code-row, .captcha-row { display:flex; gap:8px; width:100%; align-items:center; }
 .code-row .el-input, .captcha-row .el-input { flex:1; }
+.captcha-verified { display:flex; align-items:center; gap:6px; min-height:42px; padding:0 12px; border:1px solid color-mix(in srgb, var(--ff-primary) 35%, var(--ff-border)); border-radius:7px; color:var(--ff-primary); background:var(--ff-primary-soft); font-size:12px; }
 .captcha-question { min-width:92px; padding:10px; border:1px solid var(--ff-border); border-radius:6px; background:var(--ff-surface-quiet); text-align:center; color:var(--ff-text-strong); }
 .guest-link { display:block; margin:18px auto 0; border:0; padding:0; color:var(--ff-text-muted); background:transparent; font-size:12px; cursor:pointer; }
 .guest-link:hover { color:var(--ff-primary); }

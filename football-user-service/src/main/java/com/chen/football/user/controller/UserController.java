@@ -94,13 +94,16 @@ public class UserController {
         if (!StringUtils.hasText(password) || password.length() < 8 || password.length() > MAX_PASSWORD_LENGTH) {
             return ApiResponse.ok(AuthResponse.failure("密码长度需在8-64位之间"));
         }
-        if (!registrationCaptchaService.verifyAndConsume(body.get("captchaId"), body.get("captchaAnswer"), ip)) {
-            return ApiResponse.ok(AuthResponse.failure("图形验证码错误或已过期，请刷新后重试"));
-        }
-        if (!emailVerificationService.verifyAndConsume(email, "REGISTER", verificationCode)) {
+        // 图形验证码在发送邮箱验证码时已经完成一次性校验；注册提交不再要求用户重复输入。
+        // 邮箱验证码先只验证不消费，避免昵称重复等业务校验失败后被误判为“已过期”。
+        if (!emailVerificationService.verify(email, "REGISTER", verificationCode)) {
             return ApiResponse.ok(AuthResponse.failure("邮箱验证码错误或已过期"));
         }
-        return ApiResponse.ok(toAuthResponse(authService.registerEmail(email, nickname, password)));
+        String registrationError = authService.validateEmailRegistration(email, nickname, password);
+        if (registrationError != null) return ApiResponse.ok(AuthResponse.failure(registrationError));
+        Map<String, Object> result = authService.registerEmail(email, nickname, password);
+        if (Boolean.TRUE.equals(result.get("ok"))) emailVerificationService.consume(email, "REGISTER");
+        return ApiResponse.ok(toAuthResponse(result));
     }
 
     @PostMapping("/email/verification-code")

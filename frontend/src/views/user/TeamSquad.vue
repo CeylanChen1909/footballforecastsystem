@@ -229,7 +229,7 @@ const loadSquad = async (force = false) => {
 
 const loadFavorites = async () => {
   if (!userStore.token) { favorites.value = []; favorited.value = false; return }
-  favorites.value = await favoriteApi.list().then(value => Array.isArray(value) ? value : value?.data || []).catch(() => [])
+  favorites.value = await favoriteApi.list().then(value => Array.isArray(value) ? value : value?.items || value?.data || []).catch(() => [])
   favorited.value = favoriteRecords.value.length > 0
 }
 const normalizeFavoriteIdentity = value => String(value || '').trim().toLowerCase()
@@ -247,7 +247,8 @@ const toggleFavorite = async () => {
       ElMessage.success('已取消关注')
     } else {
       const id = teamId.value || teamName.value
-      await favoriteApi.add(id, teamName.value, { teamLogo: teamLogo.value, leagueName: league.value })
+      const result = await favoriteApi.add(id, teamName.value, { teamLogo: teamLogo.value, leagueName: league.value })
+      if (result?.ok === false) throw new Error(result.message || '关注保存失败')
       ElMessage.success('已关注球队')
     }
     await loadFavorites()

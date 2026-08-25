@@ -109,10 +109,8 @@ public class AuthService {
     public Map<String, Object> registerEmail(String rawEmail, String nickname, String password) {
         String email = EmailVerificationService.normalizeEmail(rawEmail);
         String displayName = nickname == null ? "" : nickname.trim();
-        if (!EmailVerificationService.isValidEmail(email)) return fail("请输入有效邮箱");
-        String nicknameError = validateNickname(displayName);
-        if (nicknameError != null) return fail(nicknameError);
-        if (!StringUtils.hasText(password) || password.length() < 8 || password.length() > MAX_PASSWORD_LENGTH) return fail("密码长度需在8-64位之间");
+        String validationError = validateEmailRegistration(email, displayName, password);
+        if (validationError != null) return fail(validationError);
         UserEntity existing = userMapper.selectOne(new LambdaQueryWrapper<UserEntity>().eq(UserEntity::getEmail, email));
         if (existing != null) return fail("该邮箱已注册，请直接登录");
         if (findNicknameOwner(displayName, null) != null) return fail("该昵称已被使用，请换一个昵称");
@@ -132,6 +130,18 @@ public class AuthService {
         resp.put("username", displayName); resp.put("nickname", displayName); resp.put("email", email);
         auditService.record("USER", "REGISTER", "t_user", String.valueOf(u.getId()), "email=" + email, "SUCCESS");
         return resp;
+    }
+
+    /** 注册前置校验，供控制器在消费邮箱验证码前调用，避免昵称重复导致验证码被误消费。 */
+    public String validateEmailRegistration(String email, String nickname, String password) {
+        if (!EmailVerificationService.isValidEmail(email)) return "请输入有效邮箱";
+        String nicknameError = validateNickname(nickname == null ? "" : nickname.trim());
+        if (nicknameError != null) return nicknameError;
+        if (!StringUtils.hasText(password) || password.length() < 8 || password.length() > MAX_PASSWORD_LENGTH) return "密码长度需在8-64位之间";
+        UserEntity existing = userMapper.selectOne(new LambdaQueryWrapper<UserEntity>().eq(UserEntity::getEmail, email));
+        if (existing != null) return "该邮箱已注册，请直接登录";
+        if (findNicknameOwner(nickname == null ? "" : nickname.trim(), null) != null) return "该昵称已被使用，请换一个昵称";
+        return null;
     }
 
     public Map<String, Object> login(String username, String password) {

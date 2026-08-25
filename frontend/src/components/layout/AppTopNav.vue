@@ -43,7 +43,7 @@
       </el-badge>
       <el-dropdown trigger="click" @command="handleUserCommand">
         <div class="nav-account-trigger" :aria-label="userStore.token ? '打开个人菜单' : '打开登录菜单'">
-          <el-avatar :size="36" class="nav-avatar">{{ userStore.username?.[0]?.toUpperCase() || '客' }}</el-avatar>
+          <el-avatar :size="36" class="nav-avatar" :src="userStore.avatarData || undefined">{{ userStore.username?.[0]?.toUpperCase() || '客' }}</el-avatar>
           <el-icon class="nav-account-arrow" aria-hidden="true"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>

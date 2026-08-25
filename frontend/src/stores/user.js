@@ -12,6 +12,9 @@ export const useUserStore = defineStore('user', {
       token: authStorage.get('football_token') || '',
       refreshToken: authStorage.get('football_refresh_token') || '',
       username: savedUser.username || '',
+      email: savedUser.email || '',
+      emailVerified: Boolean(savedUser.emailVerified),
+      avatarData: savedUser.avatarData || '',
       userId: savedUser.userId || null,
       role: savedUser.role || 'USER',
       sessionChecked: false,
@@ -22,6 +25,23 @@ export const useUserStore = defineStore('user', {
     }
   },
   actions: {
+    async hydrateProfile() {
+      try {
+        const res = await userApi.getCurrentUser()
+        const data = res?.data ?? res
+        if (!data || !data.loggedIn || data.userId == null) return null
+        this.username = data.nickname || data.username || this.username
+        this.email = data.email || ''
+        this.emailVerified = Boolean(data.emailVerified)
+        this.avatarData = data.avatarData || ''
+        this.userId = data.userId
+        this.role = data.role || this.role
+        authStorage.set('football_user', JSON.stringify({ username: this.username, email: this.email, emailVerified: this.emailVerified, avatarData: this.avatarData, userId: this.userId, role: this.role }))
+        return data
+      } catch {
+        return null
+      }
+    },
     openAuthDialog(redirect = '', tab = 'login') {
       this.authDialogRedirect = typeof redirect === 'string' ? redirect : ''
       this.authDialogTab = tab === 'register' ? 'register' : 'login'
@@ -39,10 +59,13 @@ export const useUserStore = defineStore('user', {
         const res = await userApi.getCurrentUser()
         const data = res?.data ?? res
         if (data && data.loggedIn && data.userId != null) {
-          this.username = data.username || ''
+          this.username = data.nickname || data.username || ''
+          this.email = data.email || ''
+          this.emailVerified = Boolean(data.emailVerified)
+          this.avatarData = data.avatarData || ''
           this.userId = data.userId
           this.role = data.role || 'USER'
-          authStorage.set('football_user', JSON.stringify({ username: this.username, userId: this.userId, role: this.role }))
+          authStorage.set('football_user', JSON.stringify({ username: this.username, email: this.email, emailVerified: this.emailVerified, avatarData: this.avatarData, userId: this.userId, role: this.role }))
           this.sessionChecked = true
           return true
         }
@@ -71,7 +94,7 @@ export const useUserStore = defineStore('user', {
           this.userId = data.userId ?? this.userId
           this.role = data.role || this.role
           authStorage.set('football_token', data.token)
-          authStorage.set('football_user', JSON.stringify({ username: this.username, userId: this.userId, role: this.role }))
+          await this.hydrateProfile()
           return true
         }
       } catch {
@@ -94,7 +117,8 @@ export const useUserStore = defineStore('user', {
         authStorage.set('football_token', data.token)
         if (this.refreshToken) authStorage.set('football_refresh_token', this.refreshToken)
         else authStorage.remove('football_refresh_token')
-        authStorage.set('football_user', JSON.stringify({ username: this.username, userId: data.userId, role: this.role }))
+        authStorage.set('football_user', JSON.stringify({ username: this.username, email: data.email || '', emailVerified: Boolean(data.emailVerified), avatarData: data.avatarData || '', userId: data.userId, role: this.role }))
+        await this.hydrateProfile()
         return true
       } else {
         ElMessage.error(data.message || '登录失败')
@@ -118,6 +142,9 @@ export const useUserStore = defineStore('user', {
       this.token = ''
       this.refreshToken = ''
       this.username = ''
+      this.email = ''
+      this.emailVerified = false
+      this.avatarData = ''
       this.userId = null
       this.role = 'USER'
       this.sessionChecked = true
