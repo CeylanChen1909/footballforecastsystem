@@ -167,6 +167,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *java-service-env
+      NACOS_IP: football-user-service
       # Gmail SMTP 的 IPv4 地址轮换可能导致单个地址超时；允许通过 USER_JAVA_TOOL_OPTIONS 覆盖。
       JAVA_TOOL_OPTIONS: ${USER_JAVA_TOOL_OPTIONS:--Djava.net.preferIPv6Addresses=true -Dsun.net.inetaddr.ttl=60}
     depends_on:
@@ -189,6 +190,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *java-service-env
+      NACOS_IP: football-business-service
       # 历史比赛缓存不进入 Git 和 Java 镜像，部署前需从训练/数据归档机上传到该目录。
       HISTORICAL_MATCH_CACHE_PATH: /app/historical-cache
       HISTORICAL_MATCH_CACHE_REQUIRED: ${HISTORICAL_MATCH_CACHE_REQUIRED:-true}

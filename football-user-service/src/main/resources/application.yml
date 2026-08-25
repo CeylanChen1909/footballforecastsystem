@@ -1,5 +1,10 @@
 server:
   port: 9001
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 spring:
   config:
     # 启动时自动加载项目根目录 .env（密钥/数据库等配置无需手动传参）
