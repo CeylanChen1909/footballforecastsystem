@@ -37,6 +37,7 @@ public class CrawlerStanding {
     private String teamLogo;
 
     /** 排名 */
+    @com.baomidou.mybatisplus.annotation.TableField("`rank`")
     private Integer rank;
 
     /** 场次 */
