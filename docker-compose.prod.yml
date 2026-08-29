@@ -1,5 +1,12 @@
 version: '3.8'
 
+x-docker-logging: &docker-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+    compress: "true"
+
 x-java-service-env: &java-service-env
   SPRING_PROFILES_ACTIVE: prod
   MYSQL_HOST: mysql
@@ -70,6 +77,7 @@ services:
     image: mysql:8.0
     container_name: football-mysql
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DB}
@@ -81,6 +89,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=+08:00
+      - --binlog-expire-logs-seconds=604800
     ports:
       - "127.0.0.1:3306:3306"
     volumes:
@@ -98,6 +107,7 @@ services:
     image: redis:7-alpine
     container_name: football-redis
     restart: unless-stopped
+    logging: *docker-logging
     command: sh -c 'if [ -n "$${REDIS_PASSWORD}" ]; then redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"; else redis-server --appendonly yes; fi'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
@@ -118,6 +128,7 @@ services:
     image: nacos/nacos-server:v2.3.2
     container_name: football-nacos
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       MODE: standalone
       JVM_XMS: 256m
@@ -128,6 +139,7 @@ services:
       - "127.0.0.1:9848:9848"
     volumes:
       - nacos_data:/home/nacos/data
+      - ./nacos-config/nacos-logback.xml:/home/nacos/conf/nacos-logback.xml:ro
     networks:
       - football-network
     healthcheck:
@@ -144,6 +156,7 @@ services:
         MODULE: football-gateway
     container_name: football-gateway
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       <<: *java-service-env
       JAVA_OPTS: ${GATEWAY_JAVA_OPTS:--Xms256m -Xmx512m}
@@ -165,6 +178,7 @@ services:
         MODULE: football-user-service
     container_name: football-user-service
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       <<: *java-service-env
       NACOS_IP: football-user-service
@@ -188,6 +202,7 @@ services:
         MODULE: football-business-service
     container_name: football-business-service
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       <<: *java-service-env
       NACOS_IP: football-business-service
@@ -214,6 +229,7 @@ services:
       context: ./football-ml-service
     container_name: football-ml-service
     restart: unless-stopped
+    logging: *docker-logging
     environment:
       API_FOOTBALL_API_KEY: ${API_FOOTBALL_API_KEY:-}
       ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:-}
@@ -235,6 +251,7 @@ services:
       context: ./frontend
     container_name: football-frontend
     restart: unless-stopped
+    logging: *docker-logging
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
