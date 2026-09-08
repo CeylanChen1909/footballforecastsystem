@@ -49,3 +49,14 @@ curl -fsS -H "Authorization: Bearer $TOKEN" https://chenfootball.asia/api/analyt
 
 - Do not scrape credentials from `.env` into tickets; run checks on the host that already has env loaded.
 - Client-side route meta (title/description) still updates after SPA hydration; prerender shells are for crawlers/share bots only.
+
+## Host nginx (edge)
+
+Public HTTPS terminates at `/etc/nginx/sites-enabled/chenfootball.asia`.
+`/api/` proxies to gateway `:8082/api/`. Actuator lives at gateway `/actuator/health`, so the edge maps:
+
+```
+location = /api/actuator/health { proxy_pass http://127.0.0.1:8082/actuator/health; ... }
+```
+
+Frontend container nginx has the same map for direct `:3000` checks. Static `/health.json` is served by the SPA container via `location /`.
