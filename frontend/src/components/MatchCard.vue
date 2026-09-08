@@ -5,7 +5,7 @@
         <div class="team">
           <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
           <span v-else class="logo-placeholder" :aria-label="`查看${homeDisplayName}资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
-          <span class="team-name" role="button" tabindex="0" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="homeDisplayName" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
         </div>
         <div class="score">
           <span v-if="(isFinished || isLive) && goals?.home != null && goals?.away != null" class="score-text">
@@ -14,7 +14,7 @@
           <span v-else class="match-time" :class="{ 'is-unknown': !matchTimestamp }">{{ isFinished ? '比分待同步' : matchTimestamp ? formatTime(match) : '时间待同步' }}</span>
         </div>
         <div class="team">
-          <span class="team-name" role="button" tabindex="0" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="awayDisplayName" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
           <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
           <span v-else class="logo-placeholder" :aria-label="`查看${awayDisplayName}资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
         </div>
@@ -144,6 +144,9 @@ const formatTime = match => {
   border-radius: 8px;
   padding: 16px;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   transition: background-color var(--ff-transition), border-color var(--ff-transition);
   border: 1px solid var(--ff-border);
   display: flex;
@@ -172,6 +175,9 @@ const formatTime = match => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
 .team {
   display: flex;
@@ -209,7 +215,9 @@ const formatTime = match => {
   font-size: 13px;
   font-weight: 600;
   color: var(--ff-text);
-  max-width: 112px;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -229,7 +237,9 @@ const formatTime = match => {
 }
 
 .score {
-  min-width: 76px;
+  flex: 0 0 auto;
+  min-width: 64px;
+  max-width: 88px;
   text-align: center;
 }
 .score-text {
@@ -261,6 +271,8 @@ const formatTime = match => {
   color: var(--ff-text-muted);
   border-top: 1px solid var(--ff-border);
   padding-top: 10px;
+  min-width: 0;
+  width: 100%;
 }
 .match-meta > div {
   display: flex;
@@ -268,7 +280,9 @@ const formatTime = match => {
   gap: 3px;
 }
 .venue {
-  max-width: 100px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -342,6 +356,7 @@ const formatTime = match => {
 .action-area .el-button:active { box-shadow: none; }
 
 @media (max-width: 420px) {
+  .match-card { padding: 12px; }
   .action-area {
     grid-template-columns: minmax(0, 1fr) 34px 34px;
   }
@@ -349,5 +364,6 @@ const formatTime = match => {
     grid-column: 1 / -1;
     grid-row: 2;
   }
+  .score { min-width: 56px; }
 }
 </style>

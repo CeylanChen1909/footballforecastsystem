@@ -99,6 +99,10 @@ html, body, #app {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body, #app {
+  max-width: 100%;
+  min-width: 0;
+}
 body {
   overflow-x: hidden;
 }
@@ -160,6 +164,9 @@ button, input, textarea, select {
 
 .ff-page-shell {
   min-height: 100vh;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
   background: var(--ff-bg-alt);
 }
 

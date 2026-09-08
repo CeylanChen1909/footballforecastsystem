@@ -102,8 +102,8 @@ const onLogoError = event => { event.target.style.display = 'none' }
 </script>
 
 <style scoped>
-.focus-rail { margin: 0 0 18px; padding: 18px; border: 1px solid var(--ff-border); border-radius: var(--ff-radius-lg); background: var(--ff-surface); }
-.focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.focus-rail { margin: 0 0 18px; padding: 18px; border: 1px solid var(--ff-border); border-radius: var(--ff-radius-lg); background: var(--ff-surface); width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; min-width:0; flex-wrap:wrap; }
 .focus-kicker { color:var(--ff-primary); font:700 10px/1 var(--ff-mono); letter-spacing:.14em; }
 .focus-head h2 { margin:6px 0 3px; color:var(--ff-text-strong); font-size:18px; letter-spacing:-.02em; }
 .focus-head p { margin:0; color:var(--ff-text-muted); font-size:12px; }
@@ -111,7 +111,7 @@ const onLogoError = event => { event.target.style.display = 'none' }
 .focus-count { font-family:var(--ff-mono); }
 .focus-retry-link,.focus-state button,.focus-card-actions button { border:0; background:none; color:var(--ff-primary); cursor:pointer; font:inherit; }
 .focus-retry-link:hover,.focus-state button:hover,.focus-card-actions button:hover { text-decoration:underline; }
-.focus-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.focus-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; width:100%; min-width:0; }
 .focus-card { min-width:0; overflow:hidden; border:1px solid var(--ff-border); border-radius:10px; background:var(--ff-surface-quiet); transition:border-color .16s ease,background .16s ease; }
 .focus-card:hover { border-color:var(--ff-border-strong); background:var(--ff-surface-soft); }
 .focus-card.is-LIVE { border-color:color-mix(in srgb, #d04444 45%, var(--ff-border)); }
@@ -147,5 +147,5 @@ const onLogoError = event => { event.target.style.display = 'none' }
 .focus-skeleton-card b { width:70%; margin-top:26px; }.focus-skeleton-card em { width:46%; margin-top:20px; }
 @keyframes focus-skeleton { from{background-position:100% 0} to{background-position:-100% 0} }
 @media (max-width:900px) { .focus-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:620px) { .focus-rail { padding:14px; } .focus-list { grid-template-columns:1fr; } .focus-card-actions { justify-content:space-between; } }
+@media (max-width:620px) { .focus-rail { padding:14px; } .focus-list { grid-template-columns:1fr; } .focus-head > div:first-child { min-width:0; flex:1 1 160px; } .focus-head p { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; } .focus-card-actions { justify-content:space-between; } }
 </style>

@@ -868,11 +868,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.matches-page { min-height: 100vh; }
-.matches-layout { min-height: calc(100vh - 64px); }
-.main-content { padding: 18px 22px; overflow: visible; }
+.matches-page { min-height: 100vh; max-width: 100%; overflow-x: clip; }
+.matches-layout { min-height: calc(100vh - 64px); width: 100%; max-width: 100%; min-width: 0; }
+.main-content { padding: 18px 22px; overflow-x: hidden; width: 100%; max-width: 100%; min-width: 0; }
 .reminder-button { flex:none; }
-.date-rail { display:flex; gap:8px; align-items:stretch; overflow-x:auto; padding:2px 0 16px; }
+.date-rail { display:flex; gap:8px; align-items:stretch; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; padding:2px 0 16px; width:100%; max-width:100%; min-width:0; }
 .date-rail-arrow { flex:0 0 38px; display:flex; align-items:center; justify-content:center; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text-muted); cursor:pointer; transition:border-color var(--ff-transition-fast), color var(--ff-transition-fast), background var(--ff-transition-fast); }
 .date-rail-arrow:hover:not(:disabled), .date-rail-arrow:focus-visible { border-color:var(--ff-primary); color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }
 .date-rail-arrow:disabled { cursor:wait; opacity:.55; }
@@ -884,12 +884,12 @@ onBeforeUnmount(() => {
 .date-rail-item strong { display:block; margin:4px 0; font:700 20px/1 var(--ff-mono); }
 
 /* ===== 比赛列表 ===== */
-.matches-workspace { display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:18px; align-items:start; }
-.match-list-panel { min-width: 0; }
-.matches-focus-sidebar { min-width:0; position:sticky; top:82px; }
+.matches-workspace { display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:18px; align-items:start; width:100%; max-width:100%; min-width:0; }
+.match-list-panel { min-width: 0; max-width: 100%; }
+.matches-focus-sidebar { min-width:0; max-width:100%; position:sticky; top:82px; }
 .matches-focus-sidebar :deep(.focus-rail) { margin:0; }
 .matches-focus-sidebar :deep(.focus-list) { grid-template-columns:1fr; }
-.match-list-actions { display:flex; align-items:center; gap:10px; }
+.match-list-actions { display:flex; align-items:center; gap:10px; min-width:0; max-width:100%; }
 .league-filter { width: 168px; }
 .team-filter { width: 108px; }
 .team-language-button { flex:none; }
@@ -926,6 +926,8 @@ onBeforeUnmount(() => {
   border: 1px solid var(--ff-border);
   border-radius: 8px;
   padding: 18px;
+  min-width: 0;
+  max-width: 100%;
   transition: border-color var(--ff-transition), background var(--ff-transition);
 }
 .date-group:hover {
@@ -963,7 +965,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; width: 100%; min-width: 0; }
 
 /* ===== 历史交锋弹窗 ===== */
 .loading-state { padding: 20px 0; }
@@ -1050,15 +1052,17 @@ onBeforeUnmount(() => {
   .main-content { padding: 12px; }
   .date-rail-arrow { flex-basis:34px; }
   .date-rail-item { flex:0 0 82px; }
-  .match-list-actions { width:100%; justify-content:space-between; }
+  .match-list-panel :deep(.section-head) { flex-direction:column; align-items:stretch; gap:10px; }
+  .match-list-panel :deep(.section-actions) { width:100%; }
+  .match-list-actions { width:100%; justify-content:space-between; align-items:stretch; flex-wrap:wrap; }
   .prematch-info-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .league-filter { flex:1; min-width:0; }
   .team-filter { width: 86px; }
-  .match-list-actions { align-items:stretch; flex-wrap:wrap; }
   .match-list-actions .league-filter { flex:1 1 140px; }
   .match-list-actions .team-filter { flex:1 1 100px; width:auto; }
   .match-list-actions .el-checkbox { flex:1 1 100%; }
   .match-count-tag { margin-left:auto; }
+  .date-group { padding: 14px; }
   .event-row { grid-template-columns:42px 1fr 22px; }
   .event-row small { grid-column:2 / -1; }
   .lineup-grid { grid-template-columns:1fr; }

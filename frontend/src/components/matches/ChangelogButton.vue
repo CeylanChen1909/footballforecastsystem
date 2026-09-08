@@ -8,7 +8,7 @@
   >
     <span v-if="hasUnread" class="changelog-pulse" aria-hidden="true"></span>
     <el-icon class="changelog-icon" aria-hidden="true"><Clock /></el-icon>
-    <span>更新日志</span>
+    <span class="changelog-label">更新日志</span>
   </button>
 
   <el-drawer
@@ -169,5 +169,13 @@ onMounted(loadEntries)
 
 :deep(.el-drawer__header) { margin-bottom: 4px; padding: 20px 20px 12px; border-bottom: 1px solid var(--ff-border); }
 :deep(.el-drawer__body) { padding: 14px 20px 0; }
+@media (max-width: 768px) {
+  .changelog-label { display: none; }
+  .changelog-trigger {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+}
 @media (prefers-reduced-motion: reduce) { .changelog-trigger, .changelog-pulse { animation: none; transition: none; } }
 </style>

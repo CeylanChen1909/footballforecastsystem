@@ -6,8 +6,8 @@
         <component :is="brandIcon" :size="22" />
       </div>
       <div class="brand-text">
-        <div class="brand-title">{{ title }}</div>
-        <div class="brand-subtitle">{{ subtitle }}</div>
+        <div class="brand-title" :title="title">{{ title }}</div>
+        <div class="brand-subtitle" :title="subtitle">{{ subtitle }}</div>
       </div>
     </div>
 
@@ -186,6 +186,10 @@ onMounted(() => { if (userStore.token) loadNotifications() })
   z-index: 20;
   padding: 0 28px;
   min-height: 64px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 0;
   border-top: none;
   border-left: none;
@@ -242,13 +246,14 @@ onMounted(() => { if (userStore.token) loadNotifications() })
   background: var(--ff-primary-hover);
 }
 
-.brand-text { min-width: 0; }
+.brand-text { min-width: 0; overflow: visible; }
 .brand-title {
   font-size: 17px;
   font-weight: 600;
   color: var(--ff-text-strong);
   line-height: 1.1;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .brand-title em {
   font-style: normal;
@@ -260,6 +265,9 @@ onMounted(() => { if (userStore.token) loadNotifications() })
   color: var(--ff-text-muted);
   margin-top: 2px;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-menu-wrap {
@@ -348,17 +356,22 @@ onMounted(() => { if (userStore.token) loadNotifications() })
 @media (max-width: 768px) {
   .app-top-nav {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(min-content, 1fr) auto;
     grid-template-areas:
       "brand actions"
       "menu menu";
     align-items: center;
     height: auto;
     min-height: 60px;
-    padding: 10px 14px;
-    gap: 8px 12px;
+    padding: 10px 12px;
+    gap: 8px 8px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
-  .nav-brand { grid-area: brand; min-width: 0; }
+  .nav-brand { grid-area: brand; min-width: min-content; max-width: 100%; overflow: visible; }
+  .nav-brand .brand-icon.football-brand { width: 28px; height: 28px; }
+  .nav-brand .brand-title { font-size: 16px; }
   .nav-menu-wrap {
     grid-area: menu;
     display:none;
@@ -393,6 +406,8 @@ onMounted(() => { if (userStore.token) loadNotifications() })
     height:34px;
     line-height:34px;
   }
-  .nav-actions { grid-area: actions; gap: 6px; }
+  .nav-actions { grid-area: actions; gap: 2px; min-width: 0; }
+  .nav-actions :deep(.changelog-trigger) { padding: 0 8px; }
+  .nav-account-arrow { display: none; }
 }
 </style>
