@@ -38,15 +38,30 @@ public class GlobalSearchController {
                     "articles", List.of()));
         }
 
-        List<CrawlerMatch> matchRows = matchMapper.searchMatches(q);
+        List<String> queries = expandAliases(q);
+        List<CrawlerMatch> matchRows = new ArrayList<>();
+        Set<Long> seenMatchIds = new LinkedHashSet<>();
+        for (String query : queries) {
+            for (CrawlerMatch row : matchMapper.searchMatches(query)) {
+                Long key = row.getId() != null ? row.getId() : row.getFixtureId();
+                if (key != null && !seenMatchIds.add(key)) continue;
+                matchRows.add(row);
+            }
+        }
         List<Map<String, Object>> matches = matchRows.stream().limit(safe).map(this::match).toList();
 
-        List<Map<String, Object>> teams = teamMapper.searchByName(q).stream()
-                .limit(safe)
-                .map(this::team)
-                .toList();
+        List<Map<String, Object>> teams = new ArrayList<>();
+        Set<String> seenTeams = new LinkedHashSet<>();
+        for (String query : queries) {
+            for (CrawlerTeam row : teamMapper.searchByName(query)) {
+                String key = (row.getId() == null ? "" : row.getId()) + ":" + String.valueOf(row.getName());
+                if (!seenTeams.add(key)) continue;
+                teams.add(team(row));
+                if (teams.size() >= safe) break;
+            }
+            if (teams.size() >= safe) break;
+        }
 
-        // Also surface teams mentioned in match hits when dedicated team rows are thin.
         if (teams.isEmpty()) {
             Set<String> seen = new LinkedHashSet<>();
             List<Map<String, Object>> derived = new ArrayList<>();
@@ -66,6 +81,52 @@ public class GlobalSearchController {
         payload.put("leagues", leagues);
         payload.put("articles", articles);
         return ApiResponse.ok(payload);
+    }
+
+    private List<String> expandAliases(String keyword) {
+        LinkedHashSet<String> queries = new LinkedHashSet<>();
+        queries.add(keyword);
+        String key = keyword.toLowerCase(Locale.ROOT);
+        Map<String, List<String>> aliases = Map.ofEntries(
+                Map.entry("曼城", List.of("Manchester City", "Man City")),
+                Map.entry("曼联", List.of("Manchester United", "Man United")),
+                Map.entry("奈梅亨", List.of("NEC", "NEC Nijmegen")),
+                Map.entry("nec", List.of("NEC Nijmegen", "奈梅亨")),
+                Map.entry("阿森纳", List.of("Arsenal")),
+                Map.entry("利物浦", List.of("Liverpool")),
+                Map.entry("切尔西", List.of("Chelsea")),
+                Map.entry("热刺", List.of("Tottenham Hotspur", "Tottenham")),
+                Map.entry("皇马", List.of("Real Madrid")),
+                Map.entry("巴萨", List.of("Barcelona")),
+                Map.entry("拜仁", List.of("Bayern Munich")),
+                Map.entry("多特", List.of("Borussia Dortmund")),
+                Map.entry("国米", List.of("Inter Milan")),
+                Map.entry("尤文", List.of("Juventus")),
+                Map.entry("大巴黎", List.of("Paris Saint-Germain", "PSG")),
+                Map.entry("英超", List.of("Premier League")),
+                Map.entry("西甲", List.of("La Liga")),
+                Map.entry("意甲", List.of("Serie A")),
+                Map.entry("德甲", List.of("Bundesliga")),
+                Map.entry("法甲", List.of("Ligue 1")),
+                Map.entry("荷甲", List.of("Eredivisie")),
+                Map.entry("葡超", List.of("Primeira Liga")),
+                Map.entry("英冠", List.of("Championship"))
+        );
+        for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
+            String aliasKey = entry.getKey().toLowerCase(Locale.ROOT);
+            if (key.equals(aliasKey) || key.contains(aliasKey) || aliasKey.contains(key)) {
+                queries.add(entry.getKey());
+                queries.addAll(entry.getValue());
+            }
+            for (String alias : entry.getValue()) {
+                String normalized = alias.toLowerCase(Locale.ROOT);
+                if (key.equals(normalized) || key.contains(normalized) || normalized.contains(key)) {
+                    queries.add(entry.getKey());
+                    queries.addAll(entry.getValue());
+                }
+            }
+        }
+        return List.copyOf(queries);
     }
 
     private void addDerivedTeam(List<Map<String, Object>> out, Set<String> seen,
@@ -88,11 +149,6 @@ public class GlobalSearchController {
         for (CrawlerMatch match : matches) {
             String league = match.getLeagueName();
             if (league == null || league.isBlank()) continue;
-            if (!league.toLowerCase(Locale.ROOT).contains(needle) && !needle.contains(league.toLowerCase(Locale.ROOT))) {
-                // Keep leagues from match hits even when the query was a team name,
-                // but prefer direct league-name hits first.
-                if (!seen.isEmpty() && leagues.size() >= Math.min(3, limit)) continue;
-            }
             if (!seen.add(league)) continue;
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("name", league);
@@ -100,7 +156,6 @@ public class GlobalSearchController {
             leagues.add(row);
             if (leagues.size() >= limit) break;
         }
-        // Prefer leagues whose name matches the query.
         leagues.sort((a, b) -> {
             boolean aHit = String.valueOf(a.get("name")).toLowerCase(Locale.ROOT).contains(needle);
             boolean bHit = String.valueOf(b.get("name")).toLowerCase(Locale.ROOT).contains(needle);
