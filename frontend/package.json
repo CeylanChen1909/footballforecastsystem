@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-meta.mjs",
     "preview": "vite preview",
     "test": "npm run test:smoke && npm run test:perf",
     "test:smoke": "node scripts/smoke-routes.mjs",

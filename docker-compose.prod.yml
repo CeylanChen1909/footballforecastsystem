@@ -169,6 +169,13 @@ services:
         condition: service_healthy
     networks:
       - football-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/actuator/health | grep -q UP || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
 
   football-user-service:
     build:
@@ -259,6 +266,13 @@ services:
         condition: service_started
     networks:
       - football-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health.json | grep -q ok || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 
 volumes:
   mysql_data:
