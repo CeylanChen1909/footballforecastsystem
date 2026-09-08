@@ -1050,8 +1050,18 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .matches-grid { grid-template-columns: 1fr; }
   .main-content { padding: 12px; }
-  .date-rail-arrow { flex-basis:34px; }
-  .date-rail-item { flex:0 0 82px; }
+  .date-rail {
+    scroll-snap-type: x mandatory;
+    gap: 6px;
+    padding: 2px 0 14px;
+  }
+  .date-rail-arrow { display: none; }
+  .date-rail-item {
+    flex: 0 0 88px;
+    min-width: 0;
+    padding: 11px 12px;
+    scroll-snap-align: start;
+  }
   .match-list-panel :deep(.section-head) { flex-direction:column; align-items:stretch; gap:10px; }
   .match-list-panel :deep(.section-actions) { width:100%; }
   .match-list-actions { width:100%; justify-content:space-between; align-items:stretch; flex-wrap:wrap; }

@@ -147,5 +147,50 @@ const onLogoError = event => { event.target.style.display = 'none' }
 .focus-skeleton-card b { width:70%; margin-top:26px; }.focus-skeleton-card em { width:46%; margin-top:20px; }
 @keyframes focus-skeleton { from{background-position:100% 0} to{background-position:-100% 0} }
 @media (max-width:900px) { .focus-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:620px) { .focus-rail { padding:14px; } .focus-list { grid-template-columns:1fr; } .focus-head > div:first-child { min-width:0; flex:1 1 160px; } .focus-head p { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; } .focus-card-actions { justify-content:space-between; } }
+@media (max-width:620px) {
+  .focus-rail { padding:14px; }
+  .focus-list { grid-template-columns:1fr; }
+  .focus-head > div:first-child { min-width:0; flex:1 1 160px; }
+  .focus-head p { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+  .focus-card-actions { justify-content:space-between; }
+  /* Vertical matchup: home / score / away */
+  .focus-matchup {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .focus-team,
+  .focus-team.away {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .focus-team.away {
+    flex-direction: row-reverse;
+  }
+  .focus-team.away strong { text-align: left; }
+  .focus-team strong {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: unset;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .focus-center {
+    width: 100%;
+    align-items: center;
+  }
+  /* Reason chips wrap; larger action tap target */
+  .focus-reasons {
+    flex-wrap: wrap;
+    overflow: visible;
+    min-height: 0;
+  }
+  .focus-card-actions button {
+    min-height: 36px;
+    padding: 8px 4px;
+  }
+}
 </style>

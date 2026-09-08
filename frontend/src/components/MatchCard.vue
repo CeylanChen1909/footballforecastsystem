@@ -62,6 +62,9 @@
               <el-icon><ChatLineSquare /></el-icon>
               AI 助手
             </el-dropdown-item>
+            <el-dropdown-item command="details" divided>
+              赛事数据
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -126,6 +129,8 @@ const handleMoreCommand = (command) => {
     emit('h2h', fixture.value?.id, homeTeam.value?.id, awayTeam.value?.id, homeTeam.value?.name, awayTeam.value?.name)
   } else if (command === 'agent') {
     emit('agent', props.match)
+  } else if (command === 'details') {
+    emit('details', props.match)
   }
 }
 
@@ -355,15 +360,51 @@ const formatTime = match => {
 }
 .action-area .el-button:active { box-shadow: none; }
 
+/* Vertical matchup on narrow phones; desktop stays horizontal */
+@media (max-width: 620px) {
+  .team-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .team,
+  .team:last-child {
+    flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .team:last-child .team-name {
+    text-align: left;
+  }
+  .team-name {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: unset;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .score {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    padding: 2px 0;
+  }
+}
+
 @media (max-width: 420px) {
   .match-card { padding: 12px; }
   .action-area {
     grid-template-columns: minmax(0, 1fr) 34px 34px;
   }
-  .action-details {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .action-primary {
+    width: 100%;
   }
-  .score { min-width: 56px; }
+  /* Hide separate details button; use more-menu item instead */
+  .action-details {
+    display: none;
+  }
+  .score { min-width: 0; }
 }
 </style>
