@@ -3,7 +3,25 @@
     <AppTopNav title="ChenFootball" subtitle="Agent" :brand-icon="ChatLineSquare" active-path="/agent" />
 
     <main id="app-main" class="agent-main" tabindex="-1">
-      <section class="agent-shell">
+      <section v-if="!userStore.token" class="agent-teaser ff-panel" aria-label="Agent 登录引导">
+        <div class="agent-teaser-intro">
+          <span class="launcher-mark"><el-icon :size="22"><ChatLineSquare /></el-icon></span>
+          <div>
+            <h1>登录后使用 Football Agent</h1>
+            <p>用自然语言查询赛程、球队状态与预测依据。先给结论，再说明数据与不确定性。</p>
+          </div>
+        </div>
+        <div class="agent-teaser-examples" aria-label="示例问题">
+          <button v-for="task in teaserPrompts" :key="task.label" type="button" class="agent-teaser-card" @click="promptLogin">
+            <strong>{{ task.label }}</strong>
+            <small>{{ task.description }}</small>
+          </button>
+        </div>
+        <el-button type="primary" size="large" @click="promptLogin">登录后开始提问</el-button>
+        <p class="agent-teaser-note">浏览公开赛程与预测无需登录；Agent 会话需要账号以便保存历史。</p>
+      </section>
+
+      <section v-else class="agent-shell">
         <header class="agent-toolbar">
           <div class="toolbar-leading">
             <el-button class="toolbar-icon" text :icon="ChatLineSquare" :aria-label="sessionDrawerVisible ? '关闭会话列表' : '打开会话列表'" @click="sessionDrawerVisible = !sessionDrawerVisible" />
@@ -129,6 +147,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
 import { agentApi, analyticsApi } from '../../api'
 import { authStorage } from '../../utils/authStorage'
@@ -170,6 +189,10 @@ const taskPrompts = [
   { label: '解释一场预测', description: '说明模型依据、缺失项与主要风险', prompt: '请解释这场比赛的统一预测结论：引用实际读取到的特征、数据来源和风险，不要重复概率。' },
   { label: '整理关注比赛', description: '按开赛时间整理接下来 24 小时的比赛', prompt: '请帮我整理关注比赛：按开赛时间列出接下来24小时的比赛，并标记预测是否已生成。' }
 ]
+const userStore = useUserStore()
+const teaserPrompts = taskPrompts.slice(0, 2)
+const promptLogin = () => userStore.openAuthDialog('/agent')
+
 const runSteps = [
   { key: 'understand', label: '理解' },
   { key: 'retrieve', label: '读取' },
@@ -835,5 +858,26 @@ onBeforeUnmount(() => {
   .evidence-drawer { top:auto; max-height:72vh; }
   .session-drawer { max-height:76vh; }
   .drawer-heading { padding-bottom:11px; }
+}
+
+.agent-teaser {
+  max-width: 820px; margin: 0 auto; padding: 28px 22px;
+  display:flex; flex-direction:column; gap:18px;
+}
+.agent-teaser-intro { display:flex; gap:14px; align-items:flex-start; }
+.agent-teaser-intro h1 { margin:0 0 6px; font-size:22px; color:var(--ff-text-strong); }
+.agent-teaser-intro p { margin:0; color:var(--ff-text-muted); font-size:13px; line-height:1.6; }
+.agent-teaser-examples { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.agent-teaser-card {
+  display:flex; flex-direction:column; gap:6px; text-align:left;
+  padding:14px; border:1px solid var(--ff-border); border-radius:12px;
+  background:var(--ff-surface-quiet); color:var(--ff-text); cursor:pointer;
+}
+.agent-teaser-card:hover, .agent-teaser-card:focus-visible { border-color:var(--ff-primary); outline:none; }
+.agent-teaser-card strong { font-size:14px; }
+.agent-teaser-card small { color:var(--ff-text-muted); font-size:12px; line-height:1.5; }
+.agent-teaser-note { margin:0; color:var(--ff-text-faint); font-size:12px; }
+@media (max-width: 680px) {
+  .agent-teaser-examples { grid-template-columns:1fr; }
 }
 </style>

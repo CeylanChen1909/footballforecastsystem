@@ -37,7 +37,7 @@
     <div class="nav-actions">
       <slot name="actions" />
       <el-button text class="mobile-menu-toggle" :aria-expanded="mobileMenuOpen" :aria-label="mobileMenuOpen ? '关闭导航菜单' : '打开导航菜单'" :title="mobileMenuOpen ? '关闭导航菜单' : '导航菜单'" @click="mobileMenuOpen = !mobileMenuOpen"><el-icon><Menu /></el-icon></el-button>
-      <el-button text class="global-search-btn" aria-label="全局搜索" title="全局搜索" @click="searchVisible = true"><el-icon><Search /></el-icon></el-button>
+      <el-button text class="global-search-btn" aria-label="全局搜索" title="全局搜索" @click="searchVisible = true"><el-icon><Search /></el-icon><span class="nav-action-label">搜索</span></el-button>
       <el-badge v-if="userStore.token" :value="notificationUnread" :hidden="notificationUnread === 0" :max="99" class="notification-badge">
         <el-button text class="global-search-btn" aria-label="通知中心" title="通知中心" @click="openNotifications"><el-icon><Bell /></el-icon></el-button>
       </el-badge>
@@ -50,6 +50,7 @@
           <el-dropdown-menu>
             <el-dropdown-item v-if="userStore.token" command="profile"><el-icon><User /></el-icon> 个人信息</el-dropdown-item>
             <el-dropdown-item v-else command="login"><el-icon><SwitchButton /></el-icon> 登录 / 注册</el-dropdown-item>
+            <el-dropdown-item command="privacy"><el-icon><Notebook /></el-icon> 隐私说明</el-dropdown-item>
             <el-dropdown-item v-if="userStore.token" divided command="logout"><el-icon><SwitchButton /></el-icon> 退出登录</el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -107,7 +108,7 @@ const notificationLoading = ref(false)
 const notifications = ref([])
 const notificationUnread = ref(0)
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(userStore.role))
-const protectedPaths = ['/agent', '/profile', '/admin']
+const protectedPaths = ['/profile', '/admin']
 
 const requiresLogin = path => protectedPaths.some(value => path === value || path.startsWith(`${value}/`))
 
@@ -169,6 +170,8 @@ const handleUserCommand = (cmd) => {
     else userStore.openAuthDialog('/profile')
   } else if (cmd === 'login') {
     userStore.openAuthDialog(router.currentRoute.value.fullPath)
+  } else if (cmd === 'privacy') {
+    router.push('/privacy')
   }
 }
 
@@ -409,5 +412,10 @@ onMounted(() => { if (userStore.token) loadNotifications() })
   .nav-actions { grid-area: actions; gap: 2px; min-width: 0; }
   .nav-actions :deep(.changelog-trigger) { padding: 0 8px; }
   .nav-account-arrow { display: none; }
+}
+
+.nav-action-label { display:none; margin-left:4px; font-size:12px; }
+@media (min-width: 900px) and (max-width: 1100px) {
+  .nav-action-label { display:inline; }
 }
 </style>

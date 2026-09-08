@@ -23,7 +23,10 @@
           </div>
         </section>
 
-        <el-alert v-if="matchLoadError" :title="matchLoadError" type="warning" show-icon :closable="false" class="inline-status" />
+        <div v-if="matchLoadError" class="inline-status-row">
+          <el-alert :title="matchLoadError" type="warning" show-icon :closable="false" class="inline-status" />
+          <el-button size="small" plain :loading="loading" @click="loadMatch">重试</el-button>
+        </div>
 
         <div v-if="!predictionResult && predictionStatus !== 'LOADING'" class="prediction-state-panel" :class="`state-${String(predictionStatus).toLowerCase()}`">
           <div class="state-icon"><el-icon><TrendCharts /></el-icon></div>
@@ -1296,4 +1299,7 @@ onUnmounted(() => {
   .action-buttons .el-button, .predict-btn { width:100%; min-width:0; }
   .match-info-card .match-detail { padding:16px 0; }
 }
+
+.inline-status-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.inline-status-row .inline-status { flex:1; min-width:220px; margin:0; }
 </style>

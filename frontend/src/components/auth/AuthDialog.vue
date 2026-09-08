@@ -37,6 +37,13 @@
       </el-tab-pane>
 
       <el-tab-pane label="注册" name="register">
+        <ul class="register-value-props" aria-label="注册可获得的能力">
+          <li>开赛提醒与站内通知</li>
+          <li>收藏同步跨设备</li>
+          <li>预测历史可回看</li>
+          <li>解锁 Agent 问答</li>
+        </ul>
+        <p class="register-why">图形验证与邮箱验证码用于保护账号安全，不是额外门槛。</p>
         <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top" @submit.prevent="handleRegister">
           <el-form-item label="邮箱" prop="email">
             <el-input v-model="registerForm.email" placeholder="用于登录和接收验证码" prefix-icon="Message" clearable size="large" />
@@ -271,4 +278,7 @@ const handleReset = async () => {
 .guest-link { display:block; margin:18px auto 0; border:0; padding:0; color:var(--ff-text-muted); background:transparent; font-size:12px; cursor:pointer; }
 .guest-link:hover { color:var(--ff-primary); }
 .aux-link { display:block; margin:12px auto 0; border:0; padding:0; color:var(--ff-primary); background:transparent; font-size:12px; cursor:pointer; }.aux-link:hover { text-decoration:underline; }.terms-note { margin:12px 0 0; color:var(--ff-text-faint); font-size:11px; line-height:1.5; text-align:center; }.terms-note a { color:var(--ff-primary); }
+.register-value-props { margin:0 0 10px; padding:10px 12px 10px 28px; border:1px solid var(--ff-border); border-radius:10px; background:var(--ff-surface-quiet); color:var(--ff-text); font-size:12px; line-height:1.7; }
+.register-value-props li { list-style:disc; }
+.register-why { margin:0 0 12px; color:var(--ff-text-muted); font-size:11px; line-height:1.5; }
 </style>

@@ -16,7 +16,7 @@ const routes = [
   { path: '/card-rogue', redirect: '/matches', meta: { requiresAuth: false } },
   { path: '/news', name: 'News', redirect: { path: '/competitions' }, meta: { requiresAuth: false } },
   { path: '/videos', name: 'VideoHub', redirect: { path: '/competitions' }, meta: { requiresAuth: false } },
-  { path: '/agent', name: 'Agent', component: () => import('../views/user/Agent.vue'), meta: { requiresAuth: true, roles: ['USER', 'ADMIN', 'SUPER_ADMIN'] } },
+  { path: '/agent', name: 'Agent', component: () => import('../views/user/Agent.vue'), meta: { requiresAuth: false } },
   { path: '/prediction/:fixtureId', name: 'Prediction', component: () => import('../views/user/Prediction.vue'), meta: { requiresAuth: false } },
   { path: '/prediction/:fixtureId/detail', name: 'PredictionDetail', component: () => import('../views/user/Prediction.vue'), meta: { requiresAuth: false } },
   { path: '/profile', name: 'Profile', component: () => import('../views/user/Profile.vue'), meta: { requiresAuth: true, roles: ['USER', 'ADMIN', 'SUPER_ADMIN'] } },
@@ -82,9 +82,61 @@ const TITLES = {
   '/privacy': '隐私政策 - ChenFootball',
 }
 
+const SITE_ORIGIN = 'https://chenfootball.asia'
+const DEFAULT_DESCRIPTION = 'ChenFootball 提供足球赛程、赛事资料与智能预测，帮助你快速了解比赛信息与分析结果。'
+const DESCRIPTIONS = {
+  '/matches': '浏览今日与近期足球赛程，查看联赛筛选、收藏与开赛提醒。',
+  '/competitions': '查看联赛积分榜、参赛俱乐部与球队资料。',
+  '/privacy': '了解 ChenFootball 如何保存、使用与删除账号及赛程相关数据。',
+  '/agent': '用自然语言查询赛程、球队状态与预测依据。',
+  '/prediction': '查看单场比赛的统一预测结论、概率分布与数据覆盖。',
+  '/team': '查看球队阵容与相关资料。',
+  '/profile': '管理收藏、提醒偏好与账号安全。'
+}
+
+const upsertMeta = (attr, key, content) => {
+  if (!content) return
+  let el = document.head.querySelector('meta[' + attr + '="' + key + '"]')
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute(attr, key)
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
+const upsertCanonical = (href) => {
+  let link = document.head.querySelector('link[rel="canonical"]')
+  if (!link) {
+    link = document.createElement('link')
+    link.setAttribute('rel', 'canonical')
+    document.head.appendChild(link)
+  }
+  link.setAttribute('href', href)
+}
+
+const canonicalPathFor = (path) => {
+  if (path.startsWith('/prediction/')) return path.replace(/\/detail$/, '')
+  if (path.startsWith('/team/')) return path
+  const known = ['/matches', '/competitions', '/privacy', '/agent', '/profile', '/admin', '/login']
+  const hit = known.find((key) => path === key || path.startsWith(key + '/'))
+  return hit || '/matches'
+}
+
 router.afterEach((to) => {
   const match = Object.keys(TITLES).find((key) => to.path.startsWith(key))
   document.title = match ? TITLES[match] : DEFAULT_TITLE
+
+  const descKey = Object.keys(DESCRIPTIONS).find((key) => to.path.startsWith(key))
+  const description = descKey ? DESCRIPTIONS[descKey] : DEFAULT_DESCRIPTION
+  upsertMeta('name', 'description', description)
+  upsertMeta('property', 'og:title', document.title)
+  upsertMeta('property', 'og:description', description)
+  upsertMeta('property', 'og:url', SITE_ORIGIN + canonicalPathFor(to.path))
+  upsertMeta('name', 'twitter:title', document.title)
+  upsertMeta('name', 'twitter:description', description)
+
+  upsertCanonical(SITE_ORIGIN + canonicalPathFor(to.path))
 })
 
 

@@ -11,6 +11,19 @@
       </template>
     </AppTopNav>
 
+    <div v-if="onboardingVisible" class="matches-onboarding" role="region" aria-label="使用引导">
+      <div class="matches-onboarding-copy">
+        <strong>快速上手</strong>
+        <ol>
+          <li>看赛程</li>
+          <li>看预测</li>
+          <li>收藏提醒</li>
+          <li>试试 Agent</li>
+        </ol>
+      </div>
+      <button type="button" class="matches-onboarding-dismiss" aria-label="关闭引导" @click="dismissOnboarding">知道了</button>
+    </div>
+
     <el-container class="matches-layout">
       <el-main id="app-main" class="main-content" tabindex="-1">
         <nav class="date-rail" :aria-label="`${matchesHeading}日期导航`">
@@ -18,7 +31,7 @@
             <el-icon><ArrowLeft /></el-icon>
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
-            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ item.count }} 场</small>
+            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ countsReady ? (item.count + " 场") : "…" }}</small>
           </button>
           <button type="button" class="date-rail-arrow" :disabled="loading" aria-label="查看后一天" title="查看后一天" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
@@ -26,8 +39,15 @@
         </nav>
 
         <div class="matches-workspace">
-          <aside class="matches-focus-sidebar" aria-label="比赛焦点侧栏">
+          <aside class="matches-focus-sidebar" aria-label="比赛焦点侧栏" :class="{ 'is-collapsed': focusCollapsed }">
+            <div class="focus-collapse-bar">
+              <span>比赛焦点</span>
+              <button type="button" class="focus-collapse-btn" :aria-expanded="!focusCollapsed" :aria-label="focusCollapsed ? '展开焦点' : '收起焦点'" @click="toggleFocusCollapsed">
+                {{ focusCollapsed ? '展开焦点' : '收起焦点' }}
+              </button>
+            </div>
             <MatchFocusRail
+              v-show="!focusCollapsed"
               :items="hotMatches"
               :meta="hotMeta"
               :loading="hotLoading"
@@ -56,8 +76,8 @@
                 <el-button class="reminder-button" size="small" plain :loading="remindersChanging" :type="remindersEnabled ? 'success' : 'default'" @click="toggleMatchReminders">
                   <el-icon><Bell /></el-icon>{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}
                 </el-button>
-                <div class="match-count-tag">
-                  <span class="match-count-num">{{ matchCount }}</span>
+                <div class="match-count-tag" :aria-busy="loading ? 'true' : 'false'">
+                  <span class="match-count-num">{{ loading ? '…' : matchCount }}</span>
                   <span class="match-count-unit">场比赛</span>
                 </div>
               </div>
@@ -225,6 +245,19 @@ const matchFavorites = ref([])
 const selectedLeague = ref('all')
 const teamKeyword = ref('')
 const teamNameMode = ref(localStorage.getItem('football_team_name_mode') === 'zh' ? 'zh' : 'en')
+const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
+const FOCUS_COLLAPSE_KEY = 'football_matches_focus_collapsed'
+const onboardingVisible = ref(false)
+const focusCollapsed = ref(false)
+const countsReady = ref(false)
+const dismissOnboarding = () => {
+  onboardingVisible.value = false
+  localStorage.setItem(ONBOARDING_KEY, '1')
+}
+const toggleFocusCollapsed = () => {
+  focusCollapsed.value = !focusCollapsed.value
+  localStorage.setItem(FOCUS_COLLAPSE_KEY, focusCollapsed.value ? '1' : '0')
+}
 const onlyFavorites = ref(false)
 const remindersEnabled = ref(localStorage.getItem('football_match_reminders_enabled') === '1')
 const remindersChanging = ref(false)
@@ -549,7 +582,8 @@ const loadDateCounts = async () => {
       if (date) counts.set(date, (counts.get(date) || 0) + 1)
     })
     dateCountsCache.value = counts
-  } catch { /* 当前日期数据仍可独立展示 */ }
+    countsReady.value = true
+  } catch { /* 当前日期数据仍可独立展示 */ countsReady.value = true }
 }
 
 const showH2H = async (fixtureId, homeTeamId, awayTeamId, homeTeamName, awayTeamName) => {
@@ -832,6 +866,13 @@ const isFavoritedMatch = (fixtureId) => {
 }
 
 onMounted(async () => {
+  onboardingVisible.value = localStorage.getItem(ONBOARDING_KEY) !== '1'
+  const preferCollapse = localStorage.getItem(FOCUS_COLLAPSE_KEY)
+  if (preferCollapse === '1' || preferCollapse === '0') {
+    focusCollapsed.value = preferCollapse === '1'
+  } else if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+    focusCollapsed.value = true
+  }
   selectedDate.value = String(route.query.returnDate || todayDate.value)
   selectedLeague.value = String(route.query.returnLeague || 'all')
   teamKeyword.value = String(route.query.team || route.query.returnKeyword || '')
@@ -1081,4 +1122,35 @@ onBeforeUnmount(() => {
 }
 .date-rail-item small { white-space: nowrap; }
 .match-list-panel :deep(.section-head) { position: sticky; top: 0; z-index: 2; background: var(--ff-surface); }
+
+.matches-onboarding {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:0 clamp(12px, 2vw, 24px); padding:10px 14px;
+  border:1px solid color-mix(in srgb, var(--ff-primary) 28%, var(--ff-border));
+  border-radius:12px; background:var(--ff-primary-soft); color:var(--ff-text);
+}
+.matches-onboarding-copy { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; min-width:0; }
+.matches-onboarding-copy strong { color:var(--ff-primary); font-size:13px; }
+.matches-onboarding-copy ol { display:flex; flex-wrap:wrap; gap:8px 14px; margin:0; padding:0; list-style:none; font-size:12px; color:var(--ff-text-muted); }
+.matches-onboarding-copy li { position:relative; padding-left:14px; }
+.matches-onboarding-copy li::before { content:counter(step); counter-increment:step; position:absolute; left:0; color:var(--ff-primary); font-weight:700; }
+.matches-onboarding-copy ol { counter-reset:step; }
+.matches-onboarding-copy li::before { content: counter(step) "."; }
+.matches-onboarding-dismiss {
+  flex:none; border:0; border-radius:8px; padding:7px 12px;
+  background:var(--ff-primary); color:#fff; font-size:12px; cursor:pointer;
+}
+.focus-collapse-bar {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-bottom:8px; color:var(--ff-text-muted); font-size:12px;
+}
+.focus-collapse-btn {
+  border:1px solid var(--ff-border); border-radius:999px; padding:4px 10px;
+  background:var(--ff-surface); color:var(--ff-primary); font-size:11px; cursor:pointer;
+}
+.matches-focus-sidebar.is-collapsed .focus-collapse-bar { margin-bottom:0; }
+@media (min-width: 769px) {
+  .focus-collapse-bar { display:none; }
+  .matches-focus-sidebar.is-collapsed .focus-collapse-bar { display:flex; }
+}
 </style>

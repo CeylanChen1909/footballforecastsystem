@@ -27,7 +27,7 @@
                 </label>
               </div>
               <div class="toolbar-group toolbar-secondary">
-                <el-tag size="small" effect="plain" type="info">{{ standings.length }} 队</el-tag>
+                <el-tag size="small" effect="plain" type="info">{{ loading ? "…" : (standings.length + " 队") }}</el-tag>
                 <el-tag v-if="quality.statusText" size="small" effect="plain" :type="qualityTagType">{{ quality.statusText }}</el-tag>
                 <el-button :icon="Refresh" circle aria-label="重新读取积分榜" title="重新读取积分榜快照" :loading="loading" @click="loadLeagueData" />
                 <el-button v-if="isAdmin" text type="primary" size="small" :loading="loading" @click="refreshStandings">管理员同步</el-button>
@@ -45,7 +45,9 @@
               </span>
               <span v-if="zoneRules.note" class="zone-note">{{ zoneRules.note }}</span>
             </div>
-            <el-table :data="standings" class="standings-table" size="small" row-key="rank">
+            <p class="standings-scroll-hint" aria-hidden="true">左右滑动查看完整积分榜</p>
+            <div class="standings-table-scroll" role="region" aria-label="积分榜表格，可横向滚动">
+            <el-table :data="standings" class="standings-table standings-table-desktop" size="small" row-key="rank">
             <el-table-column prop="rank" label="#" width="48" align="center">
               <template #default="scope"><span class="rank-number" :class="rankClass(scope.row)">{{ scope.row.rank }}</span></template>
             </el-table-column>
@@ -56,8 +58,8 @@
               <template #default="scope">
                 <button type="button" class="team-cell" :aria-label="`查看${scope.row.team?.name || '未知球队'}资料`" @click="openTeam(scope.row.team)">
                   <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" @error="markLogoBroken(scope.row.team)" />
-                  <span v-else class="mini-logo">{{ firstLetter(scope.row.team?.name) }}</span>
-                  <span>{{ scope.row.team?.name || '未知球队' }}</span>
+                  <span v-else class="mini-logo" title="暂无队徽" :aria-label="`${scope.row.team?.name || '球队'}暂无队徽`">{{ firstLetter(scope.row.team?.name) }}</span>
+                  <span class="team-name-text" :title="scope.row.team?.name || '未知球队'">{{ scope.row.team?.name || '未知球队' }}</span>
                 </button>
               </template>
             </el-table-column>
@@ -73,6 +75,30 @@
               <template #default="scope"><strong>{{ scope.row.points ?? '—' }}</strong></template>
             </el-table-column>
             </el-table>
+            </div>
+            <div class="standings-cards" aria-label="积分榜卡片视图">
+              <button
+                v-for="row in standings"
+                :key="'card-' + (row.rank || row.team?.id || row.team?.name)"
+                type="button"
+                class="standing-card"
+                :aria-label="`查看${row.team?.name || '未知球队'}资料`"
+                @click="openTeam(row.team)"
+              >
+                <div class="standing-card-top">
+                  <span class="rank-number" :class="rankClass(row)">{{ row.rank }}</span>
+                  <span v-if="row.zone" class="zone-label" :class="`zone-${String(row.zone).toLowerCase()}`">{{ row.zoneLabel || zoneLabel(row.zone) }}</span>
+                  <strong class="standing-card-name" :title="row.team?.name || '未知球队'">{{ row.team?.name || '未知球队' }}</strong>
+                  <span class="standing-card-pts"><b>{{ row.points ?? '—' }}</b> 积分</span>
+                </div>
+                <div class="standing-card-stats">
+                  <span>赛 {{ row.played ?? '—' }}</span>
+                  <span>胜 {{ row.win ?? '—' }}</span>
+                  <span>平 {{ row.draw ?? '—' }}</span>
+                  <span>负 {{ row.loss ?? '—' }}</span>
+                </div>
+              </button>
+            </div>
           </div>
           <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。" />
           <PageState v-else title="暂无积分榜" :description="qualityMessage || '该联赛当前没有已同步的榜单数据，可稍后刷新或切换联赛。'" />
@@ -82,11 +108,12 @@
           <template #actions>
             <el-input v-model="clubKeyword" class="club-search" clearable size="small" placeholder="搜索球队" aria-label="搜索球队" />
           </template>
-          <div v-if="filteredClubs.length" class="club-grid">
+          <PageState v-if="loading && !filteredClubs.length" type="loading" title="正在加载俱乐部..." :size="32" />
+          <div v-else-if="filteredClubs.length" class="club-grid">
             <button v-for="club in filteredClubs" :key="clubKey(club)" type="button" class="club-card" :title="club.name" :aria-label="`查看${club.name}球队资料`" @click="openTeam(club)">
               <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" @error="markLogoBroken(club)" />
-              <span v-else class="club-logo-placeholder">{{ firstLetter(club.name) }}</span>
-              <span class="club-name">{{ club.name }}</span>
+              <span v-else class="club-logo-placeholder" title="暂无队徽" :aria-label="`${club.name}暂无队徽`">{{ firstLetter(club.name) }}</span>
+              <span class="club-name" :title="club.name">{{ club.name }}</span>
               <span class="club-meta">{{ clubRank(club) ? `第 ${clubRank(club)} 名` : '查看球队资料' }}</span>
               <span class="club-arrow" aria-hidden="true">→</span>
             </button>
@@ -349,4 +376,37 @@ onMounted(loadLeagueData)
 .club-card { min-height: 54px; }
 .club-name { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.3; }
 @media (max-width: 680px) { .toolbar-secondary .el-tag { display:none; } }
+
+.team-name-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: normal;
+}
+.standings-scroll-hint { display:none; margin:0; color:var(--ff-text-faint); font-size:11px; }
+.standings-table-scroll { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.standings-cards { display:none; flex-direction:column; gap:8px; }
+.standing-card {
+  display:flex; flex-direction:column; gap:8px; width:100%;
+  padding:12px; border:1px solid var(--ff-border); border-radius:10px;
+  background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer;
+}
+.standing-card:hover, .standing-card:focus-visible { border-color:var(--ff-primary); outline:none; }
+.standing-card-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.standing-card-name {
+  flex:1; min-width:0;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; line-height:1.25; font-size:13px;
+}
+.standing-card-pts { margin-left:auto; color:var(--ff-text-strong); font-size:12px; white-space:nowrap; }
+.standing-card-stats { display:flex; flex-wrap:wrap; gap:10px; color:var(--ff-text-muted); font-size:12px; font-family:var(--ff-mono); }
+@media (max-width: 768px) {
+  .standings-scroll-hint { display:block; }
+  .standings-table-desktop { display:none !important; }
+  .standings-table-scroll { display:none; }
+  .standings-cards { display:flex; }
+  .standings-scroll-hint { display:none; }
+}
 </style>

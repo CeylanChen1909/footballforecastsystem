@@ -3,6 +3,7 @@
     type="button"
     class="changelog-trigger"
     aria-label="打开更新日志"
+    title="更新日志"
     aria-controls="matches-changelog-drawer"
     @click="openChangelog"
   >
