@@ -67,22 +67,25 @@ router.beforeEach(async (to, from, next) => {
 })
 
 
+const DEFAULT_TITLE = 'ChenFootball - 足球赛程与预测'
 const TITLES = {
   '/login': '登录 - ChenFootball',
-  '/matches': '比赛 - ChenFootball',
+  '/matches': '比赛赛程 - ChenFootball',
   '/competitions': '赛事资料 - ChenFootball',
   '/news': '赛事资料 - ChenFootball',
   '/videos': '赛事资料 - ChenFootball',
   '/agent': 'Agent - ChenFootball',
-  '/prediction': '预测 - ChenFootball',
+  '/prediction': '比赛预测 - ChenFootball',
   '/profile': '个人中心 - ChenFootball',
-  '/team': '球队 - ChenFootball',
+  '/team': '球队阵容 - ChenFootball',
   '/admin': '管理后台 - ChenFootball',
+  '/privacy': '隐私政策 - ChenFootball',
 }
 
 router.afterEach((to) => {
   const match = Object.keys(TITLES).find((key) => to.path.startsWith(key))
-  document.title = match ? TITLES[match] : 'ChenFootball'
+  document.title = match ? TITLES[match] : DEFAULT_TITLE
 })
+
 
 export default router
