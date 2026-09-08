@@ -86,16 +86,15 @@ public class GlobalSearchController {
     private List<String> expandAliases(String keyword) {
         LinkedHashSet<String> queries = new LinkedHashSet<>();
         queries.add(keyword);
-        String key = keyword.toLowerCase(Locale.ROOT);
+        String key = keyword.toLowerCase(Locale.ROOT).trim();
         Map<String, List<String>> aliases = Map.ofEntries(
-                Map.entry("曼城", List.of("Manchester City", "Man City")),
-                Map.entry("曼联", List.of("Manchester United", "Man United")),
+                Map.entry("曼城", List.of("Manchester City")),
+                Map.entry("曼联", List.of("Manchester United")),
                 Map.entry("奈梅亨", List.of("NEC", "NEC Nijmegen")),
-                Map.entry("nec", List.of("NEC Nijmegen", "奈梅亨")),
                 Map.entry("阿森纳", List.of("Arsenal")),
                 Map.entry("利物浦", List.of("Liverpool")),
                 Map.entry("切尔西", List.of("Chelsea")),
-                Map.entry("热刺", List.of("Tottenham Hotspur", "Tottenham")),
+                Map.entry("热刺", List.of("Tottenham")),
                 Map.entry("皇马", List.of("Real Madrid")),
                 Map.entry("巴萨", List.of("Barcelona")),
                 Map.entry("拜仁", List.of("Bayern Munich")),
@@ -114,17 +113,29 @@ public class GlobalSearchController {
         );
         for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
             String aliasKey = entry.getKey().toLowerCase(Locale.ROOT);
-            if (key.equals(aliasKey) || key.contains(aliasKey) || aliasKey.contains(key)) {
-                queries.add(entry.getKey());
+            if (key.equals(aliasKey) || key.contains(aliasKey)) {
                 queries.addAll(entry.getValue());
             }
             for (String alias : entry.getValue()) {
                 String normalized = alias.toLowerCase(Locale.ROOT);
-                if (key.equals(normalized) || key.contains(normalized) || normalized.contains(key)) {
+                if (key.equals(normalized) || key.contains(normalized)) {
                     queries.add(entry.getKey());
                     queries.addAll(entry.getValue());
                 }
             }
+        }
+        // Extra English nicknames that should map to full club names.
+        if (key.equals("man city") || key.equals("mancity")) {
+            queries.add("Manchester City");
+            queries.add("曼城");
+        }
+        if (key.equals("man united") || key.equals("man utd")) {
+            queries.add("Manchester United");
+            queries.add("曼联");
+        }
+        if (key.equals("nec")) {
+            queries.add("NEC Nijmegen");
+            queries.add("奈梅亨");
         }
         return List.copyOf(queries);
     }

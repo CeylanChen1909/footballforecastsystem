@@ -242,9 +242,11 @@ public interface CrawlerMatchMapper extends BaseMapper<CrawlerMatch> {
                     outer.apply("LOWER(IFNULL(league_name,'')) LIKE {0}", full)
                             .or().apply("LOWER(IFNULL(home_team_name,'')) LIKE {0}", full)
                             .or().apply("LOWER(IFNULL(away_team_name,'')) LIKE {0}", full);
-                    // Token OR helps queries like "Man City" / multi-word fragments.
+                    // Token OR for longer fragments only. Short tokens like "City"
+                    // from "Man City" would otherwise match every *City* club.
                     for (String token : tokens) {
                         if (token == null || token.isBlank() || token.equalsIgnoreCase(normalized)) continue;
+                        if (token.codePointCount(0, token.length()) < 4) continue;
                         String like = "%" + token.toLowerCase(java.util.Locale.ROOT) + "%";
                         outer.or().apply("LOWER(IFNULL(league_name,'')) LIKE {0}", like)
                                 .or().apply("LOWER(IFNULL(home_team_name,'')) LIKE {0}", like)
