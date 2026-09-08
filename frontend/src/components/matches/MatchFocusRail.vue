@@ -4,12 +4,9 @@
       <div>
         <span class="focus-kicker">FOCUS</span>
         <h2 id="match-focus-title">比赛焦点</h2>
-        <p>{{ contextLabel }}</p>
       </div>
       <div class="focus-head-actions">
         <span v-if="meta?.returnedCount != null" class="focus-count">{{ meta.returnedCount }} 场</span>
-        <button v-if="items.length" type="button" class="focus-retry-link" :disabled="promoBusy" @click="copyPromoText">{{ promoBusy ? '生成中…' : '复制推广文案' }}</button>
-        <button v-if="items.length" type="button" class="focus-retry-link" @click="downloadPromoText">生成分享文案</button>
         <button v-if="error && items.length" type="button" class="focus-retry-link" @click="$emit('retry')">重新更新</button>
       </div>
     </div>
@@ -54,8 +51,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed } from 'vue'
 import { formatMatchTime, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../../utils/match'
 import { getTeamDisplayName } from '../../utils/teamNames'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
@@ -69,10 +65,7 @@ const props = defineProps({
   teamNameMode: { type: String, default: 'en' }
 })
 defineEmits(['open', 'predict', 'retry', 'view-all'])
-const promoBusy = ref(false)
-const SITE_URL = 'https://chenfootball.asia'
 
-const contextLabel = computed(() => '按联赛、开赛距离和球队关注度计算')
 const emptyTitle = computed(() => props.meta?.emptyReason === 'NO_MATCHES_IN_WINDOW' ? '当前日期没有比赛' : '暂无重点比赛')
 const emptyDescription = computed(() => props.meta?.emptyReason === 'NO_VISIBLE_FOCUS_MATCHES' ? '当前数据已读取，但没有符合焦点规则的赛事。' : '当前没有正在进行或临近开赛的重点赛事。')
 const team = (match, side) => match?.teams?.[side] || {}
@@ -105,45 +98,6 @@ const scoreOrTime = match => {
 }
 const onLogoError = event => { event.target.style.display = 'none' }
 
-const buildPromoText = () => {
-  const lines = ['【今日焦点】ChenFootball 精选赛程', '']
-  props.items.slice(0, 6).forEach((match, index) => {
-    const league = leagueName(match)
-    const home = homeName(match)
-    const away = awayName(match)
-    const when = kickoffLabel(match)
-    lines.push(`${index + 1}. ${league}｜${home} vs ${away}｜${when}（北京时间）`)
-  })
-  lines.push('', `查看预测与赛前数据：${SITE_URL}/matches`, '数据仅供参考，不构成投注建议。')
-  return lines.join('\n')
-}
-const copyPromoText = async () => {
-  if (!props.items.length || promoBusy.value) return
-  promoBusy.value = true
-  try {
-    const text = buildPromoText()
-    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text)
-    else window.prompt('复制推广文案', text)
-    ElMessage.success('推广文案已复制')
-  } catch {
-    ElMessage.error('复制失败，请手动选择文案')
-  } finally {
-    promoBusy.value = false
-  }
-}
-const downloadPromoText = () => {
-  if (!props.items.length) return
-  const text = buildPromoText()
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  const stamp = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', dateStyle: 'short' }).format(new Date())
-  anchor.href = url
-  anchor.download = `chenfootball-focus-${stamp}.txt`
-  anchor.click()
-  URL.revokeObjectURL(url)
-  ElMessage.success('分享文案已下载')
-}
 </script>
 
 <style scoped>
