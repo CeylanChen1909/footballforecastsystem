@@ -14,7 +14,7 @@ public interface CrawlerTeamMapper extends BaseMapper<CrawlerTeam> {
     @Select("SELECT * FROM crawler_teams WHERE league_name = #{leagueName}")
     List<CrawlerTeam> findByLeague(@Param("leagueName") String leagueName);
 
-    @Select("SELECT * FROM crawler_teams WHERE name LIKE CONCAT('%', #{name}, '%')")
+    @Select("SELECT * FROM crawler_teams WHERE LOWER(IFNULL(name,'')) LIKE CONCAT('%', LOWER(#{name}), '%') ORDER BY updated_at DESC LIMIT 40")
     List<CrawlerTeam> searchByName(@Param("name") String name);
 
     @Select("SELECT * FROM crawler_teams WHERE name = #{name} ORDER BY updated_at DESC LIMIT 1")
@@ -26,6 +26,6 @@ public interface CrawlerTeamMapper extends BaseMapper<CrawlerTeam> {
             + "updated_at DESC LIMIT 1")
     CrawlerTeam findPreferredByName(@Param("name") String name);
 
-    @Select("SELECT * FROM crawler_teams WHERE league_name = #{leagueName} AND name LIKE CONCAT('%', #{keyword}, '%') ORDER BY name ASC")
+    @Select("SELECT * FROM crawler_teams WHERE league_name = #{leagueName} AND LOWER(IFNULL(name,'')) LIKE CONCAT('%', LOWER(#{keyword}), '%') ORDER BY name ASC")
     List<CrawlerTeam> searchByLeagueAndName(@Param("leagueName") String leagueName, @Param("keyword") String keyword);
 }

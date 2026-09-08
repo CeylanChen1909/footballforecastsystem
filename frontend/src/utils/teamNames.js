@@ -45,7 +45,7 @@ const TEAM_DIRECTORY = [
   ['AZ', '阿尔克马尔'], ['Go Ahead Eagles', '前进之鹰'], ['Groningen', '格罗宁根'],
   ['PSV', '埃因霍温', ['PSV埃因霍温', 'PSV Eindhoven']], ['Ajax', '阿贾克斯'], ['Feyenoord', '费耶诺德'],
   ['Sparta Rotterdam', '鹿特丹斯巴达'], ['Fortuna Sittard', '福图纳锡塔德'], ['Heerenveen', '海伦芬'],
-  ['Excelsior', 'SBV精英'], ['NEC', '奈梅亨'], ['Twente', '特温特'], ['Telstar', '特尔斯达'],
+  ['Excelsior', 'SBV精英'], ['NEC', '奈梅亨', ['NEC Nijmegen', 'Nijmegen']], ['Twente', '特温特'], ['Telstar', '特尔斯达'],
   ['PEC Zwolle', '兹沃勒'], ['Utrecht', '乌德勒支'], ['Willem II', '威廉二世'],
   ['Cambuur', '坎布尔'], ['ADO Den Haag', '海牙'],
 
@@ -66,6 +66,17 @@ const TEAM_DIRECTORY = [
   ['Preston North End', '普雷斯顿'], ['Stoke City', '斯托克城'], ['Norwich City', '诺维奇'],
   ['Southampton', '南安普顿']
 ].map(([en, zh, aliases = []]) => ({ en, zh, aliases }))
+
+const LEAGUE_ALIASES = [
+  { name: '英超', aliases: ['Premier League', 'EPL', '英格兰超级联赛'] },
+  { name: '西甲', aliases: ['La Liga', '西班牙甲级联赛'] },
+  { name: '意甲', aliases: ['Serie A', '意大利甲级联赛'] },
+  { name: '德甲', aliases: ['Bundesliga', '德国甲级联赛'] },
+  { name: '法甲', aliases: ['Ligue 1', '法国甲级联赛'] },
+  { name: '荷甲', aliases: ['Eredivisie', '荷兰甲级联赛'] },
+  { name: '葡超', aliases: ['Primeira Liga', '葡萄牙超级联赛'] },
+  { name: '英冠', aliases: ['Championship', '英格兰冠军联赛'] }
+]
 
 const normalizeTeamName = value => String(value || '')
   .normalize('NFKD')
@@ -89,6 +100,49 @@ export const getTeamSearchTokens = name => {
   const source = String(name || '')
   const entry = findTeamEntry(source)
   return entry ? [source, entry.en, entry.zh, ...entry.aliases] : [source]
+}
+
+/** Expand a user query into bilingual aliases for API search fallbacks. */
+export const expandSearchQueries = query => {
+  const source = String(query || '').trim()
+  if (!source) return []
+  const key = normalizeTeamName(source)
+  const queries = new Set([source])
+  for (const item of TEAM_DIRECTORY) {
+    const names = [item.en, item.zh, ...item.aliases]
+    if (names.some(value => {
+      const normalized = normalizeTeamName(value)
+      return normalized === key || normalized.includes(key) || key.includes(normalized)
+    })) {
+      names.forEach(value => { if (value) queries.add(value) })
+    }
+  }
+  for (const league of LEAGUE_ALIASES) {
+    const names = [league.name, ...league.aliases]
+    if (names.some(value => {
+      const normalized = normalizeTeamName(value)
+      return normalized === key || normalized.includes(key) || key.includes(normalized)
+    })) {
+      names.forEach(value => { if (value) queries.add(value) })
+    }
+  }
+  return [...queries]
+}
+
+export const matchLocalSearch = (haystack, query) => {
+  const tokens = expandSearchQueries(query).map(normalizeTeamName).filter(Boolean)
+  const text = normalizeTeamName(haystack)
+  if (!text || !tokens.length) return false
+  return tokens.some(token => text.includes(token) || token.includes(text))
+}
+
+export const findLeagueAlias = query => {
+  const key = normalizeTeamName(query)
+  if (!key) return null
+  return LEAGUE_ALIASES.find(item => [item.name, ...item.aliases].some(value => {
+    const normalized = normalizeTeamName(value)
+    return normalized === key || normalized.includes(key) || key.includes(normalized)
+  })) || null
 }
 
 export const normalizeTeamSearch = normalizeTeamName

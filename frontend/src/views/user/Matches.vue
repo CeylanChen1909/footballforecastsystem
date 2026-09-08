@@ -218,7 +218,7 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { analyticsApi, crawlerApi, favoriteApi, matchApi, userApi } from '../../api'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ArrowRight, Bell, Football } from '@element-plus/icons-vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
@@ -793,7 +793,8 @@ const toggleMatchFavorite = async (match) => {
         matchTime: match?.fixture?.date || match?.matchTime || ''
       })
       saveMatchReminder({ fixtureId: String(fixtureId), title: `${homeName} vs ${awayName}`, matchTime: match?.fixture?.date || match?.matchTime || '', notified: false })
-      ElMessage.success('比赛收藏成功')
+      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      maybeAskBrowserNotifyAfterFavorite()
     }
     await loadFavorites()
   } catch (e) {
@@ -833,6 +834,27 @@ const checkMatchReminders = () => {
   })
   if (changed) writeMatchReminders(items)
 }
+const BROWSER_NOTIFY_DISMISS_KEY = 'football_browser_notify_dismissed'
+const maybeAskBrowserNotifyAfterFavorite = async () => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'default') return
+  if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
+  try {
+    await ElMessageBox.confirm(
+      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可随时忽略。',
+      '开启浏览器通知',
+      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+    )
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted' && !remindersEnabled.value) {
+      remindersEnabled.value = true
+      localStorage.setItem('football_match_reminders_enabled', '1')
+    }
+  } catch (error) {
+    if (error === 'cancel') localStorage.setItem(BROWSER_NOTIFY_DISMISS_KEY, '1')
+  }
+}
+
 const enableMatchReminders = async () => {
   if (typeof Notification === 'undefined') return ElMessage.info('当前浏览器不支持开赛提醒')
   const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission

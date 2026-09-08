@@ -127,8 +127,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Trophy } from '@element-plus/icons-vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
@@ -153,6 +153,7 @@ const leagueOptions = [
   { value: '葡超', label: '葡超', id: 94 },
   { value: '英冠', label: '英冠', id: 40 }
 ]
+const route = useRoute()
 const selectedLeague = ref('英超')
 const selectedSeason = ref('')
 const seasonOptions = ref([])
@@ -304,7 +305,20 @@ const openTeam = (team) => {
   })
 }
 
-onMounted(loadLeagueData)
+const applyLeagueFromQuery = () => {
+  const requested = String(route.query.league || route.query.q || '').trim()
+  if (!requested) return
+  const hit = leagueOptions.find(item => item.value === requested || item.label === requested)
+  if (hit) selectedLeague.value = hit.value
+}
+onMounted(() => {
+  applyLeagueFromQuery()
+  loadLeagueData()
+})
+watch(() => route.query.league, () => {
+  applyLeagueFromQuery()
+  loadLeagueData()
+})
 </script>
 
 <style scoped>

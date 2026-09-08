@@ -232,11 +232,27 @@ public interface CrawlerMatchMapper extends BaseMapper<CrawlerMatch> {
     }
 
     default List<CrawlerMatch> searchMatches(String keyword) {
+        if (keyword == null || keyword.isBlank()) return List.of();
+        String normalized = keyword.trim();
+        String[] tokens = normalized.split("\\s+");
         return selectList(Wrappers.<CrawlerMatch>lambdaQuery()
-                .and(w -> w.like(CrawlerMatch::getLeagueName, keyword)
-                        .or().like(CrawlerMatch::getHomeTeamName, keyword)
-                        .or().like(CrawlerMatch::getAwayTeamName, keyword))
-                .orderByDesc(CrawlerMatch::getMatchTime));
+                .and(outer -> {
+                    // Full phrase first (case-insensitive).
+                    String full = "%" + normalized.toLowerCase(java.util.Locale.ROOT) + "%";
+                    outer.apply("LOWER(IFNULL(league_name,'')) LIKE {0}", full)
+                            .or().apply("LOWER(IFNULL(home_team_name,'')) LIKE {0}", full)
+                            .or().apply("LOWER(IFNULL(away_team_name,'')) LIKE {0}", full);
+                    // Token OR helps queries like "Man City" / multi-word fragments.
+                    for (String token : tokens) {
+                        if (token == null || token.isBlank() || token.equalsIgnoreCase(normalized)) continue;
+                        String like = "%" + token.toLowerCase(java.util.Locale.ROOT) + "%";
+                        outer.or().apply("LOWER(IFNULL(league_name,'')) LIKE {0}", like)
+                                .or().apply("LOWER(IFNULL(home_team_name,'')) LIKE {0}", like)
+                                .or().apply("LOWER(IFNULL(away_team_name,'')) LIKE {0}", like);
+                    }
+                })
+                .orderByDesc(CrawlerMatch::getMatchTime)
+                .last("LIMIT 50"));
     }
 
     default List<CrawlerMatch> findRecentByTeamName(String teamName, int limit) {

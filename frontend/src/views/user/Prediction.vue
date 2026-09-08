@@ -19,7 +19,13 @@
           </div>
           <div class="report-heading-meta">
             <el-tag :type="statusType" size="small">{{ fixtureStatusLabel }}</el-tag>
-            <div class="report-confidence"><span>概率分离度</span><strong>{{ confidenceValue }}</strong><small>{{ confidenceLabel }}</small></div>
+            <div class="report-confidence">
+              <span>概率分离度</span>
+              <strong>{{ confidenceValue }}</strong>
+              <small>{{ confidenceLabel }}</small>
+              <el-tag v-if="coverageBadge" class="coverage-badge" size="small" :type="coverageBadge.type" effect="plain">{{ coverageBadge.text }}</el-tag>
+              <small v-if="dataFreshnessLabel" class="freshness-label">{{ dataFreshnessLabel }}</small>
+            </div>
           </div>
         </section>
 
@@ -66,7 +72,8 @@
             :home-name="fixtureData?.teams?.home?.name || '主队'"
             :away-name="fixtureData?.teams?.away?.name || '客队'"
             :probabilities="normalizedProbabilities"
-            :warning="predictionHasWarning"
+            :warning="predictionHasWarning || dataInsufficient"
+            :hint="probabilityHint"
             :home-color="homeColor"
             :draw-color="drawColor"
             :away-color="awayColor"
@@ -174,7 +181,7 @@ import { analyticsApi, crawlerApi, favoriteApi, predictionApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { normalizeProbability, normalizeProbabilities, parseFeatureString } from '../../utils/prediction'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PredictionProbabilityPanel from '../../components/prediction/PredictionProbabilityPanel.vue'
 import PredictionModelQuality from '../../components/prediction/PredictionModelQuality.vue'
@@ -251,10 +258,67 @@ const predictionStatusDescription = computed(() => {
   return '请稍候，页面将自动加载结果。'
 })
 
+const sampleCoverage = computed(() => {
+  const meta = predictionResult.value?.featureMeta || {}
+  const home = Number(meta.homeSampleSize)
+  const away = Number(meta.awaySampleSize)
+  return {
+    home: Number.isFinite(home) ? home : null,
+    away: Number.isFinite(away) ? away : null
+  }
+})
+const prematchUnconfigured = computed(() => {
+  const snapshot = predictionResult.value?.featureMeta?.prematchSnapshot
+  const quality = snapshot?.dataQuality && typeof snapshot.dataQuality === 'object' ? snapshot.dataQuality : null
+  if (!quality) return false
+  return ['injuries', 'lineups', 'xgShots'].some(key => String(quality[key] || '').toUpperCase() === 'NOT_CONFIGURED')
+})
+const dataInsufficient = computed(() => {
+  if (!predictionResult.value) return false
+  const status = String(predictionResult.value.featureStatus || '').toUpperCase()
+  if (status === 'DEFAULTED' || predictionResult.value.featureComplete === false && status !== 'LIMITED') return true
+  const { home, away } = sampleCoverage.value
+  if (home != null && away != null && (home + away) <= 3) return true
+  if ((home != null && home === 0) || (away != null && away === 0)) return true
+  if (prematchUnconfigured.value && (home == null || home < 3 || away == null || away < 3)) return true
+  return false
+})
+const coverageBadge = computed(() => {
+  if (!predictionResult.value) return null
+  const { home, away } = sampleCoverage.value
+  if (home != null && away != null) {
+    const total = home + away
+    if (total <= 3 || home === 0 || away === 0) {
+      return { type: 'warning', text: `样本 ${home}/${away} · 数据不足` }
+    }
+    if (home < 3 || away < 3 || String(predictionResult.value.featureStatus || '').toUpperCase() === 'LIMITED') {
+      return { type: 'info', text: `样本 ${home}/${away} · 覆盖有限` }
+    }
+    return { type: 'success', text: `样本 ${home}/${away}` }
+  }
+  if (prematchUnconfigured.value) return { type: 'warning', text: '赛前特征未配置' }
+  if (predictionResult.value.featureComplete === false) return { type: 'warning', text: '特征不完整' }
+  return null
+})
+const dataFreshnessLabel = computed(() => {
+  const meta = predictionResult.value?.featureMeta || {}
+  const snapshot = meta.prematchSnapshot || {}
+  const stamp = snapshot.dataFetchedAt || snapshot.fetchedAt || meta.featureAsOf || predictionGeneratedAt.value
+  if (!stamp) return ''
+  return `数据新鲜度：${formatDate(stamp)}`
+})
+const probabilityHint = computed(() => {
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
+  if (predictionHasWarning.value) return '特征或模型质量不足，仅供参考'
+  return '来自正式预测服务'
+})
 const predictionQualityTitle = computed(() => {
   if (!predictionResult.value) return ''
   if (isFinished.value && predictionHit.value !== null) {
     return predictionHit.value ? '赛前预测已命中，下面展示本场复盘' : '赛前预测未命中，下面展示本场复盘'
+  }
+  if (dataInsufficient.value) {
+    return '数据不足，暂不建议作为依据'
   }
   if (!normalizedProbabilities.value.valid) {
     return '接口概率已自动归一化：本场结果仅供参考'
@@ -266,7 +330,8 @@ const predictionQualityTitle = computed(() => {
         ? '历史样本有限：本场使用 ELO+Poisson 保守基线'
       : '部分特征缺失：本次结果仅供参考'
   }
-  if (Number.isFinite(Number(predictionResult.value.decisionMargin)) && Number(predictionResult.value.decisionMargin) < 0.08) {
+  const margin = Number(predictionResult.value.decisionMargin ?? predictionResult.value.featureMeta?.decisionMargin)
+  if (Number.isFinite(margin) && margin < 0.08) {
     return '三类概率接近：本场不做强结论，仅作为信息参考'
   }
   const accuracy = Number(predictionResult.value.featureMeta?.model_accuracy)
@@ -421,7 +486,8 @@ const resultLabel = computed(() => {
 })
 const confidenceValue = computed(() => {
   if (!predictionResult.value) return '待生成'
-  const margin = Number(predictionResult.value.decisionMargin)
+  if (dataInsufficient.value) return '低'
+  const margin = Number(predictionResult.value.decisionMargin ?? predictionResult.value.featureMeta?.decisionMargin)
   if (Number.isFinite(margin)) return `${Math.round(Math.max(0, margin) * 100)}%`
   const values = [predictionResult.value.homeWinProb, predictionResult.value.drawProb, predictionResult.value.awayWinProb]
     .map(normalizeProbability).filter(value => value !== null).sort((a, b) => b - a)
@@ -429,7 +495,8 @@ const confidenceValue = computed(() => {
 })
 const confidenceLabel = computed(() => {
   if (!predictionResult.value) return predictionStatus.value === 'LOADING' ? '正在读取统一快照' : '等待统一快照'
-  const label = predictionResult.value?.confidenceLabel || '概率分离程度'
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
+  const label = predictionResult.value?.confidenceLabel || predictionResult.value?.featureMeta?.confidenceLabel || '概率分离程度'
   return `${label}（未校准，不代表命中率）`
 })
 const statusActionLabel = computed(() => ({
@@ -445,6 +512,7 @@ const primaryDecisionText = computed(() => {
     if (predictionHit.value === false) return `赛前判断与最终赛果不同，下面保留原始概率用于复盘。`
     return '比赛已经结束，以下内容保留赛前预测快照。'
   }
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据；下方概率仅作低可信度参考。'
   return `模型更偏向${resultLabelShort.value}，当前概率分离度为 ${confidenceValue.value}；请结合下方风险提示阅读。`
 })
 const outcomeIcon = computed(() => {
@@ -891,6 +959,23 @@ const loadFavoriteState = async () => {
   }
 }
 
+const BROWSER_NOTIFY_DISMISS_KEY = 'football_browser_notify_dismissed'
+const maybeAskBrowserNotifyAfterFavorite = async () => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'default') return
+  if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
+  try {
+    await ElMessageBox.confirm(
+      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可稍后在通知中心处理。',
+      '开启浏览器通知',
+      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+    )
+    await Notification.requestPermission()
+  } catch (error) {
+    if (error === 'cancel') localStorage.setItem(BROWSER_NOTIFY_DISMISS_KEY, '1')
+  }
+}
+
 const toggleFavorite = async () => {
   if (!isLoggedIn.value) {
     userStore.openAuthDialog(route.fullPath, 'login')
@@ -911,7 +996,8 @@ const toggleFavorite = async () => {
         matchTime: fixtureData.value?.fixture?.date || queryText(route.query.matchTime, '')
       })
       isFavorite.value = true
-      ElMessage.success('比赛收藏成功')
+      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      maybeAskBrowserNotifyAfterFavorite()
     }
   } catch (error) {
     ElMessage.error(error?.message || '收藏操作失败，请稍后重试')
@@ -1033,6 +1119,8 @@ onUnmounted(() => {
 .report-confidence { min-width:130px; padding-left:18px; border-left:1px solid var(--ff-border); display:flex; flex-direction:column; gap:3px; }
 .report-confidence span,.report-confidence small { color:var(--ff-text-muted); font-size:12px; }
 .report-confidence strong { color:var(--ff-primary); font:700 30px/1 var(--ff-mono); }
+.coverage-badge { margin-top:6px; width:fit-content; }
+.freshness-label { display:block; margin-top:2px; }
 .back-btn { box-shadow: var(--ff-shadow-sm); }
 .result-banner { border-radius: 8px; }
 .prediction-state-panel { display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px dashed var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text-muted); }

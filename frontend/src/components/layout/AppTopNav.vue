@@ -56,21 +56,65 @@
         </template>
       </el-dropdown>
     </div>
-    <el-dialog v-model="searchVisible" title="全局搜索" width="min(620px, 92vw)" append-to-body>
-      <el-input v-model="searchKeyword" clearable autofocus placeholder="搜索球队、联赛或比赛" @keyup.enter="runSearch" />
+    <el-dialog v-model="searchVisible" title="全局搜索" width="min(620px, 92vw)" append-to-body @opened="focusSearchInput">
+      <el-input ref="searchInputRef" v-model="searchKeyword" clearable autofocus placeholder="搜索球队、联赛或比赛（支持中英文别名）" @keyup.enter="runSearch" @input="onSearchInput" />
       <div v-if="searchLoading" class="global-search-state">正在搜索…</div>
-      <div v-else-if="searchResults.matches.length" class="global-search-results">
-        <button v-for="item in searchResults.matches" :key="`m-${item.fixtureId}`" type="button" class="global-search-item" @click="openMatch(item)"><strong>{{ item.homeTeamName }} vs {{ item.awayTeamName }}</strong><small>{{ item.leagueName || '比赛' }}</small></button>
+      <div v-else-if="hasSearchHits" class="global-search-results">
+        <div v-if="searchResults.teams.length" class="global-search-section">
+          <div class="global-search-section-title">球队</div>
+          <button v-for="item in searchResults.teams" :key="`t-${item.id || item.name}`" type="button" class="global-search-item" @click="openTeam(item)">
+            <strong>{{ item.name }}</strong>
+            <small>{{ item.league || '球队资料' }}</small>
+          </button>
+        </div>
+        <div v-if="searchResults.leagues.length" class="global-search-section">
+          <div class="global-search-section-title">联赛</div>
+          <button v-for="item in searchResults.leagues" :key="`l-${item.name}`" type="button" class="global-search-item" @click="openLeague(item)">
+            <strong>{{ item.name }}</strong>
+            <small>{{ item.matchCount ? `${item.matchCount} 场相关比赛` : '赛事资料' }}</small>
+          </button>
+        </div>
+        <div v-if="searchResults.matches.length" class="global-search-section">
+          <div class="global-search-section-title">比赛</div>
+          <button v-for="item in searchResults.matches" :key="`m-${item.fixtureId || item.matchId || item.id}-${item.homeTeamName}-${item.awayTeamName}`" type="button" class="global-search-item" @click="openMatch(item)">
+            <strong>{{ item.homeTeamName }} vs {{ item.awayTeamName }}</strong>
+            <small>{{ item.leagueName || '比赛' }}{{ item.matchTime ? ` · ${formatSearchTime(item.matchTime)}` : '' }}</small>
+          </button>
+        </div>
+        <div v-if="searchResults.articles.length" class="global-search-section">
+          <div class="global-search-section-title">资讯</div>
+          <button v-for="item in searchResults.articles" :key="`a-${item.id || item.title}`" type="button" class="global-search-item" @click="openArticle(item)">
+            <strong>{{ item.title || '资讯' }}</strong>
+            <small>{{ item.source || '文章' }}</small>
+          </button>
+        </div>
       </div>
-      <div v-else-if="searchKeyword" class="global-search-state">没有找到相关内容</div>
+      <div v-else-if="searchKeyword.trim()" class="global-search-state global-search-empty">
+        <p>没有找到「{{ searchKeyword.trim() }}」相关内容</p>
+        <div class="global-search-empty-links">
+          <el-button type="primary" link @click="goBrowse('/matches')">浏览比赛</el-button>
+          <el-button type="primary" link @click="goBrowse('/competitions')">查看赛事资料</el-button>
+        </div>
+      </div>
     </el-dialog>
     <el-dialog v-model="notificationVisible" title="通知中心" width="min(520px, 92vw)" append-to-body>
       <div class="notification-head">
-        <span>比赛提醒、数据同步和账号安全通知会显示在这里</span>
+        <span>收藏比赛后将在开赛前站内提醒；也可开启浏览器通知。</span>
         <el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">全部已读</el-button>
       </div>
       <div v-if="notificationLoading" class="global-search-state">正在加载通知…</div>
-      <el-empty v-else-if="notifications.length === 0" description="暂无通知" />
+      <div v-else-if="notifications.length === 0" class="notification-empty">
+        <el-empty description="暂无通知">
+          <template #description>
+            <p>暂无通知</p>
+            <p class="notification-empty-hint">收藏比赛后将在开赛前站内提醒</p>
+          </template>
+        </el-empty>
+        <div class="notification-empty-actions">
+          <el-button type="primary" plain size="small" @click="goBrowse('/matches')">去收藏一场比赛</el-button>
+          <el-button v-if="browserNotifyState === 'default'" size="small" plain @click="requestBrowserNotify">开启浏览器通知</el-button>
+        </div>
+      </div>
       <div v-else class="notification-list">
         <button v-for="item in notifications" :key="item.id" type="button" class="notification-item" :class="{ 'is-unread': !item.read_at }" @click="markNotification(item)">
           <span class="notification-dot"></span>
@@ -84,8 +128,9 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { searchApi, userApi } from '../../api'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { crawlerApi, searchApi, userApi } from '../../api'
+import { expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
 import { ArrowDown, ChatLineSquare, Football, Notebook, User, SwitchButton, Setting, Search, Bell, Menu } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -101,14 +146,22 @@ const userStore = useUserStore()
 const searchVisible = ref(false)
 const searchLoading = ref(false)
 const searchKeyword = ref('')
-const searchResults = reactive({ matches: [] })
+const searchInputRef = ref(null)
+const searchResults = reactive({ matches: [], teams: [], leagues: [], articles: [] })
 const notificationVisible = ref(false)
 const mobileMenuOpen = ref(false)
 const notificationLoading = ref(false)
 const notifications = ref([])
 const notificationUnread = ref(0)
+const knownNotificationIds = ref(new Set())
+const browserNotifyState = ref(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
+let searchDebounceTimer = null
+let notificationPollTimer = null
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(userStore.role))
 const protectedPaths = ['/profile', '/admin']
+const hasSearchHits = computed(() =>
+  searchResults.matches.length + searchResults.teams.length + searchResults.leagues.length + searchResults.articles.length > 0
+)
 
 const requiresLogin = path => protectedPaths.some(value => path === value || path.startsWith(`${value}/`))
 
@@ -116,24 +169,204 @@ const handleBrandClick = () => {
   router.push(props.brandHref)
 }
 
+const resetSearchResults = () => {
+  searchResults.matches = []
+  searchResults.teams = []
+  searchResults.leagues = []
+  searchResults.articles = []
+}
+
+const uniqBy = (rows, keyFn) => {
+  const seen = new Set()
+  return rows.filter(item => {
+    const key = keyFn(item)
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const unwrapList = payload => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload?.data?.response)) return payload.data.response
+  if (Array.isArray(payload?.response)) return payload.response
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
+const normalizeMatchHit = item => {
+  const fixtureId = item?.fixtureId || item?.matchId || item?.id || item?.fixture?.id || item?.fixture?.publicMatchId
+  return {
+    fixtureId,
+    matchId: fixtureId,
+    id: fixtureId,
+    homeTeamName: item?.homeTeamName || item?.teams?.home?.name || '',
+    awayTeamName: item?.awayTeamName || item?.teams?.away?.name || '',
+    leagueName: item?.leagueName || item?.league?.name || '',
+    matchTime: item?.matchTime || item?.fixture?.date || ''
+  }
+}
+
+const normalizeTeamHit = item => ({
+  id: item?.id || item?.teamId || 0,
+  name: item?.name || item?.teamName || '',
+  league: item?.league || item?.leagueName || '',
+  logo: item?.logo || ''
+})
+
+const mergeSearchPayload = (base, extra) => {
+  const matches = uniqBy([...(base.matches || []), ...(extra.matches || [])].map(normalizeMatchHit).filter(item => item.homeTeamName || item.awayTeamName), item => `${item.fixtureId || ''}:${item.homeTeamName}:${item.awayTeamName}:${item.matchTime || ''}`)
+  const teams = uniqBy([...(base.teams || []), ...(extra.teams || [])].map(normalizeTeamHit).filter(item => item.name), item => `${item.id || ''}:${item.name}`)
+  const leagues = uniqBy([...(base.leagues || []), ...(extra.leagues || [])].filter(item => item?.name), item => item.name)
+  const articles = uniqBy([...(base.articles || []), ...(extra.articles || [])], item => item?.id || item?.title)
+  return { matches, teams, leagues, articles }
+}
+
+const localAliasFallback = async (keyword) => {
+  const queries = expandSearchQueries(keyword).slice(0, 4)
+  const leagueAlias = findLeagueAlias(keyword)
+  const tasks = [
+    ...queries.map(q => searchApi.search(q, 8).catch(() => null)),
+    ...queries.map(q => crawlerApi.searchTeams(q).catch(() => null)),
+    ...queries.map(q => crawlerApi.searchMatches(q).catch(() => null))
+  ]
+  const settled = await Promise.all(tasks)
+  let merged = { matches: [], teams: [], leagues: [], articles: [] }
+  settled.forEach((result, index) => {
+    if (!result) return
+    if (index < queries.length) {
+      merged = mergeSearchPayload(merged, {
+        matches: result.matches || result?.data?.matches || [],
+        teams: result.teams || result?.data?.teams || [],
+        leagues: result.leagues || result?.data?.leagues || [],
+        articles: result.articles || result?.data?.articles || []
+      })
+    } else if (index < queries.length * 2) {
+      merged = mergeSearchPayload(merged, { teams: unwrapList(result) })
+    } else {
+      merged = mergeSearchPayload(merged, { matches: unwrapList(result).map(normalizeMatchHit) })
+    }
+  })
+  if (leagueAlias) {
+    merged.leagues = uniqBy([{ name: leagueAlias.name, matchCount: 0 }, ...merged.leagues], item => item.name)
+  }
+  // Keep only rows that still relate to the original query / aliases.
+  merged.matches = merged.matches.filter(item => matchLocalSearch(`${item.homeTeamName} ${item.awayTeamName} ${item.leagueName}`, keyword)).slice(0, 8)
+  merged.teams = merged.teams.filter(item => matchLocalSearch(`${item.name} ${item.league}`, keyword)).slice(0, 8)
+  merged.leagues = merged.leagues.filter(item => matchLocalSearch(item.name, keyword) || findLeagueAlias(keyword)?.name === item.name).slice(0, 8)
+  return merged
+}
+
 const runSearch = async () => {
-  if (!searchKeyword.value.trim()) return
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) { resetSearchResults(); return }
   searchLoading.value = true
   try {
-    const result = await searchApi.search(searchKeyword.value.trim())
-    searchResults.matches = result?.matches || []
-  } catch { searchResults.matches = [] } finally { searchLoading.value = false }
+    const [globalResult, teamResult, matchResult] = await Promise.all([
+      searchApi.search(keyword, 8).catch(() => null),
+      crawlerApi.searchTeams(keyword).catch(() => null),
+      crawlerApi.searchMatches(keyword).catch(() => null)
+    ])
+    let merged = mergeSearchPayload({
+      matches: globalResult?.matches || globalResult?.data?.matches || [],
+      teams: globalResult?.teams || globalResult?.data?.teams || [],
+      leagues: globalResult?.leagues || globalResult?.data?.leagues || [],
+      articles: globalResult?.articles || globalResult?.data?.articles || []
+    }, {
+      teams: unwrapList(teamResult),
+      matches: unwrapList(matchResult).map(normalizeMatchHit)
+    })
+    if (!(merged.matches.length || merged.teams.length || merged.leagues.length)) {
+      merged = await localAliasFallback(keyword)
+    }
+    searchResults.matches = merged.matches.slice(0, 8)
+    searchResults.teams = merged.teams.slice(0, 8)
+    searchResults.leagues = merged.leagues.slice(0, 8)
+    searchResults.articles = merged.articles.slice(0, 6)
+  } catch {
+    resetSearchResults()
+  } finally {
+    searchLoading.value = false
+  }
 }
-const openMatch = item => { searchVisible.value = false; const id = item?.matchId || item?.id || item?.fixtureId; if (!id) return; router.push(`/prediction/${id}?homeName=${encodeURIComponent(item.homeTeamName || '')}&awayName=${encodeURIComponent(item.awayTeamName || '')}&leagueName=${encodeURIComponent(item.leagueName || '')}&matchTime=${encodeURIComponent(item.matchTime || '')}`) }
 
-const loadNotifications = async () => {
+const onSearchInput = () => {
+  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = window.setTimeout(() => { runSearch() }, 280)
+}
+const focusSearchInput = () => {
+  window.setTimeout(() => searchInputRef.value?.focus?.(), 30)
+}
+const formatSearchTime = value => {
+  if (!value) return ''
+  const date = new Date(String(value).includes('T') ? value : String(value).replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+const goBrowse = (path) => {
+  searchVisible.value = false
+  notificationVisible.value = false
+  router.push(path)
+}
+const openMatch = item => {
+  searchVisible.value = false
+  const id = item?.matchId || item?.id || item?.fixtureId
+  if (!id) return
+  router.push(`/prediction/${id}?homeName=${encodeURIComponent(item.homeTeamName || '')}&awayName=${encodeURIComponent(item.awayTeamName || '')}&leagueName=${encodeURIComponent(item.leagueName || '')}&matchTime=${encodeURIComponent(item.matchTime || '')}`)
+}
+const openTeam = item => {
+  searchVisible.value = false
+  const id = item?.id || item?.name
+  if (!id) return
+  router.push({
+    path: `/team/${encodeURIComponent(String(id))}/squad`,
+    query: { name: item.name || '', league: item.league || '', logo: item.logo || '' }
+  })
+}
+const openLeague = item => {
+  searchVisible.value = false
+  const name = item?.name
+  if (!name) return
+  router.push({ path: '/competitions', query: { league: name } })
+}
+const openArticle = item => {
+  searchVisible.value = false
+  if (item?.link) router.push(item.link)
+  else router.push('/competitions')
+}
+
+const maybeBrowserNotify = (item) => {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  if (!item || item.read_at) return
+  const type = String(item.type || item.category || '')
+  if (type && !/MATCH_KICKOFF|PREDICTION_READY|REMINDER|FAVORITE/i.test(type) && !/提醒|开赛|预测/.test(String(item.title || ''))) return
+  try {
+    new Notification(item.title || 'ChenFootball 提醒', {
+      body: item.body || '你收藏的比赛有新提醒',
+      tag: `cf-notif-${item.id}`
+    })
+  } catch { /* ignore */ }
+}
+
+const loadNotifications = async ({ silent = false } = {}) => {
   if (!userStore.token) return
-  notificationLoading.value = true
+  if (!silent) notificationLoading.value = true
   try {
     const result = await userApi.getNotifications(20)
-    notifications.value = result?.items || []
+    const items = result?.items || []
+    const previous = knownNotificationIds.value
+    if (previous.size) {
+      items.filter(item => item?.id != null && !previous.has(item.id) && !item.read_at).forEach(maybeBrowserNotify)
+    }
+    knownNotificationIds.value = new Set(items.map(item => item.id).filter(id => id != null))
+    notifications.value = items
     notificationUnread.value = Number(result?.unread || 0)
-  } catch { notifications.value = []; notificationUnread.value = 0 } finally { notificationLoading.value = false }
+  } catch {
+    if (!silent) { notifications.value = []; notificationUnread.value = 0 }
+  } finally {
+    if (!silent) notificationLoading.value = false
+  }
 }
 const openNotifications = async () => { notificationVisible.value = true; await loadNotifications() }
 const markNotification = async item => {
@@ -142,6 +375,7 @@ const markNotification = async item => {
     item.read_at = new Date().toISOString()
     notificationUnread.value = Math.max(0, notificationUnread.value - 1)
   }
+  notificationVisible.value = false
   if (item.link) router.push(item.link)
 }
 const markAllNotifications = async () => {
@@ -149,7 +383,24 @@ const markAllNotifications = async () => {
   notifications.value.forEach(item => { item.read_at = item.read_at || new Date().toISOString() })
   notificationUnread.value = 0
 }
-const formatNotificationTime = value => value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+const requestBrowserNotify = async () => {
+  if (typeof Notification === 'undefined') return
+  const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
+  browserNotifyState.value = permission
+}
+const formatNotificationTime = value => value ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+
+const startNotificationPolling = () => {
+  stopNotificationPolling()
+  if (!userStore.token) return
+  notificationPollTimer = window.setInterval(() => loadNotifications({ silent: true }), 60 * 1000)
+}
+const stopNotificationPolling = () => {
+  if (notificationPollTimer) {
+    window.clearInterval(notificationPollTimer)
+    notificationPollTimer = null
+  }
+}
 
 const handleSelect = (index) => {
   mobileMenuOpen.value = false
@@ -175,8 +426,16 @@ const handleUserCommand = (cmd) => {
   }
 }
 
-watch(() => userStore.token, token => { if (token) loadNotifications(); else { notifications.value = []; notificationUnread.value = 0 } })
-onMounted(() => { if (userStore.token) loadNotifications() })
+watch(() => userStore.token, token => {
+  if (token) { loadNotifications(); startNotificationPolling() }
+  else { notifications.value = []; notificationUnread.value = 0; knownNotificationIds.value = new Set(); stopNotificationPolling() }
+})
+watch(searchVisible, visible => { if (!visible && searchDebounceTimer) window.clearTimeout(searchDebounceTimer) })
+onMounted(() => { if (userStore.token) { loadNotifications(); startNotificationPolling() } })
+onBeforeUnmount(() => {
+  stopNotificationPolling()
+  if (searchDebounceTimer) window.clearTimeout(searchDebounceTimer)
+})
 </script>
 
 <style scoped>
@@ -214,11 +473,17 @@ onMounted(() => { if (userStore.token) loadNotifications() })
 .notification-copy { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .notification-copy strong { font-size:13px; }
 .notification-copy small, .notification-copy em { color:var(--ff-text-muted); font-size:12px; font-style:normal; }
-.global-search-results { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+.global-search-results { display:flex; flex-direction:column; gap:14px; margin-top:16px; max-height:60vh; overflow:auto; }
+.global-search-section { display:flex; flex-direction:column; gap:8px; }
+.global-search-section-title { color:var(--ff-text-muted); font-size:12px; font-weight:700; letter-spacing:.04em; }
 .global-search-item { display:flex; flex-direction:column; align-items:flex-start; gap:3px; padding:10px 12px; border:1px solid var(--ff-border); border-radius:8px; background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer; }
 .global-search-item:hover { border-color:var(--ff-primary); }
 .global-search-item small, .global-search-state { color:var(--ff-text-muted); font-size:12px; }
 .global-search-state { padding:20px 0; text-align:center; }
+.global-search-empty-links { display:flex; justify-content:center; gap:12px; margin-top:8px; }
+.notification-empty { padding:8px 0 4px; text-align:center; }
+.notification-empty-hint { margin:6px 0 0; color:var(--ff-text-muted); font-size:12px; }
+.notification-empty-actions { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:4px; }
 
 
 .nav-brand {

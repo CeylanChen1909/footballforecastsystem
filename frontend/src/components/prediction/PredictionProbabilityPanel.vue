@@ -2,7 +2,7 @@
   <section class="prob-section" aria-label="预测概率分布">
     <div class="prob-header">
       <span>预测概率分布</span>
-      <span class="prob-hint">{{ warning ? '特征或模型质量不足，仅供参考' : '来自正式预测服务' }}</span>
+      <span class="prob-hint">{{ hint || (warning ? '特征或模型质量不足，仅供参考' : '来自正式预测服务') }}</span>
     </div>
     <div class="prob-bars">
       <div v-for="item in items" :key="item.key" class="prob-item" :class="{ 'is-leading': item.isLeading }" :aria-label="`${item.label} ${item.text}`">
@@ -28,6 +28,7 @@ const props = defineProps({
   awayName: { type: String, default: '客队' },
   probabilities: { type: Object, default: () => ({ home: 0, draw: 0, away: 0 }) },
   warning: { type: Boolean, default: false },
+  hint: { type: String, default: '' },
   homeColor: { type: String, default: '#0f6b4d' },
   drawColor: { type: String, default: '#909399' },
   awayColor: { type: String, default: '#b27a18' }
