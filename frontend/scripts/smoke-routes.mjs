@@ -117,6 +117,10 @@ assert(composeProd.includes('aliases:') && composeProd.includes('- nacos') && co
 assert(read('../docs/ops.md').includes('Nacos network alias persistence'), 'ops nacos alias persistence doc missing')
 
 assert(about.includes('about-trust') && about.includes('chenfootball.asia') && about.includes('trust-grid'), 'about trust/contact section is missing')
-assert(read('src/main.js').includes('element-plus-on-demand') && !read('src/main.js').includes('element-plus/dist/index.css') && exists('src/styles/element-plus-on-demand.js') && (read('src/styles/element-plus-on-demand.js').includes('theme-chalk/base.css') || read('src/styles/element-plus-on-demand.js').includes('components/alert/style/css')), 'element-plus should use on-demand chalk CSS module, not full dist index')
+const mainJs = read('src/main.js')
+const epCss = read('src/styles/element-plus-on-demand.js')
+assert(!mainJs.includes('element-plus/dist/index.css'), 'element-plus should not import full dist/index.css')
+assert(mainJs.includes('element-plus-on-demand') || mainJs.includes('element-plus/theme-chalk/base.css'), 'element-plus on-demand entry missing from main.js')
+assert(epCss.includes('theme-chalk/base.css') && epCss.includes('components/button/style/css'), 'element-plus-on-demand.js incomplete')
 console.log('Smoke routes passed')
 

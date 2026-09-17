@@ -1,22 +1,21 @@
 # Element Plus CSS strategy (Round 4)
 
-## Decision
-The project **does not** use `unplugin-vue-components` / auto-import. Components are
-registered manually in `src/main.js`.
+## Context
+This frontend registers Element Plus components manually in `src/main.js` and does
+**not** use `unplugin-vue-components` / auto-import.
 
 ## Change
-Replaced `import 'element-plus/dist/index.css'` (~350KB full theme) with
-`src/styles/element-plus-on-demand.js`, which imports base + per-component CSS
-for every registered widget plus Message / MessageBox / Loading / Overlay /
-Popper / Scrollbar.
+Replaced full `element-plus/dist/index.css` (~350KB) with
+`src/styles/element-plus-on-demand.js` (`theme-chalk/base.css` + per-component CSS
+for registered widgets and Message / MessageBox / Loading / Overlay / Popper /
+Scrollbar / OptionGroup / CheckboxGroup / Radio).
 
-## Why not unplugin
-Adding unplugin while keeping manual `app.component(...)` registration risks
-double registration and a larger dependency surface for a polish round. On-demand
-style imports match the existing manual-register model without changing runtime
-component resolution.
+## Why not unplugin in r4
+Auto-import would conflict with manual `app.component(...)` registration.
+On-demand style imports cut CSS weight without changing runtime resolution.
+
+## Verify
+`npm run test:smoke` asserts no `dist/index.css` and on-demand module present.
 
 ## Rollback
-If a missing widget style appears, either:
-1. Add `import 'element-plus/es/components/<name>/style/css'` to the on-demand file, or
-2. Temporarily restore `import 'element-plus/dist/index.css'` in `main.js`.
+Restore `import 'element-plus/dist/index.css'` in `main.js` if a style is missing.

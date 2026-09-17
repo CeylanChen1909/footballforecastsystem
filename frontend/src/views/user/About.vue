@@ -45,7 +45,7 @@
       <p>所有预测、概率与 Agent 解读仅供信息参考，不构成投注、投资或其他决策建议。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
 
       <h2 id="about-contact">联系与反馈</h2>
-      <p>当前未公开独立客服邮箱。你可以通过以下渠道联系或自助处理：</p>
+      <p>当前未公开独立客服邮箱或微信客服号（与隐私说明一致，不设虚假联系方式）。你可以通过以下渠道联系或自助处理：</p>
       <ul class="trust-list">
         <li>账号与隐私请求：登录后前往 <router-link to="/profile">个人中心</router-link>，或查阅 <router-link to="/privacy">隐私说明</router-link></li>
         <li>产品体验反馈：使用站内 <router-link to="/agent">Agent</router-link> 描述问题（不发送敏感凭据）</li>

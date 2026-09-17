@@ -1,6 +1,7 @@
 <template>
   <div class="login-page">
-    <div class="login-card reveal">
+    <a class="skip-link" href="#app-main">跳转到主要内容</a>
+    <main id="app-main" class="login-card reveal" tabindex="-1">
       <div class="logo">
         <div class="logo-icon"><el-icon :size="36"><Football /></el-icon></div>
         <h1>ChenFootball</h1>
@@ -58,7 +59,7 @@
 
       <div class="login-footnote">登录后可同步收藏、预测历史与提醒设置；没有账号可直接注册。<router-link to="/privacy">隐私与数据说明</router-link></div>
       <div class="login-footnote">© ChenFootball · 智能预测平台</div>
-    </div>
+    </main>
     <el-dialog v-model="resetVisible" title="通过邮箱重置密码" width="min(420px, 92vw)">
       <el-form label-position="top">
         <el-form-item label="注册邮箱"><el-input v-model="resetForm.email" type="email" placeholder="请输入注册邮箱" /></el-form-item>
@@ -128,7 +129,7 @@ const refreshRegisterCaptcha = async () => {
     if (data?.ok === false) throw new Error(data.message || '图形验证码加载失败')
     registerForm.captchaId = data?.captchaId || ''
     registerCaptchaImage.value = data?.image || ''
-  } catch (error) { ElMessage.error(error?.message || '图形验证码加载失败') }
+  } catch (error) { ElMessage.error(error?.message || '图形验证加载失败，请刷新后重试') }
 }
 
 const showForgotPassword = () => { resetVisible.value = true }
@@ -143,7 +144,7 @@ const sendRegisterCode = async () => {
     await refreshRegisterCaptcha()
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 
 const sendResetCode = async () => {
@@ -154,10 +155,10 @@ const sendResetCode = async () => {
     ElMessage.success('如果该邮箱已注册，验证码已发送')
     resetCountdown.value = 60
     resetTimer = window.setInterval(() => { resetCountdown.value -= 1; if (resetCountdown.value <= 0) { window.clearInterval(resetTimer); resetTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 const submitReset = async () => {
-  if (!resetForm.email || !/^\d{6}$/.test(resetForm.verificationCode) || resetForm.newPassword.length < 8) { ElMessage.warning('请完整填写邮箱、验证码和至少8位新密码'); return }
+  if (!resetForm.email || !/^\d{6}$/.test(resetForm.verificationCode) || resetForm.newPassword.length < 8) { ElMessage.warning('请填写注册邮箱、6 位验证码，以及至少 8 位新密码'); return }
   try {
     const result = await userApi.resetPassword(resetForm.email, resetForm.verificationCode, resetForm.newPassword)
     if (result?.ok === false) throw new Error(result.message || '密码重置失败')
@@ -165,7 +166,7 @@ const submitReset = async () => {
     resetVisible.value = false
     loginForm.account = resetForm.email
     resetForm.verificationCode = ''; resetForm.newPassword = ''
-  } catch (error) { ElMessage.error(error?.message || '密码重置失败') }
+  } catch (error) { ElMessage.error(error?.message || '密码重置未完成，请确认验证码后重试') }
 }
 
 const handleLogin = async () => {
@@ -199,6 +200,10 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
+.login-page { position: relative; }
+.skip-link { position:absolute; top:-48px; left:14px; z-index:30; padding:8px 12px; border-radius:6px; color:#fff; background:var(--ff-primary, #0f6b4d); font-size:12px; font-weight:700; }
+.skip-link:focus, .skip-link:focus-visible { top:8px; outline:2px solid #d4a017; outline-offset:2px; }
+
 .login-page {
   min-height: 100vh;
   background: var(--ff-bg-alt);

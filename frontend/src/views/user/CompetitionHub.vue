@@ -104,8 +104,8 @@
               </button>
             </div>
           </div>
-          <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。" />
-          <PageState v-else title="暂无积分榜" :description="qualityMessage || '该联赛当前没有已同步的榜单数据，可稍后刷新或切换联赛。'" />
+          <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。可先浏览赛程中的单场分析。" action-text="去看赛程与预测" @action="goMatchesDiscover" />
+          <PageState v-else title="暂无积分榜" :description="qualityMessage || '该联赛当前没有已同步的榜单数据，可稍后刷新、切换联赛，或先从赛程浏览本场分析。'" action-text="浏览赛程与预测" @action="goMatchesDiscover" />
         </PageSection>
 
         <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从联赛名单进入球队资料，不再依赖资讯聚合">
@@ -122,7 +122,7 @@
               <span class="club-arrow" aria-hidden="true">→</span>
             </button>
           </div>
-          <PageState v-else title="暂无俱乐部" description="积分榜同步后，参赛俱乐部会自动出现在这里。" />
+          <PageState v-else title="暂无俱乐部" description="积分榜同步后，参赛俱乐部会自动出现在这里。也可先从赛程页按球队名称搜索。" action-text="去赛程页搜索" @action="goMatchesDiscover" />
         </PageSection>
       </section>
 
@@ -153,6 +153,9 @@ import { useUserStore } from '../../stores/user'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
 
 const router = useRouter()
+const goMatchesDiscover = () => {
+  router.push({ path: "/matches", query: { discover: "predict" } })
+}
 const userStore = useUserStore()
 
 // 只展示当前主爬虫源具备稳定积分榜路径的生产联赛。

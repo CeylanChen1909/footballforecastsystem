@@ -171,7 +171,7 @@ const refreshRegisterCaptcha = async () => {
     registerForm.captchaId = data?.captchaId || ''
     registerCaptchaImage.value = data?.image || ''
   } catch (error) {
-    ElMessage.error(error?.message || '图形验证码加载失败')
+    ElMessage.error(error?.message || '图形验证加载失败，请刷新后重试')
   }
 }
 
@@ -191,7 +191,7 @@ const sendRegisterCode = async () => {
     registerCaptchaVerified.value = true
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 
 const sendResetCode = async () => {
@@ -202,7 +202,7 @@ const sendResetCode = async () => {
     ElMessage.success(result?.delivery === 'console' ? '验证码已写入后端开发日志' : '验证码已发送，请查收邮件')
     resetCodeCountdown.value = 60
     resetCodeTimer = window.setInterval(() => { resetCodeCountdown.value -= 1; if (resetCodeCountdown.value <= 0) { window.clearInterval(resetCodeTimer); resetCodeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 
 const goAfterLogin = () => {
@@ -226,7 +226,7 @@ const handleLogin = async () => {
       goAfterLogin()
     }
   } catch (error) {
-    ElMessage.error(error?.message || '登录失败，请稍后重试')
+    ElMessage.error(error?.message || '登录未成功，请确认账号密码后重试')
   } finally {
     loading.value = false
   }
@@ -243,7 +243,7 @@ const handleRegister = async () => {
       loginForm.password = ''
     }
   } catch (error) {
-    ElMessage.error(error?.message || '注册失败，请稍后重试')
+    ElMessage.error(error?.message || '注册未完成，请检查验证码与密码后重试')
   } finally {
     loading.value = false
   }
@@ -260,7 +260,7 @@ const handleReset = async () => {
     loginForm.account = resetForm.email
     loginForm.password = ''
     activeTab.value = 'login'
-  } catch (error) { ElMessage.error(error?.message || '密码重置失败') } finally { loading.value = false }
+  } catch (error) { ElMessage.error(error?.message || '密码重置未完成，请确认验证码后重试') } finally { loading.value = false }
 }
 </script>
 
