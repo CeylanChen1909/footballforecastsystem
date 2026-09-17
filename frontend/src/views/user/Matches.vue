@@ -118,7 +118,7 @@
                   </div>
                 </div>
               </div>
-              <PageState v-else :title="dataQuality.status === 'SOURCE_LIMITED' ? '数据源额度受限' : dataQuality.status === 'SYNC_FAILED' ? '数据同步失败' : (selectedLeague === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛')" :description="dataQuality.message || (selectedLeague === 'all' ? '点击左右箭头切换日期，或点击日期选择具体日期' : '可以切换其他联赛，或点击日期轨道查看其他赛程')" />
+              <PageState v-else :title="dataQuality.status === 'SOURCE_LIMITED' ? '数据源额度受限' : dataQuality.status === 'SYNC_FAILED' ? '数据同步失败' : (selectedLeague === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛')" :description="dataQuality.message || (selectedLeague === 'all' ? '点击左右箭头切换日期，或点击日期选择具体日期' : '可以切换其他联赛，或点击日期轨道查看其他赛程')" :action-text="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? '重试' : (selectedLeague === 'all' ? '查看昨天' : '查看全部联赛')" @action="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? loadCurrentView() : (selectedLeague === 'all' ? shiftDate(-1) : (selectedLeague = 'all'))" />
             </template>
           </PageSection>
 
@@ -210,6 +210,7 @@
           </div>
       </div>
     </el-dialog>
+      <AppFooter />
   </div>
 </template>
 
@@ -220,6 +221,7 @@ import { useUserStore } from '../../stores/user'
 import { analyticsApi, crawlerApi, favoriteApi, matchApi, userApi } from '../../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ArrowRight, Bell, Football } from '@element-plus/icons-vue'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
@@ -544,7 +546,7 @@ const loadMatches = async () => {
       ElMessage.info('暂无今日比赛数据，可点击日期切换查看历史比赛')
     }
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请检查后端服务是否启动'
+    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -567,7 +569,7 @@ const loadMatchesByDate = async (date) => {
     dateCountsCache.value = nextCounts
     if (rawMatches.value.length === 0) ElMessage.info('该日期暂无比赛数据，可尝试其他日期')
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请检查后端服务是否启动'
+    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
     loading.value = false
   }

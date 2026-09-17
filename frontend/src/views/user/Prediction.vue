@@ -171,6 +171,7 @@
 
         </div>
     </el-main>
+      <AppFooter />
   </div>
 </template>
 
@@ -182,6 +183,7 @@ import { useUserStore } from '../../stores/user'
 import { normalizeProbability, normalizeProbabilities, parseFeatureString } from '../../utils/prediction'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PredictionProbabilityPanel from '../../components/prediction/PredictionProbabilityPanel.vue'
 import PredictionModelQuality from '../../components/prediction/PredictionModelQuality.vue'

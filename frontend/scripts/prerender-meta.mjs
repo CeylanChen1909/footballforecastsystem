@@ -38,6 +38,11 @@ const ROUTES = [
     title: "隐私政策 - ChenFootball",
     description: "了解 ChenFootball 如何保存、使用与删除账号及赛程相关数据。",
   },
+  {
+    path: "/agent",
+    title: "Agent - ChenFootball",
+    description: "用自然语言查询赛程、球队状态与预测依据。",
+  },
 ];
 
 function replaceMeta(html, { path, title, description }) {

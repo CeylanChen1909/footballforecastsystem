@@ -141,6 +141,7 @@
         </div>
       </section>
     </main>
+      <AppFooter />
   </div>
 </template>
 
@@ -151,6 +152,7 @@ import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
 import { agentApi, analyticsApi } from '../../api'
 import { authStorage } from '../../utils/authStorage'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import { renderMarkdown } from '../../utils/markdown'
 import { ArrowDown, ChatLineSquare, Close, Connection, CopyDocument, Delete, Download, Edit, InfoFilled, Plus, Promotion, Refresh, Search, Share, Trophy } from '@element-plus/icons-vue'

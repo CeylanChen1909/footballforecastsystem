@@ -22,10 +22,18 @@ const routes = [
   { path: '/profile', name: 'Profile', component: () => import('../views/user/Profile.vue'), meta: { requiresAuth: true, roles: ['USER', 'ADMIN', 'SUPER_ADMIN'] } },
   { path: '/team/:teamId/squad', name: 'TeamSquad', component: () => import('../views/user/TeamSquad.vue'), meta: { requiresAuth: false } },
   { path: '/admin', name: 'AdminDashboard', component: () => import('../views/admin/AdminDashboard.vue'), meta: { requiresAuth: true, roles: ['ADMIN', 'SUPER_ADMIN'] } },
-  { path: '/:pathMatch(.*)*', redirect: '/matches' }
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('../views/user/NotFound.vue'), meta: { requiresAuth: false } }
 ]
 
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
+    return { top: 0 }
+  }
+})
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
@@ -80,6 +88,7 @@ const TITLES = {
   '/team': '球队阵容 - ChenFootball',
   '/admin': '管理后台 - ChenFootball',
   '/privacy': '隐私政策 - ChenFootball',
+  '/404': '页面未找到 - ChenFootball',
 }
 
 const SITE_ORIGIN = 'https://chenfootball.asia'
@@ -125,10 +134,14 @@ const canonicalPathFor = (path) => {
 
 router.afterEach((to) => {
   const match = Object.keys(TITLES).find((key) => to.path.startsWith(key))
-  document.title = match ? TITLES[match] : DEFAULT_TITLE
+  document.title = to.name === 'NotFound'
+    ? '页面未找到 - ChenFootball'
+    : (match ? TITLES[match] : DEFAULT_TITLE)
 
   const descKey = Object.keys(DESCRIPTIONS).find((key) => to.path.startsWith(key))
-  const description = descKey ? DESCRIPTIONS[descKey] : DEFAULT_DESCRIPTION
+  const description = to.name === 'NotFound'
+    ? '你访问的页面不存在或链接已失效，可返回比赛赛程继续浏览。'
+    : (descKey ? DESCRIPTIONS[descKey] : DEFAULT_DESCRIPTION)
   upsertMeta('name', 'description', description)
   upsertMeta('property', 'og:title', document.title)
   upsertMeta('property', 'og:description', description)

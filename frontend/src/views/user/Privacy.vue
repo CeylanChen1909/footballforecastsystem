@@ -16,10 +16,12 @@
       <p>你可以访问、修改、导出或删除账号资料，也可以撤回匿名统计同意。若发现数据错误、隐私问题或需要投诉，请通过站点反馈或管理员渠道联系（当前未公开独立客服邮箱）。我们会记录处理时间、处理结论和恢复方式。也可登录后在个人中心提交账户相关请求。</p>
       <div class="privacy-actions"><el-button type="primary" plain @click="$router.back()">返回</el-button><el-button plain @click="resetConsent">重新设置统计偏好</el-button></div>
     </main>
+      <AppFooter />
   </div>
 </template>
 
 <script setup>
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import { Football } from '@element-plus/icons-vue'
 import { clearAnalyticsConsent } from '../../utils/privacyConsent'

@@ -523,3 +523,17 @@ button:disabled,
   .el-drawer { width: min(92vw, 460px) !important; }
   .el-table { font-size: 12px; }
 }
+
+
+/* commercial polish: page shell footer layout */
+.ff-page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.ff-page-shell > .el-container,
+.ff-page-shell > .el-main,
+.ff-page-shell > main,
+.ff-page-shell > .matches-layout {
+  flex: 1 1 auto;
+}

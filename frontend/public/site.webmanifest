@@ -1,0 +1,31 @@
+{
+  "name": "ChenFootball",
+  "short_name": "ChenFootball",
+  "description": "足球赛程、赛事资料与智能预测",
+  "start_url": "/matches",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f7",
+  "theme_color": "#0f172a",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/og.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

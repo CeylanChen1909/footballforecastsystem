@@ -123,6 +123,7 @@
       </section>
 
     </el-main>
+      <AppFooter />
   </div>
 </template>
 
@@ -131,6 +132,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Trophy } from '@element-plus/icons-vue'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
@@ -273,7 +275,7 @@ const loadLeagueData = async () => {
     standings.value = []
     clubsFromApi.value = []
     zoneRules.value = { zones: [], note: '' }
-    loadError.value = error?.message || '请检查后端服务或数据同步状态'
+    loadError.value = error?.message || '积分榜暂时不可用，请稍后重试'
     quality.value = { status: 'SYNC_FAILED', statusText: '同步失败', message: loadError.value, source: '' }
   } finally {
     loading.value = false

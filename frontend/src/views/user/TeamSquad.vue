@@ -74,6 +74,7 @@
         </PageSection>
       </template>
     </el-main>
+      <AppFooter />
   </div>
 </template>
 
@@ -82,6 +83,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Trophy } from '@element-plus/icons-vue'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'

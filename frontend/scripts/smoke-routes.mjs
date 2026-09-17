@@ -69,4 +69,22 @@ assert(privacy.includes('privacy-toc') && privacy.includes('privacy-rights'), 'p
 assert(admin.includes('lastReloadAt') && admin.includes('最近刷新') && admin.includes('管理后台导航'), 'admin freshness or landmark is missing')
 assert(pageState.includes('aria-live') && pageState.includes("type === 'error' ? 'alert'"), 'loading and error states need live-region semantics')
 
+
+const notFound = read('src/views/user/NotFound.vue')
+const footer = read('src/components/layout/AppFooter.vue')
+const indexHtml = read('index.html')
+const manifest = read('public/site.webmanifest')
+const favicon = read('public/favicon.svg')
+assert(notFound.includes('找不到这个页面') && notFound.includes('返回比赛'), 'not-found page is missing')
+assert(footer.includes('隐私说明') && footer.includes('不构成投注建议'), 'trust footer is missing')
+assert(indexHtml.includes('/favicon.svg') && !indexHtml.includes('/vite.svg'), 'favicon still points at vite.svg')
+assert(indexHtml.includes('site.webmanifest') && indexHtml.includes('apple-touch-icon'), 'manifest or apple icon link missing')
+assert(manifest.includes('"short_name": "ChenFootball"'), 'web manifest incomplete')
+assert(favicon.includes('ChenFootball'), 'brand favicon missing label')
+assert(!matches.includes('请检查后端服务是否启动') && matches.includes('加载比赛失败，请稍后重试'), 'matches still exposes backend-centric errors')
+assert(competition.includes('积分榜暂时不可用，请稍后重试'), 'competition error copy not commercialized')
+assert(prediction.includes('AppFooter') && matches.includes('AppFooter'), 'main pages missing trust footer')
+
+assert(routes.includes("name: 'NotFound'") && !routes.includes("path: '/:pathMatch(.*)*', redirect: '/matches'"), 'catch-all still silent-redirects')
+
 console.log(`Smoke checks passed: ${new Date().toISOString()}`)
