@@ -120,7 +120,16 @@ assert(about.includes('about-trust') && about.includes('chenfootball.asia') && a
 const mainJs = read('src/main.js')
 const epCss = read('src/styles/element-plus-on-demand.js')
 assert(!mainJs.includes('element-plus/dist/index.css'), 'element-plus should not import full dist/index.css')
-assert(mainJs.includes('element-plus-on-demand') || mainJs.includes('element-plus/theme-chalk/base.css'), 'element-plus on-demand entry missing from main.js')
+const userEp = read('src/plugins/register-element-plus-user.js')
+const adminEp = read('src/plugins/register-element-plus-admin.js')
+assert(mainJs.includes('registerElementPlusUser') || userEp.includes('element-plus-on-demand'), 'element-plus user register plugin missing')
+assert(userEp.includes('element-plus-on-demand') || userEp.includes('theme-chalk/base.css'), 'element-plus on-demand entry missing from user register plugin')
+assert(!epCss.includes('date-picker/style'), 'date-picker CSS must stay out of user on-demand')
+assert(userEp.includes('ElDialog') && !userEp.includes('ElDatePicker'), 'user shell must keep dialog and defer date-picker')
+assert(adminEp.includes('ElDatePicker') && adminEp.includes('ElTimePicker'), 'admin register must include date/time pickers')
+assert(read('index.html').includes('/site.webmanifest') && !read('index.html').includes('manifest.webmanifest'), 'canonical PWA manifest must be site.webmanifest only')
+assert(read('vite.config.js').includes('dialog'), 'vite modulePreload must skip element-dialog')
+assert(read('scripts/lcp-html-order.mjs').includes('stripped'), 'lcp-html-order must strip route CSS from user shell')
 assert(epCss.includes('theme-chalk/base.css') && epCss.includes('components/button/style/css'), 'element-plus-on-demand.js incomplete')
 
 assert(matches.includes("defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))"), 'MatchFocusRail must stay async for LCP')
@@ -141,6 +150,7 @@ assert(exists('public/screenshot-wide.png') && exists('public/screenshot-narrow.
 const nginxConf = read('nginx.conf')
 assert(nginxConf.includes('Referrer-Policy') && nginxConf.includes('Permissions-Policy'), 'frontend nginx security headers missing')
 assert(nginxConf.includes('X-Content-Type-Options'), 'X-Content-Type-Options missing')
+assert(nginxConf.includes('Content-Security-Policy-Report-Only') && nginxConf.includes('browsing-topics=()'), 'CSP Report-Only / tightened Permissions-Policy missing')
 
 console.log('Smoke routes passed')
 

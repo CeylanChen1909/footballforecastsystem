@@ -135,3 +135,22 @@ Prefer `docker compose … up -d nacos` (uses compose aliases) over raw `docker 
 Nginx does **not** inherit `add_header` from `server` into a `location` that defines its own `add_header` (e.g. Cache-Control). Those locations repeat the security headers so `/assets/`, HTML shells, and health endpoints stay covered.
 
 Host edge nginx (`/etc/nginx/sites-enabled/chenfootball.asia`) already sets XCTO / XFO / Referrer-Policy. Do not stack a second, stricter CSP at the edge without verifying the SPA + API still works.
+
+
+## Round 6 — CSP Report-Only & Permissions-Policy
+
+Frontend container nginx (`frontend/nginx.conf`) now:
+
+- Tightens `Permissions-Policy` (camera/mic/geo/payment/usb/topics/sensors denied; `fullscreen=(self)`).
+- Keeps the **moderate enforcing CSP** (allows `'unsafe-inline'` scripts/styles for the Vue SPA).
+- Adds a **stricter `Content-Security-Policy-Report-Only`** (no `'unsafe-inline'` scripts, `connect-src` https-only, `object-src 'none'`) so violations can be observed without breaking the app.
+
+### Edge host nginx limits
+
+Public HTTPS terminates at `/etc/nginx/sites-enabled/chenfootball.asia`. That edge config already emits HSTS + XCTO + XFO + Referrer-Policy. Because nginx **accumulates duplicate `add_header` from proxy layers**, do **not** also attach an enforcing CSP (or a second Permissions-Policy) on the edge unless you intentionally own the full header set there and have removed the container duplicates. Prefer:
+
+1. Container frontend nginx as the source of truth for CSP / Permissions-Policy (this file).
+2. Edge keeps transport + baseline frame/nosniff/referrer only.
+3. If Cloudflare sits in front, avoid stacking yet another CSP in the dashboard unless Report-Only is used for experiments.
+
+Canonical PWA manifest is `/site.webmanifest`. Legacy `/manifest.webmanifest` is aliased to the same file.

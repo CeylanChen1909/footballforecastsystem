@@ -1,0 +1,12 @@
+/** Admin-only Element Plus CSS (r6). Loaded with /admin shell. */
+import 'element-plus/es/components/aside/style/css'
+import 'element-plus/es/components/date-picker/style/css'
+import 'element-plus/es/components/descriptions/style/css'
+import 'element-plus/es/components/descriptions-item/style/css'
+import 'element-plus/es/components/divider/style/css'
+import 'element-plus/es/components/input-number/style/css'
+import 'element-plus/es/components/pagination/style/css'
+import 'element-plus/es/components/switch/style/css'
+import 'element-plus/es/components/time-picker/style/css'
+import 'element-plus/es/components/timeline/style/css'
+import 'element-plus/es/components/timeline-item/style/css'

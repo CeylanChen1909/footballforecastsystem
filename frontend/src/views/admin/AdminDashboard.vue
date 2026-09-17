@@ -55,12 +55,15 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import { adminApi } from '../../api/admin'
+import { registerElementPlusAdmin } from '../../plugins/register-element-plus-admin'
 import { agentApi, crawlerApi, predictionApi } from '../../api'
+
+registerElementPlusAdmin(getCurrentInstance()?.appContext.app)
 
 const AdminConfigPanel = defineAsyncComponent(() => import('./AdminConfigPanel.vue'))
 const AdminChangelogPanel = defineAsyncComponent(() => import('./AdminChangelogPanel.vue'))

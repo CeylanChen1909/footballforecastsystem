@@ -17,7 +17,7 @@ export default defineConfig({
         return deps.filter((dep) => {
           const d = String(dep).replace(/\\/g, '/')
           if (/(admin-app|agent-app|prediction-app)/i.test(d)) return false
-          if (/element-(table|table-v2|date-picker|drawer|menu|tree-v2|upload)/i.test(d)) return false
+          if (/element-(table|table-v2|date-picker|dialog|drawer|menu|tree-v2|upload)/i.test(d)) return false
           if (/echarts/i.test(d)) return false
           return true
         })
@@ -27,10 +27,20 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalized = id.replace(/\\/g, '/')
+          // Never park Vite runtime helpers inside route chunks — otherwise the
+          // entry statically imports admin-app just for __vitePreload and the
+          // user shell preloads admin CSS/JS.
+          if (
+            normalized.includes('\0') ||
+            normalized.includes('vite/preload-helper') ||
+            normalized.includes('commonjsHelpers') ||
+            /\/vite\/dist\//.test(normalized)
+          ) {
+            return undefined
+          }
           if (normalized.includes('/src/views/admin/') || normalized.includes('/src/components/charts/')) {
             return 'admin-app'
           }
-          // Keep heavy user surfaces out of the matches/home LCP path.
           if (normalized.includes('/src/views/user/Agent.vue') || normalized.includes('/src/components/agent/')) {
             return 'agent-app'
           }
@@ -39,6 +49,14 @@ export default defineConfig({
           }
           if (normalized.includes('/src/components/matches/PredictionDiscovery.vue')) {
             return 'matches-discovery'
+          }
+          // Admin EP registration + CSS must stay with admin chunk, not entry.
+          if (
+            normalized.includes('/src/plugins/register-element-plus-admin') ||
+            normalized.includes('/src/plugins/element-plus-admin-extras') ||
+            normalized.includes('/src/styles/element-plus-admin-on-demand')
+          ) {
+            return 'admin-app'
           }
           if (!id.includes('node_modules')) return undefined
           if (normalized.includes('/echarts')) return 'echarts'

@@ -17,31 +17,39 @@ if (!links.length) {
   process.exit(0)
 }
 
+const isRouteCss = (tag) => /(admin-app|agent-app|prediction-app)/i.test(tag)
+
 const rank = (tag) => {
   const href = (tag.match(/href=["']([^"']+)["']/) || [])[1] || ''
   if (/\/index-[^/"']+\.css/i.test(href)) return 0
   if (/element-plus-core/i.test(href)) return 1
-  if (/(admin-app|agent-app|prediction-app)/i.test(href)) return 9
+  if (isRouteCss(tag)) return 9
   return 5
 }
 
-const ordered = [...links].sort((a, b) => rank(a) - rank(b))
-const rewritten = ordered.map((tag) => {
-  if (/(admin-app|agent-app|prediction-app)/i.test(tag) && !/media=/i.test(tag)) {
-    return tag.replace(/\s*\/?>$/, ' media="print" onload="this.media=\'all\'" />')
-  }
-  return tag
-})
+// Drop route-only CSS from the user shell HTML. Async chunks load their own CSS.
+const kept = links.filter((tag) => !isRouteCss(tag))
+const ordered = [...kept].sort((a, b) => rank(a) - rank(b))
+const stripped = links.length - kept.length
 
 html = html.replace(linkRe, '')
-const block = rewritten.join('\n    ')
+const block = ordered.join('\n    ')
 if (/id="critical-shell"/.test(html)) {
   html = html.replace(/<\/style>/i, `</style>\n    ${block}`)
 } else {
   html = html.replace(/<\/head>/i, `    ${block}\n  </head>`)
 }
 
-html = html.replace(/\s*<link[^>]+rel=["']modulepreload["'][^>]*(?:admin-app|agent-app|prediction-app)[^>]*>\s*/gi, '\n    ')
+html = html.replace(
+  /\s*<link[^>]+rel=["']modulepreload["'][^>]*(?:admin-app|agent-app|prediction-app)[^>]*>\s*/gi,
+  '\n    '
+)
+
+// Canonical PWA manifest only.
+html = html.replace(/\s*<link[^>]+rel=["']manifest["'][^>]*href=["']\/manifest\.webmanifest["'][^>]*>\s*/gi, '\n    ')
+if (!/rel=["']manifest["'][^>]*href=["']\/site\.webmanifest["']/i.test(html)) {
+  html = html.replace(/<link rel="apple-touch-icon"[^>]*>/i, (m) => `${m}\n    <link rel="manifest" href="/site.webmanifest" />`)
+}
 
 fs.writeFileSync(indexPath, html)
-console.log(`lcp-html-order: reordered ${rewritten.length} stylesheets`)
+console.log(`lcp-html-order: kept ${ordered.length} stylesheets, stripped ${stripped} route CSS`)

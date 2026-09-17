@@ -9,6 +9,18 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function sanitizeManifestLinks(html) {
+  let out = String(html).replace(/\s*<link[^>]+rel=["']manifest["'][^>]*>\s*/gi, "\n    ");
+  const link = '<link rel="manifest" href="/site.webmanifest" />';
+  if (/rel=["']apple-touch-icon["']/i.test(out)) {
+    out = out.replace(/(<link[^>]+rel=["']apple-touch-icon["'][^>]*>)/i, `$1\n    ${link}`);
+  } else {
+    out = out.replace(/<head>/i, `<head>\n    ${link}`);
+  }
+  return out;
+}
+
 const distDir = join(__dirname, "..", "dist");
 const indexPath = join(distDir, "index.html");
 
@@ -134,14 +146,14 @@ function main() {
   for (const route of ROUTES) {
     const html = replaceMeta(base, route);
     if (route.path === "/") {
-      writeFileSync(indexPath, html, "utf8");
+      writeFileSync(indexPath, sanitizeManifestLinks(html), "utf8");
       console.log(`[prerender-meta] wrote ${indexPath}`);
       continue;
     }
     const outDir = join(distDir, route.path.replace(/^\//, ""));
     mkdirSync(outDir, { recursive: true });
     const outPath = join(outDir, "index.html");
-    writeFileSync(outPath, html, "utf8");
+    writeFileSync(outPath, sanitizeManifestLinks(html), "utf8");
     console.log(`[prerender-meta] wrote ${outPath}`);
   }
 }
