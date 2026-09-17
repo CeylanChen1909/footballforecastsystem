@@ -126,3 +126,12 @@ curl -fsS http://127.0.0.1:8082/actuator/health
 Compose also pins `networks.football-network.name: footballforecastsystem_football-network` so the repair script target stays stable across recreate.
 
 Prefer `docker compose … up -d nacos` (uses compose aliases) over raw `docker run` so aliases stay declared in the project file.
+
+
+## Frontend nginx security headers
+
+`frontend/nginx.conf` sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and a moderate CSP on the SPA container (`:3000`).
+
+Nginx does **not** inherit `add_header` from `server` into a `location` that defines its own `add_header` (e.g. Cache-Control). Those locations repeat the security headers so `/assets/`, HTML shells, and health endpoints stay covered.
+
+Host edge nginx (`/etc/nginx/sites-enabled/chenfootball.asia`) already sets XCTO / XFO / Referrer-Policy. Do not stack a second, stricter CSP at the edge without verifying the SPA + API still works.

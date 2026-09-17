@@ -39,7 +39,7 @@
               <i></i><b></b><em></em><em></em><em></em>
             </div>
           </div>
-          <PageState v-else-if="loadError" type="error" title="积分榜加载失败" :description="loadError" action-text="重试" @action="loadLeagueData" />
+          <PageState v-else-if="loadError" type="error" title="积分榜暂时不可用" :description="loadError || '联赛积分快照读取失败，可稍后重试，或先从赛程页浏览比赛与预测。'" action-text="重试" @action="loadLeagueData" />
           <div v-else-if="standings.length && standingDataState !== 'INCOMPLETE'" class="standings-data-wrap">
             <el-alert v-if="standingDataState !== 'READY'" :title="standingDataState === 'PRESEASON' ? '赛季尚未产生积分' : '积分数据不完整'" :description="qualityMessage || '当前仅显示参赛名单或缓存快照，积分列不会被当作真实成绩。'" type="info" :closable="false" show-icon />
             <div v-if="zoneRules.zones?.length" class="zone-legend" aria-label="积分榜区域说明">
@@ -61,7 +61,7 @@
             <el-table-column label="球队" min-width="180">
               <template #default="scope">
                 <button type="button" class="team-cell" :aria-label="`查看${scope.row.team?.name || '未知球队'}资料`" @click="openTeam(scope.row.team)">
-                  <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" @error="markLogoBroken(scope.row.team)" />
+                  <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" width="28" height="28" loading="lazy" decoding="async" @error="markLogoBroken(scope.row.team)" />
                   <span v-else class="mini-logo" title="暂无队徽" :aria-label="`${scope.row.team?.name || '球队'}暂无队徽`">{{ firstLetter(scope.row.team?.name) }}</span>
                   <span class="team-name-text" :title="scope.row.team?.name || '未知球队'">{{ scope.row.team?.name || '未知球队' }}</span>
                 </button>
@@ -105,7 +105,7 @@
             </div>
           </div>
           <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。可先浏览赛程中的单场分析。" action-text="去看赛程与预测" @action="goMatchesDiscover" />
-          <PageState v-else title="暂无积分榜" :description="qualityMessage || '该联赛当前没有已同步的榜单数据，可稍后刷新、切换联赛，或先从赛程浏览本场分析。'" action-text="浏览赛程与预测" @action="goMatchesDiscover" />
+          <PageState v-else title="该联赛暂无积分榜" :description="qualityMessage || '当前没有已同步的榜单数据。可切换联赛/赛季，稍后刷新，或先从赛程浏览单场分析。'" action-text="浏览赛程与预测" @action="goMatchesDiscover" />
         </PageSection>
 
         <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从联赛名单进入球队资料，不再依赖资讯聚合">
@@ -115,13 +115,14 @@
           <PageState v-if="loading && !filteredClubs.length" type="loading" title="正在加载俱乐部..." :size="32" />
           <div v-else-if="filteredClubs.length" class="club-grid">
             <button v-for="club in filteredClubs" :key="clubKey(club)" type="button" class="club-card" :title="club.name" :aria-label="`查看${club.name}球队资料`" @click="openTeam(club)">
-              <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" @error="markLogoBroken(club)" />
+              <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" width="32" height="32" loading="lazy" decoding="async" @error="markLogoBroken(club)" />
               <span v-else class="club-logo-placeholder" title="暂无队徽" :aria-label="`${club.name}暂无队徽`">{{ firstLetter(club.name) }}</span>
               <span class="club-name" :title="club.name">{{ club.name }}</span>
               <span class="club-meta">{{ clubRank(club) ? `第 ${clubRank(club)} 名` : '查看球队资料' }}</span>
               <span class="club-arrow" aria-hidden="true">→</span>
             </button>
           </div>
+          <PageState v-else-if="clubKeyword.trim()" title="没有符合条件的球队" description="换一个关键词，或清空搜索后再浏览参赛名单。" action-text="清除搜索" @action="clubKeyword = ''" />
           <PageState v-else title="暂无俱乐部" description="积分榜同步后，参赛俱乐部会自动出现在这里。也可先从赛程页按球队名称搜索。" action-text="去赛程页搜索" @action="goMatchesDiscover" />
         </PageSection>
       </section>

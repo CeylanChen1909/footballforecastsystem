@@ -235,13 +235,13 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import MatchCardSkeleton from '../../components/matches/MatchCardSkeleton.vue'
 import MatchCard from '../../components/MatchCard.vue'
-import PredictionDiscovery from '../../components/matches/PredictionDiscovery.vue'
 import { getBusinessDate } from '../../utils/match'
 import { getTeamSearchTokens, normalizeTeamSearch } from '../../utils/teamNames'
 import { useMatchRecommendations } from '../../composables/useMatchRecommendations'
 
 // Defer focus rail + changelog off the matches critical path (LCP: date rail + list/skeleton).
 const MatchFocusRail = defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))
+const PredictionDiscovery = defineAsyncComponent(() => import('../../components/matches/PredictionDiscovery.vue'))
 const ChangelogButton = defineAsyncComponent(() => import('../../components/matches/ChangelogButton.vue'))
 
 const router = useRouter()

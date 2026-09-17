@@ -57,7 +57,7 @@
                   <div class="player-copy">
                     <strong>{{ player.name || '未知球员' }}<b v-if="player.number" class="player-number">#{{ player.number }}</b></strong>
                     <span>{{ player.position || '位置待确认' }}<template v-if="player.number"> · {{ player.number }}号</template></span>
-                    <small><template v-if="player.nationality">{{ player.nationality }}</template><template v-if="player.age"> · {{ player.age }}岁</template></small>
+                    <small><template v-if="player.nationality">{{ player.nationality }}</template><template v-if="playerAgeLabel(player)"> · {{ playerAgeLabel(player) }}</template></small>
                   </div>
                 </article>
               </div>
@@ -150,6 +150,13 @@ const filteredSquadGroups = computed(() => {
   return squadGroups.value.map(group => ({ ...group, items: group.items.filter(player => allowed.has(playerKey(player))) })).filter(group => group.items.length)
 })
 
+const playerAgeLabel = (player) => {
+  const age = Number(player?.age)
+  if (!Number.isFinite(age) || age <= 0) return ''
+  // Privacy: only surface ages for 18+ players; under-18 stays N/A.
+  if (age < 18) return 'N/A'
+  return `${Math.trunc(age)}岁`
+}
 const firstLetter = value => String(value || '?').trim().slice(0, 1).toUpperCase()
 const playerKey = player => `${player.id || player.name}-${player.number || ''}`
 const formatDateTime = value => {

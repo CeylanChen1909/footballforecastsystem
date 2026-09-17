@@ -3,7 +3,7 @@
     <div class="match-info">
       <div class="team-row">
         <div class="team">
-          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
+          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
           <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${homeDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
           <span class="team-name" role="button" tabindex="0" :title="homeDisplayName" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
         </div>
@@ -15,7 +15,7 @@
         </div>
         <div class="team">
           <span class="team-name" role="button" tabindex="0" :title="awayDisplayName" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
-          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
+          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
           <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${awayDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
         </div>
       </div>

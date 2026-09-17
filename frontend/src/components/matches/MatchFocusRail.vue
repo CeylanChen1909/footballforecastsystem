@@ -33,9 +33,9 @@
             <span class="focus-status"><i v-if="tier(match) === 'LIVE'"></i>{{ statusText(match) }}</span>
           </span>
           <span class="focus-matchup">
-            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" :alt="`${homeName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${homeName(match)}暂无队徽`">{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
+            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${homeName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${homeName(match)}暂无队徽`">{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
             <span class="focus-center"><b>{{ scoreOrTime(match) }}</b><small>{{ tier(match) === 'LIVE' ? '进行中' : kickoffLabel(match) }}</small></span>
-            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" :alt="`${awayName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${awayName(match)}暂无队徽`">{{ initial(awayName(match)) }}</b></span>
+            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${awayName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${awayName(match)}暂无队徽`">{{ initial(awayName(match)) }}</b></span>
           </span>
           <span class="focus-reasons">
             <em v-for="reason in reasons(match).slice(0, 2)" :key="reason">{{ reason }}</em>
