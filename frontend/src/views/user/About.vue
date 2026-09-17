@@ -1,6 +1,6 @@
 <template>
   <div class="legal-page ff-page-shell">
-    <AppTopNav title="ChenFootball" subtitle="关于我们" :brand-icon="Football" active-path="/matches" />
+    <AppTopNav title="ChenFootball" subtitle="关于我们" :brand-icon="Football" active-path="/about" />
     <main id="app-main" class="legal-main" tabindex="-1">
       <p class="legal-lead">ChenFootball 是面向球迷的足球赛程与预测站点，帮助你快速查看比赛、联赛资料与模型分析，并在关键位置标明数据覆盖与可信度边界。</p>
       <nav class="legal-toc" aria-label="关于目录">

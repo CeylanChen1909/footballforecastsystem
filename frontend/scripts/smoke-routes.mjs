@@ -79,7 +79,8 @@ assert(routes.includes("path: '/about'") && routes.includes("path: '/terms'"), '
 assert(about.includes('产品定位') && about.includes('免责声明'), 'about page content is incomplete')
 assert(terms.includes('使用条款') && terms.includes('责任限制'), 'terms page content is incomplete')
 assert(footer.includes('/about') && footer.includes('/terms'), 'footer legal links are missing')
-assert(matches.includes('matches-skeleton') && matches.includes('match-skeleton-card'), 'matches loading skeleton is missing')
+assert(matches.includes('matches-skeleton') && matches.includes('MatchCardSkeleton'), 'matches loading skeleton is missing')
+assert(exists('src/components/matches/MatchCardSkeleton.vue'), 'MatchCardSkeleton component is missing')
 assert(exists('public/apple-touch-icon.png') && exists('public/og.png'), 'share/touch icons are missing')
 const indexHtml = read('index.html')
 const manifest = read('public/site.webmanifest')
@@ -96,4 +97,10 @@ assert(prediction.includes('AppFooter') && matches.includes('AppFooter'), 'main 
 
 assert(routes.includes("name: 'NotFound'") && !routes.includes("path: '/:pathMatch(.*)*', redirect: '/matches'"), 'catch-all still silent-redirects')
 
+
+assert(competition.includes('standings-skeleton'), 'competition standings skeleton is missing')
+const sitemapXml = read('public/sitemap.xml')
+assert(sitemapXml.includes('/about') && sitemapXml.includes('/terms'), 'sitemap missing about/terms')
+assert(!read('src/main.js').includes('VideoCamera') && !read('src/main.js').includes('MagicStick'), 'unused icons remain in main entry')
+assert(routes.includes("() => import('../views/user/Matches.vue')") && routes.includes("() => import('../views/user/About.vue')"), 'route-level lazy imports missing')
 console.log(`Smoke checks passed: ${new Date().toISOString()}`)

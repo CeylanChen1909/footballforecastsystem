@@ -84,12 +84,7 @@
             </template>
 
             <div v-if="loading" class="matches-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载比赛数据">
-              <div v-for="n in 6" :key="n" class="match-skeleton-card">
-                <div class="sk-row"><i></i><i></i></div>
-                <b></b>
-                <em></em>
-                <span></span>
-              </div>
+              <MatchCardSkeleton v-for="n in 6" :key="n" />
             </div>
             <PageState v-else-if="errorMsg" type="error" :title="errorMsg" action-text="重试" @action="loadCurrentView" />
             <template v-else>
@@ -232,6 +227,7 @@ import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
+import MatchCardSkeleton from '../../components/matches/MatchCardSkeleton.vue'
 import MatchCard from '../../components/MatchCard.vue'
 import MatchFocusRail from '../../components/matches/MatchFocusRail.vue'
 import ChangelogButton from '../../components/matches/ChangelogButton.vue'
@@ -1193,26 +1189,6 @@ onBeforeUnmount(() => {
   min-width: 0;
   padding: 4px 0 8px;
 }
-.match-skeleton-card {
-  min-height: 132px;
-  padding: 16px;
-  border: 1px solid var(--ff-border);
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--ff-surface-quiet), var(--ff-surface-soft), var(--ff-surface-quiet));
-  background-size: 200% 100%;
-  animation: matches-skeleton 1.2s ease-in-out infinite;
-}
-.match-skeleton-card .sk-row { display:flex; justify-content:space-between; gap:12px; }
-.match-skeleton-card i, .match-skeleton-card b, .match-skeleton-card em, .match-skeleton-card span {
-  display: block;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ff-border-strong) 42%, transparent);
-}
-.match-skeleton-card i { width: 42%; height: 12px; }
-.match-skeleton-card b { width: 70%; height: 14px; margin-top: 18px; }
-.match-skeleton-card em { width: 52%; height: 10px; margin-top: 14px; }
-.match-skeleton-card span { width: 36%; height: 28px; margin-top: 18px; border-radius: 6px; }
-@keyframes matches-skeleton { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (max-width: 620px) {
   .matches-skeleton { grid-template-columns: 1fr; }
 }

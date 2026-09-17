@@ -1,6 +1,6 @@
 <template>
   <div class="legal-page ff-page-shell">
-    <AppTopNav title="ChenFootball" subtitle="使用条款" :brand-icon="Football" active-path="/matches" />
+    <AppTopNav title="ChenFootball" subtitle="使用条款" :brand-icon="Football" active-path="/terms" />
     <main id="app-main" class="legal-main" tabindex="-1">
       <p class="legal-lead">使用 ChenFootball（chenfootball.asia）即表示你理解并同意以下条款。若不同意，请停止使用本站点服务。</p>
       <nav class="legal-toc" aria-label="条款目录">

@@ -11,8 +11,8 @@ import 'element-plus/dist/index.css'
 import './style.css'
 import {
   ArrowDown, ArrowLeft, ArrowRight, Bell, Calendar, ChatLineSquare, CircleCheck, Connection, DataLine,
-  Football, Histogram, Loading, Location, MagicStick, Message, Notebook, OfficeBuilding, Refresh, RefreshRight, Search,
-  Setting, Star, StarFilled, SwitchButton, Tickets, TrendCharts, Trophy, User, VideoCamera, VideoPlay,
+  Football, Loading, Location, Message, Notebook, Refresh, RefreshRight, Search,
+  Setting, Star, StarFilled, SwitchButton, Tickets, TrendCharts, Trophy, User,
   WarningFilled
 } from '@element-plus/icons-vue'
 import App from './App.vue'
@@ -30,8 +30,8 @@ const elementComponents = [
 for (const component of elementComponents) app.component(component.name, component)
 const elementIcons = {
   ArrowDown, ArrowLeft, ArrowRight, Bell, Calendar, ChatLineSquare, CircleCheck, Connection, DataLine,
-  Football, Histogram, Loading, Location, MagicStick, Message, Notebook, OfficeBuilding, Refresh, RefreshRight, Search,
-  Setting, Star, StarFilled, SwitchButton, Tickets, TrendCharts, Trophy, User, VideoCamera, VideoPlay,
+  Football, Loading, Location, Message, Notebook, Refresh, RefreshRight, Search,
+  Setting, Star, StarFilled, SwitchButton, Tickets, TrendCharts, Trophy, User,
   WarningFilled
 }
 for (const [key, value] of Object.entries(elementIcons)) app.component(key, value)

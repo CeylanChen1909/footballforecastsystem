@@ -34,7 +34,11 @@
               </div>
             </div>
           </template>
-          <PageState v-if="loading" type="loading" title="正在加载积分榜..." :size="36" />
+          <div v-if="loading" class="standings-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载积分榜">
+            <div v-for="n in 8" :key="n" class="standings-skeleton-row">
+              <i></i><b></b><em></em><em></em><em></em>
+            </div>
+          </div>
           <PageState v-else-if="loadError" type="error" title="积分榜加载失败" :description="loadError" action-text="重试" @action="loadLeagueData" />
           <div v-else-if="standings.length && standingDataState !== 'INCOMPLETE'" class="standings-data-wrap">
             <el-alert v-if="standingDataState !== 'READY'" :title="standingDataState === 'PRESEASON' ? '赛季尚未产生积分' : '积分数据不完整'" :description="qualityMessage || '当前仅显示参赛名单或缓存快照，积分列不会被当作真实成绩。'" type="info" :closable="false" show-icon />
@@ -424,5 +428,32 @@ watch(() => route.query.league, () => {
   .standings-table-scroll { display:none; }
   .standings-cards { display:flex; }
   .standings-scroll-hint { display:none; }
+}
+
+.standings-skeleton { display: grid; gap: 8px; padding: 4px 0 8px; }
+.standings-skeleton-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1.8fr) repeat(3, 44px);
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--ff-border);
+  border-radius: 10px;
+  background: var(--ff-surface);
+}
+.standings-skeleton-row i, .standings-skeleton-row b, .standings-skeleton-row em {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--ff-surface-soft) 0%, #eef3f0 45%, var(--ff-surface-soft) 100%);
+  background-size: 200% 100%;
+  animation: standings-skeleton 1.2s ease-in-out infinite;
+}
+.standings-skeleton-row i { width: 22px; height: 22px; border-radius: 999px; }
+.standings-skeleton-row b { width: 70%; height: 14px; }
+.standings-skeleton-row em { width: 100%; }
+@keyframes standings-skeleton { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .standings-skeleton-row i, .standings-skeleton-row b, .standings-skeleton-row em { animation: none; }
 }
 </style>
