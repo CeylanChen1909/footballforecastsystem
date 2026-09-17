@@ -1,21 +1,23 @@
-# Element Plus CSS strategy (Round 4)
+# Element Plus CSS / JS strategy (Round 6)
 
 ## Context
-This frontend registers Element Plus components manually in `src/main.js` and does
-**not** use `unplugin-vue-components` / auto-import.
+This frontend registers Element Plus components manually (no `unplugin-vue-components`).
 
-## Change
-Replaced full `element-plus/dist/index.css` (~350KB) with
-`src/styles/element-plus-on-demand.js` (`theme-chalk/base.css` + per-component CSS
-for registered widgets and Message / MessageBox / Loading / Overlay / Popper /
-Scrollbar / OptionGroup / CheckboxGroup / Radio).
+## Round 4–5
+Replaced full `element-plus/dist/index.css` with on-demand `theme-chalk` imports.
 
-## Why not unplugin in r4
-Auto-import would conflict with manual `app.component(...)` registration.
-On-demand style imports cut CSS weight without changing runtime resolution.
+## Round 6
+Split registration and CSS by shell:
+
+- **User shell** (`src/plugins/register-element-plus-user.js` + `src/styles/element-plus-on-demand.js`) — matches/home LCP path.
+- **Admin shell** (`src/plugins/register-element-plus-admin.js` + `src/styles/element-plus-admin-on-demand.js`) — loaded from `AdminDashboard.vue` only.
+
+Admin-only widgets moved out of the entry: Aside, DatePicker, Descriptions, Divider, InputNumber, Pagination, Switch, TimePicker, Timeline.
+
+`vite.config.js` `manualChunks` keeps Vite preload helpers out of `admin-app` so the entry does not statically import admin CSS/JS. `scripts/lcp-html-order.mjs` strips `admin-app` / `agent-app` / `prediction-app` stylesheets from `dist/index.html`.
 
 ## Verify
-`npm run test:smoke` asserts no `dist/index.css` and on-demand module present.
+`npm run build && npm run test:smoke && npm run test:perf`
 
 ## Rollback
-Restore `import 'element-plus/dist/index.css'` in `main.js` if a style is missing.
+Restore full registration in `main.js` and merge admin CSS back into `element-plus-on-demand.js` if an admin widget style is missing.
