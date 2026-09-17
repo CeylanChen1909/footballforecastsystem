@@ -13,10 +13,9 @@ export default defineConfig({
     modulePreload: {
       polyfill: true,
       resolveDependencies(filename, deps) {
-        // Keep matches/home LCP lean: skip admin and heavy optional EP widgets.
         return deps.filter((dep) => {
           const d = String(dep).replace(/\\/g, '/')
-          if (/(admin-app|agent-app|prediction-app)/i.test(d)) return false
+          if (/(admin-app|agent-app|prediction-app|vite-runtime)/i.test(d)) return false
           if (/element-(table|table-v2|date-picker|dialog|drawer|menu|tree-v2|upload)/i.test(d)) return false
           if (/echarts/i.test(d)) return false
           return true
@@ -27,16 +26,22 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalized = id.replace(/\\/g, '/')
-          // Never park Vite runtime helpers inside route chunks — otherwise the
-          // entry statically imports admin-app just for __vitePreload and the
-          // user shell preloads admin CSS/JS.
+          // Vite injects \0vite/preload-helper into every dynamic-import chunk.
+          // If it lands in admin-app, the entry statically imports admin-app and
+          // the user shell preloads admin CSS. Keep it in a tiny dedicated chunk.
           if (
-            normalized.includes('\0') ||
+            id.includes('\0') ||
             normalized.includes('vite/preload-helper') ||
+            normalized.includes('vite/modulepreload-polyfill') ||
             normalized.includes('commonjsHelpers') ||
-            /\/vite\/dist\//.test(normalized)
+            /\/node_modules\/vite\//.test(normalized)
           ) {
-            return undefined
+            return 'vite-runtime'
+          }
+          if (normalized.includes('/src/plugins/register-element-plus-admin') ||
+              normalized.includes('/src/styles/element-plus-admin-on-demand') ||
+              normalized.includes('/src/plugins/element-plus-admin-extras')) {
+            return 'admin-app'
           }
           if (normalized.includes('/src/views/admin/') || normalized.includes('/src/components/charts/')) {
             return 'admin-app'
@@ -50,14 +55,6 @@ export default defineConfig({
           if (normalized.includes('/src/components/matches/PredictionDiscovery.vue')) {
             return 'matches-discovery'
           }
-          // Admin EP registration + CSS must stay with admin chunk, not entry.
-          if (
-            normalized.includes('/src/plugins/register-element-plus-admin') ||
-            normalized.includes('/src/plugins/element-plus-admin-extras') ||
-            normalized.includes('/src/styles/element-plus-admin-on-demand')
-          ) {
-            return 'admin-app'
-          }
           if (!id.includes('node_modules')) return undefined
           if (normalized.includes('/echarts')) return 'echarts'
           if (normalized.includes('/@element-plus/icons-vue')) return 'element-plus-icons'
@@ -67,7 +64,9 @@ export default defineConfig({
             if (match && heavy.has(match[1])) return `element-${match[1]}`
           }
           if (normalized.includes('/element-plus')) return 'element-plus-core'
-          if (normalized.includes('/vue/') || normalized.includes('/@vue/') || normalized.includes('/vue-router') || normalized.includes('/pinia')) return 'vue-vendor'
+          if (normalized.includes('/vue/') || normalized.includes('/@vue/') || normalized.includes('/vue-router') || normalized.includes('/pinia')) {
+            return 'vue-vendor'
+          }
           if (normalized.includes('/axios')) return 'http'
           return undefined
         }
@@ -77,19 +76,13 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/news': {
-        target: 'http://localhost:8082',
-        changeOrigin: true,
-      },
-      '/api': {
-        target: 'http://localhost:8082',
-        changeOrigin: true,
-      },
+      '/api/news': { target: 'http://localhost:8082', changeOrigin: true },
+      '/api': { target: 'http://localhost:8082', changeOrigin: true },
       '/ml': {
         target: 'http://localhost:5001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ml/, ''),
-      },
+        rewrite: (path) => path.replace(/^\/ml/, '')
+      }
     }
   }
 })
