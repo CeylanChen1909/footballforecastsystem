@@ -5,6 +5,8 @@ const routes = [
   { path: '/', redirect: '/matches' },
   { path: '/login', name: 'Login', component: () => import('../views/user/Login.vue'), meta: { requiresAuth: false } },
   { path: '/privacy', name: 'Privacy', component: () => import('../views/user/Privacy.vue'), meta: { requiresAuth: false } },
+  { path: '/about', name: 'About', component: () => import('../views/user/About.vue'), meta: { requiresAuth: false } },
+  { path: '/terms', name: 'Terms', component: () => import('../views/user/Terms.vue'), meta: { requiresAuth: false } },
   // Home 已下线；保留旧地址，避免历史书签失效。
   { path: '/home', redirect: '/matches', meta: { requiresAuth: false } },
   { path: '/matches', name: 'Matches', component: () => import('../views/user/Matches.vue'), meta: { requiresAuth: false } },
@@ -88,6 +90,8 @@ const TITLES = {
   '/team': '球队阵容 - ChenFootball',
   '/admin': '管理后台 - ChenFootball',
   '/privacy': '隐私政策 - ChenFootball',
+  '/about': '关于我们 - ChenFootball',
+  '/terms': '使用条款 - ChenFootball',
   '/404': '页面未找到 - ChenFootball',
 }
 
@@ -97,6 +101,8 @@ const DESCRIPTIONS = {
   '/matches': '浏览今日与近期足球赛程，查看联赛筛选、收藏与开赛提醒。',
   '/competitions': '查看联赛积分榜、参赛俱乐部与球队资料。',
   '/privacy': '了解 ChenFootball 如何保存、使用与删除账号及赛程相关数据。',
+  '/about': '了解 ChenFootball 的产品定位、数据来源、模型边界与免责声明。',
+  '/terms': '查阅 ChenFootball 使用条款、账号规则、合理使用与责任限制。',
   '/agent': '用自然语言查询赛程、球队状态与预测依据。',
   '/prediction': '查看单场比赛的统一预测结论、概率分布与数据覆盖。',
   '/team': '查看球队阵容与相关资料。',
@@ -127,7 +133,7 @@ const upsertCanonical = (href) => {
 const canonicalPathFor = (path) => {
   if (path.startsWith('/prediction/')) return path.replace(/\/detail$/, '')
   if (path.startsWith('/team/')) return path
-  const known = ['/matches', '/competitions', '/privacy', '/agent', '/profile', '/admin', '/login']
+  const known = ['/matches', '/competitions', '/privacy', '/about', '/terms', '/agent', '/profile', '/admin', '/login']
   const hit = known.find((key) => path === key || path.startsWith(key + '/'))
   return hit || '/matches'
 }
@@ -148,6 +154,10 @@ router.afterEach((to) => {
   upsertMeta('property', 'og:url', SITE_ORIGIN + canonicalPathFor(to.path))
   upsertMeta('name', 'twitter:title', document.title)
   upsertMeta('name', 'twitter:description', description)
+  upsertMeta('property', 'og:image', SITE_ORIGIN + '/og.png')
+  upsertMeta('property', 'og:type', 'website')
+  upsertMeta('name', 'twitter:image', SITE_ORIGIN + '/og.png')
+  upsertMeta('name', 'twitter:card', 'summary_large_image')
 
   upsertCanonical(SITE_ORIGIN + canonicalPathFor(to.path))
 })

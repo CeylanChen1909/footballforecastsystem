@@ -39,6 +39,16 @@ const ROUTES = [
     description: "了解 ChenFootball 如何保存、使用与删除账号及赛程相关数据。",
   },
   {
+    path: "/about",
+    title: "关于我们 - ChenFootball",
+    description: "了解 ChenFootball 的产品定位、数据来源、模型边界与免责声明。",
+  },
+  {
+    path: "/terms",
+    title: "使用条款 - ChenFootball",
+    description: "查阅 ChenFootball 使用条款、账号规则、合理使用与责任限制。",
+  },
+  {
     path: "/agent",
     title: "Agent - ChenFootball",
     description: "用自然语言查询赛程、球队状态与预测依据。",

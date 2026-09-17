@@ -9,6 +9,8 @@
         <router-link to="/matches">比赛</router-link>
         <router-link to="/competitions">赛事资料</router-link>
         <router-link to="/agent">Agent</router-link>
+        <router-link to="/about">关于</router-link>
+        <router-link to="/terms">使用条款</router-link>
         <router-link to="/privacy">隐私说明</router-link>
       </nav>
       <p class="footer-note">预测仅供参考，不构成投注建议。数据覆盖与模型质量会在页面中明确标注。</p>

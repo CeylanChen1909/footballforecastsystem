@@ -60,3 +60,28 @@ location = /api/actuator/health { proxy_pass http://127.0.0.1:8082/actuator/heal
 ```
 
 Frontend container nginx has the same map for direct `:3000` checks. Static `/health.json` is served by the SPA container via `location /`.
+
+## Troubleshooting: `/api/actuator/health` returns 502
+
+Edge and frontend nginx maps are correct when present:
+
+- host: `location = /api/actuator/health` → `http://127.0.0.1:8082/actuator/health`
+- frontend container: `location = /api/actuator/health` → `http://football-gateway:8082/actuator/health`
+
+If public/local checks still 502 while `football-frontend` is healthy:
+
+1. Confirm gateway process answers locally: `curl -fsS http://127.0.0.1:8082/actuator/health`
+2. If connection reset / gateway restarting, check Nacos DNS from gateway: `docker exec football-gateway getent hosts nacos`
+3. If `nacos` does not resolve but `football-nacos` is running, the container may have lost its compose network endpoint (`Networks: {}` while `HostConfig.NetworkMode` still names the network). Re-attach without recreating the stack:
+
+```bash
+docker network connect --alias nacos footballforecastsystem_football-network football-nacos
+docker exec football-gateway getent hosts nacos
+# wait for gateway health; restart only the gateway if it stays down:
+# docker restart football-gateway
+curl -fsS http://127.0.0.1:8082/actuator/health
+curl -fsS https://chenfootball.asia/api/actuator/health
+```
+
+Do not scrape `.env` secrets into tickets while debugging.
+

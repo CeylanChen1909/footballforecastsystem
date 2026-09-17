@@ -70,8 +70,17 @@ assert(admin.includes('lastReloadAt') && admin.includes('最近刷新') && admin
 assert(pageState.includes('aria-live') && pageState.includes("type === 'error' ? 'alert'"), 'loading and error states need live-region semantics')
 
 
+
 const notFound = read('src/views/user/NotFound.vue')
 const footer = read('src/components/layout/AppFooter.vue')
+const about = read('src/views/user/About.vue')
+const terms = read('src/views/user/Terms.vue')
+assert(routes.includes("path: '/about'") && routes.includes("path: '/terms'"), 'about/terms routes are missing')
+assert(about.includes('产品定位') && about.includes('免责声明'), 'about page content is incomplete')
+assert(terms.includes('使用条款') && terms.includes('责任限制'), 'terms page content is incomplete')
+assert(footer.includes('/about') && footer.includes('/terms'), 'footer legal links are missing')
+assert(matches.includes('matches-skeleton') && matches.includes('match-skeleton-card'), 'matches loading skeleton is missing')
+assert(exists('public/apple-touch-icon.png') && exists('public/og.png'), 'share/touch icons are missing')
 const indexHtml = read('index.html')
 const manifest = read('public/site.webmanifest')
 const favicon = read('public/favicon.svg')
