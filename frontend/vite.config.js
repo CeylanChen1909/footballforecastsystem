@@ -13,8 +13,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined
           const normalized = id.replace(/\\/g, '/')
+          if (normalized.includes('/src/views/admin/') || normalized.includes('/src/components/charts/')) {
+            return 'admin-app'
+          }
+          if (!id.includes('node_modules')) return undefined
           if (normalized.includes('/echarts')) return 'echarts'
           if (normalized.includes('/@element-plus/icons-vue')) return 'element-plus-icons'
           if (normalized.includes('/element-plus/es/components/')) {

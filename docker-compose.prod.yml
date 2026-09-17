@@ -152,6 +152,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 30
+      start_period: 40s
 
   football-gateway:
     build:
@@ -287,4 +288,5 @@ volumes:
 
 networks:
   football-network:
+    name: footballforecastsystem_football-network
     driver: bridge

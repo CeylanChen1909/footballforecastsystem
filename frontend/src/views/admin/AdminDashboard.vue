@@ -55,18 +55,19 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import { adminApi } from '../../api/admin'
 import { agentApi, crawlerApi, predictionApi } from '../../api'
-import AdminConfigPanel from './AdminConfigPanel.vue'
-import AdminChangelogPanel from './AdminChangelogPanel.vue'
-import AdminCrawlerMatchEditorDialog from './AdminCrawlerMatchEditorDialog.vue'
-import AdminLogPanel from './AdminLogPanel.vue'
-import AdminUsersPanel from './AdminUsersPanel.vue'
-import MatchWorkbench from './MatchWorkbench.vue'
+
+const AdminConfigPanel = defineAsyncComponent(() => import('./AdminConfigPanel.vue'))
+const AdminChangelogPanel = defineAsyncComponent(() => import('./AdminChangelogPanel.vue'))
+const AdminCrawlerMatchEditorDialog = defineAsyncComponent(() => import('./AdminCrawlerMatchEditorDialog.vue'))
+const AdminLogPanel = defineAsyncComponent(() => import('./AdminLogPanel.vue'))
+const AdminUsersPanel = defineAsyncComponent(() => import('./AdminUsersPanel.vue'))
+const MatchWorkbench = defineAsyncComponent(() => import('./MatchWorkbench.vue'))
 
 const router = useRouter()
 const activeMenu = ref('dashboard')

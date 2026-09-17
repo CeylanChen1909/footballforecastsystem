@@ -78,7 +78,11 @@ const year = new Date().getFullYear()
     padding: 16px 14px calc(72px + env(safe-area-inset-bottom, 0px));
     gap: 8px;
   }
+  .footer-brand { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .footer-brand span,
+  .footer-note { overflow-wrap: anywhere; word-break: break-word; }
   .footer-links { gap: 10px 12px; }
+  .footer-links a { min-height: 28px; display: inline-flex; align-items: center; font-size: 12px; }
   .footer-note { margin-top: 2px; }
 }
 </style>

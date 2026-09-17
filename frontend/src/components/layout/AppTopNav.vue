@@ -78,7 +78,7 @@
           <div class="global-search-section-title">比赛</div>
           <button v-for="item in searchResults.matches" :key="`m-${item.fixtureId || item.matchId || item.id}-${item.homeTeamName}-${item.awayTeamName}`" type="button" class="global-search-item" @click="openMatch(item)">
             <strong>{{ item.homeTeamName }} vs {{ item.awayTeamName }}</strong>
-            <small>{{ item.leagueName || '比赛' }}{{ item.matchTime ? ` · ${formatSearchTime(item.matchTime)}` : '' }}</small>
+            <small>{{ item.leagueName || '比赛' }}{{ item.matchTime ? ` · ${formatSearchTime(item.matchTime)}` : '' }} · 查看预测</small>
           </button>
         </div>
         <div v-if="searchResults.articles.length" class="global-search-section">
@@ -92,7 +92,7 @@
       <div v-else-if="searchKeyword.trim()" class="global-search-state global-search-empty">
         <p>没有找到「{{ searchKeyword.trim() }}」相关内容</p>
         <div class="global-search-empty-links">
-          <el-button type="primary" link @click="goBrowse('/matches')">浏览比赛</el-button>
+          <el-button type="primary" link @click="goBrowse('/matches')">浏览比赛并查看预测</el-button>
           <el-button type="primary" link @click="goBrowse('/competitions')">查看赛事资料</el-button>
         </div>
       </div>

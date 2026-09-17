@@ -36,7 +36,7 @@
       </div>
     </div>
     <div class="action-area" aria-label="比赛操作">
-      <el-button class="action-primary" type="primary" size="small" plain @click.stop="$emit('predict', match)">
+      <el-button class="action-primary" type="primary" size="small" plain :aria-label="primaryActionLabel + '：打开本场分析'" @click.stop="$emit('predict', match)">
         <el-icon><TrendCharts /></el-icon>
         {{ primaryActionLabel }}
       </el-button>
@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { ChatLineSquare, DataLine, MoreFilled, Star, StarFilled, TrendCharts } from '@element-plus/icons-vue'
+import { ChatLineSquare, DataLine, Location, MoreFilled, Star, StarFilled, TrendCharts, Trophy } from '@element-plus/icons-vue'
 import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatchId, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../utils/match'
 import { getTeamDisplayName } from '../utils/teamNames'
 import { getMediaAssetUrl } from '../utils/mediaAsset'
@@ -400,6 +400,8 @@ const formatTime = match => {
   }
   .action-primary {
     width: 100%;
+    min-height: 36px;
+    font-size: 13px;
   }
   /* Hide separate details button; use more-menu item instead */
   .action-details {

@@ -488,5 +488,10 @@ watch(() => route.query.league, () => {
 .hub-predict-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 680px) {
   .hub-predict-entry { flex-direction: column; align-items: flex-start; }
+  .standings-skeleton-row {
+    grid-template-columns: 28px minmax(0, 1fr) 40px 40px;
+    overflow: hidden;
+  }
+  .standings-skeleton-row em:nth-child(n+5) { display: none; }
 }
 </style>

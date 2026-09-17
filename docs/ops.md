@@ -105,7 +105,13 @@ Gateway / user / business `depends_on` nacos with `condition: service_healthy`, 
 ### After recreate / if `/api/actuator/health` is 502
 
 1. Check DNS: `docker exec football-gateway getent hosts nacos`
-2. If missing, re-attach **with both aliases** (do not recreate the whole stack):
+2. Preferred repair (idempotent script):
+
+```bash
+./scripts/repair-nacos-network.sh
+```
+
+3. Manual equivalent — re-attach **with both aliases** (do not recreate the whole stack):
 
 ```bash
 NET=footballforecastsystem_football-network
@@ -116,5 +122,7 @@ docker exec football-gateway getent hosts nacos
 # docker compose -f docker-compose.prod.yml restart football-gateway
 curl -fsS http://127.0.0.1:8082/actuator/health
 ```
+
+Compose also pins `networks.football-network.name: footballforecastsystem_football-network` so the repair script target stays stable across recreate.
 
 Prefer `docker compose … up -d nacos` (uses compose aliases) over raw `docker run` so aliases stay declared in the project file.
