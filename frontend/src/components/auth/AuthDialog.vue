@@ -85,11 +85,14 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Football } from '@element-plus/icons-vue'
 import { useUserStore } from '../../stores/user'
+import { registerElementPlusDialog } from '../../plugins/register-element-plus-dialog'
+
+registerElementPlusDialog(getCurrentInstance()?.appContext.app)
 import { userApi } from '../../api'
 import ImageCaptcha from './ImageCaptcha.vue'
 

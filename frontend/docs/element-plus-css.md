@@ -31,3 +31,9 @@ Table / Menu / Drawer left the user-shell entry:
 
 Agent shell: `agent-app` chunk is only `Agent.vue`. `AgentLauncher` lives under `components/layout` and loads after idle; stores/api/utils go to `app-shared` so the entry never statically imports `agent-app`.
 
+
+
+## Round 8
+- **Custom top nav** — `AppTopNav.vue` no longer uses `ElMenu`; lightweight buttons replace it so the matches shell never loads `element-menu`.
+- **Dialog on demand** — `register-element-plus-dialog.js` registers `ElDialog` when search/notification/auth opens; removed from user-shell sync registration.
+- Admin still registers Menu / Dialog / Table / Drawer for the admin shell.

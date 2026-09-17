@@ -5,7 +5,7 @@
  */
 import {
   ElAlert, ElAvatar, ElBadge, ElButton, ElCard, ElCheckbox, ElContainer,
-  ElCollapse, ElCollapseItem, ElDialog, ElDropdown, ElDropdownItem, ElDropdownMenu,
+  ElCollapse, ElCollapseItem, ElDropdown, ElDropdownItem, ElDropdownMenu,
   ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain,
   ElOption, ElProgress, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
   ElTabPane, ElTabs, ElTag, ElTooltip, ElLoading
@@ -20,7 +20,7 @@ import {
 
 const elementComponents = [
   ElAlert, ElAvatar, ElBadge, ElButton, ElCard, ElCheckbox, ElContainer,
-  ElCollapse, ElCollapseItem, ElDialog, ElDropdown, ElDropdownItem, ElDropdownMenu,
+  ElCollapse, ElCollapseItem, ElDropdown, ElDropdownItem, ElDropdownMenu,
   ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain,
   ElOption, ElProgress, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
   ElTabPane, ElTabs, ElTag, ElTooltip

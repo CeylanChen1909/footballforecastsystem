@@ -174,3 +174,10 @@ curl -sI https://chenfootball.asia/ | tr -d '\r' | grep -i content-security-poli
 ```
 
 You should see one enforcing CSP (from the container) and one or two Report-Only lines. If the SPA breaks, remove the edge line immediately — keep container nginx as source of truth.
+
+
+## Round 8 — Deduplicate security headers
+Host edge (`/etc/nginx/sites-available/chenfootball.asia`) already sets:
+`Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
+
+Container `frontend/nginx.conf` therefore only adds app-level `Content-Security-Policy` (+ Report-Only) and `Permissions-Policy` (plus Cache-Control where needed). Do not re-add XCTO/XFO/Referrer inside the container or responses will stack duplicates.

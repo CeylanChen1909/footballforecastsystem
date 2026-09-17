@@ -4,14 +4,14 @@
  * descriptions / pagination / timeline / aside / switch / divider into matches LCP.
  */
 import {
-  ElAside, ElDatePicker, ElDescriptions, ElDescriptionsItem, ElDivider, ElDrawer,
+  ElAside, ElDialog, ElDatePicker, ElDescriptions, ElDescriptionsItem, ElDivider, ElDrawer,
   ElInputNumber, ElMenu, ElMenuItem, ElPagination, ElSwitch,
   ElTable, ElTableColumn, ElTimePicker, ElTimeline, ElTimelineItem
 } from 'element-plus'
 import '../styles/element-plus-admin-on-demand.js'
 
 const adminComponents = [
-  ElAside, ElDatePicker, ElDescriptions, ElDescriptionsItem, ElDivider, ElDrawer,
+  ElAside, ElDialog, ElDatePicker, ElDescriptions, ElDescriptionsItem, ElDivider, ElDrawer,
   ElInputNumber, ElMenu, ElMenuItem, ElPagination, ElSwitch,
   ElTable, ElTableColumn, ElTimePicker, ElTimeline, ElTimelineItem
 ]

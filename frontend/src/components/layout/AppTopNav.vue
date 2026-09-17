@@ -11,33 +11,27 @@
       </div>
     </div>
 
-    <div class="nav-menu-wrap" :class="{ 'is-open': mobileMenuOpen }">
-      <el-menu
-        mode="horizontal"
-        :default-active="activePath"
-        :ellipsis="false"
-        class="top-menu sport-menu"
-        @select="handleSelect"
-      >
-        <el-menu-item index="/matches" class="menu-item">
-          <el-icon><Football /></el-icon><span>比赛</span>
-        </el-menu-item>
-        <el-menu-item index="/competitions" class="menu-item">
-          <el-icon><Notebook /></el-icon><span>赛事资料</span>
-        </el-menu-item>
-        <el-menu-item index="/agent" class="menu-item">
-          <el-icon><ChatLineSquare /></el-icon><span>Agent</span>
-        </el-menu-item>
-        <el-menu-item v-if="isAdmin" index="/admin" class="menu-item">
-          <el-icon><Setting /></el-icon><span>管理</span>
-        </el-menu-item>
-      </el-menu>
-    </div>
+        <nav class="nav-menu-wrap" :class="{ 'is-open': mobileMenuOpen }" aria-label="主导航">
+      <div class="top-menu sport-menu" role="menubar">
+        <button
+          v-for="item in navItems"
+          :key="item.path"
+          type="button"
+          role="menuitem"
+          class="menu-item sport-menu-item"
+          :class="{ 'is-active': activePath === item.path || activePath.startsWith(item.path + '/') }"
+          :aria-current="activePath === item.path || activePath.startsWith(item.path + '/') ? 'page' : undefined"
+          @click="handleSelect(item.path)"
+        >
+          <el-icon><component :is="item.icon" /></el-icon><span>{{ item.label }}</span>
+        </button>
+      </div>
+    </nav>
 
     <div class="nav-actions">
       <slot name="actions" />
       <el-button text class="mobile-menu-toggle" :aria-expanded="mobileMenuOpen" :aria-label="mobileMenuOpen ? '关闭导航菜单' : '打开导航菜单'" :title="mobileMenuOpen ? '关闭导航菜单' : '导航菜单'" @click="mobileMenuOpen = !mobileMenuOpen"><el-icon><Menu /></el-icon></el-button>
-      <el-button text class="global-search-btn" aria-label="全局搜索" title="全局搜索" @click="searchVisible = true"><el-icon><Search /></el-icon><span class="nav-action-label">搜索</span></el-button>
+      <el-button text class="global-search-btn" aria-label="全局搜索" title="全局搜索" @click="openSearch"><el-icon><Search /></el-icon><span class="nav-action-label">搜索</span></el-button>
       <el-badge v-if="userStore.token" :value="notificationUnread" :hidden="notificationUnread === 0" :max="99" class="notification-badge">
         <el-button text class="global-search-btn" aria-label="通知中心" title="通知中心" @click="openNotifications"><el-icon><Bell /></el-icon></el-button>
       </el-badge>
@@ -132,9 +126,9 @@ import { computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref
 import { crawlerApi, searchApi, userApi } from '../../api'
 import { expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
 import { ArrowDown, ChatLineSquare, Football, Notebook, User, SwitchButton, Setting, Search, Bell, Menu } from '@element-plus/icons-vue'
-import { registerElementPlusMenu } from '../../plugins/register-element-plus-menu'
+import { registerElementPlusDialog } from '../../plugins/register-element-plus-dialog'
 
-registerElementPlusMenu(getCurrentInstance()?.appContext.app)
+const epApp = getCurrentInstance()?.appContext.app
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -161,6 +155,15 @@ const browserNotifyState = ref(typeof Notification === 'undefined' ? 'unsupporte
 let searchDebounceTimer = null
 let notificationPollTimer = null
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(userStore.role))
+const navItems = computed(() => {
+  const items = [
+    { path: '/matches', label: '比赛', icon: Football },
+    { path: '/competitions', label: '赛事资料', icon: Notebook },
+    { path: '/agent', label: 'Agent', icon: ChatLineSquare },
+  ]
+  if (isAdmin.value) items.push({ path: '/admin', label: '管理', icon: Setting })
+  return items
+})
 const protectedPaths = ['/profile', '/admin']
 const hasSearchHits = computed(() =>
   searchResults.matches.length + searchResults.teams.length + searchResults.leagues.length + searchResults.articles.length > 0
@@ -371,7 +374,7 @@ const loadNotifications = async ({ silent = false } = {}) => {
     if (!silent) notificationLoading.value = false
   }
 }
-const openNotifications = async () => { notificationVisible.value = true; await loadNotifications() }
+const openNotifications = async () => { ensureDialog(); notificationVisible.value = true; await loadNotifications() }
 const markNotification = async item => {
   if (!item.read_at) {
     await userApi.readNotification(item.id).catch(() => {})
@@ -405,6 +408,9 @@ const stopNotificationPolling = () => {
   }
 }
 
+
+const ensureDialog = () => { registerElementPlusDialog(epApp) }
+const openSearch = () => { ensureDialog(); searchVisible.value = true }
 const handleSelect = (index) => {
   mobileMenuOpen.value = false
   if (index === props.activePath) return
@@ -591,14 +597,26 @@ onBeforeUnmount(() => {
 }
 
 .sport-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   background: transparent;
   padding: 0;
   border-radius: 0;
   border: none;
   box-shadow: none;
 }
-.sport-menu :deep(.el-menu-item) {
+.sport-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   line-height: 40px;
   border-radius: 4px;
   margin: 0 1px;
@@ -607,11 +625,11 @@ onBeforeUnmount(() => {
   transition: background-color var(--ff-transition-fast), color var(--ff-transition-fast), border-color var(--ff-transition-fast);
   border-bottom: 2px solid transparent !important;
 }
-.sport-menu :deep(.el-menu-item:hover) {
+.sport-menu-item:hover {
   background: var(--ff-surface-quiet);
   color: var(--ff-primary);
 }
-.sport-menu :deep(.el-menu-item.is-active) {
+.sport-menu-item.is-active {
   background: transparent;
   color: var(--ff-primary) !important;
   border-bottom-color: var(--ff-primary) !important;
@@ -666,14 +684,14 @@ onBeforeUnmount(() => {
     width:100%;
     min-width:0;
   }
-  .nav-menu-wrap .sport-menu :deep(.el-menu-item) {
+  .nav-menu-wrap .sport-menu-item {
     justify-content:flex-start;
     margin:2px;
     padding:0 12px;
   }
-  .nav-menu-wrap .sport-menu :deep(.el-menu-item.is-active) { border-bottom-color:transparent !important; }
+  .nav-menu-wrap .sport-menu-item.is-active { border-bottom-color:transparent !important; }
   .nav-menu-wrap::-webkit-scrollbar { display: none; }
-  .nav-menu-wrap .sport-menu :deep(.el-menu-item) {
+  .nav-menu-wrap .sport-menu-item {
     height:34px;
     line-height:34px;
   }
@@ -696,7 +714,7 @@ onBeforeUnmount(() => {
   min-height: 40px;
   padding: 2px 4px;
 }
-.top-menu .el-menu-item {
+.top-menu .sport-menu-item {
   min-height: 44px;
 }
 .global-search-item {
