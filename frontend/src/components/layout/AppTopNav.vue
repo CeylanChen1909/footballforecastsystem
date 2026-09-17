@@ -128,10 +128,13 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { crawlerApi, searchApi, userApi } from '../../api'
 import { expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
 import { ArrowDown, ChatLineSquare, Football, Notebook, User, SwitchButton, Setting, Search, Bell, Menu } from '@element-plus/icons-vue'
+import { registerElementPlusMenu } from '../../plugins/register-element-plus-menu'
+
+registerElementPlusMenu(getCurrentInstance()?.appContext.app)
 
 const props = defineProps({
   title: { type: String, required: true },

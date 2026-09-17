@@ -1,5 +1,6 @@
-/** Element Plus on-demand CSS (user shell, r6).
+/** Element Plus on-demand CSS (user shell, r6/r7).
  * Admin-only styles: element-plus-admin-on-demand.js (loaded with /admin).
+ * Table/Menu/Drawer CSS loads with route register plugins (r7).
  * No unplugin-vue-components — components stay manually registered.
  */
 import 'element-plus/theme-chalk/base.css'
@@ -14,7 +15,6 @@ import 'element-plus/es/components/container/style/css'
 import 'element-plus/es/components/collapse/style/css'
 import 'element-plus/es/components/collapse-item/style/css'
 import 'element-plus/es/components/dialog/style/css'
-import 'element-plus/es/components/drawer/style/css'
 import 'element-plus/es/components/dropdown/style/css'
 import 'element-plus/es/components/dropdown-item/style/css'
 import 'element-plus/es/components/dropdown-menu/style/css'
@@ -25,8 +25,6 @@ import 'element-plus/es/components/empty/style/css'
 import 'element-plus/es/components/icon/style/css'
 import 'element-plus/es/components/input/style/css'
 import 'element-plus/es/components/main/style/css'
-import 'element-plus/es/components/menu/style/css'
-import 'element-plus/es/components/menu-item/style/css'
 import 'element-plus/es/components/option/style/css'
 import 'element-plus/es/components/option-group/style/css'
 import 'element-plus/es/components/overlay/style/css'
@@ -39,8 +37,6 @@ import 'element-plus/es/components/scrollbar/style/css'
 import 'element-plus/es/components/select/style/css'
 import 'element-plus/es/components/skeleton/style/css'
 import 'element-plus/es/components/tab-pane/style/css'
-import 'element-plus/es/components/table/style/css'
-import 'element-plus/es/components/table-column/style/css'
 import 'element-plus/es/components/tabs/style/css'
 import 'element-plus/es/components/tag/style/css'
 import 'element-plus/es/components/tooltip/style/css'

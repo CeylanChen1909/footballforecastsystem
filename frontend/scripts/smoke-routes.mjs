@@ -152,5 +152,20 @@ assert(nginxConf.includes('Referrer-Policy') && nginxConf.includes('Permissions-
 assert(nginxConf.includes('X-Content-Type-Options'), 'X-Content-Type-Options missing')
 assert(nginxConf.includes('Content-Security-Policy-Report-Only') && nginxConf.includes('browsing-topics=()'), 'CSP Report-Only / tightened Permissions-Policy missing')
 
+
+// Round 7 — agent async + EP route registers
+assert(read('src/App.vue').includes('components/layout/AgentLauncher.vue') && read('src/App.vue').includes('agentLauncherReady'), 'AgentLauncher must be layout-async + idle-deferred')
+assert(read('vite.config.js').includes("'app-shared'") && read('vite.config.js').includes('/src/views/user/Agent.vue'), 'vite must isolate app-shared and Agent.vue-only agent-app')
+assert(!read('vite.config.js').includes('/src/components/agent/'), 'vite must not force components/agent into agent-app')
+assert(!/\bElTable\b/.test(userEp) && !/\bElMenu\b/.test(userEp) && !/\bElDrawer\b/.test(userEp), 'user EP register must defer Table/Menu/Drawer')
+assert(!epCss.includes('table/style') && !epCss.includes('/menu/style') && !epCss.includes('drawer/style'), 'user on-demand CSS must drop table/menu/drawer')
+assert(exists('src/plugins/register-element-plus-table.js') && exists('src/plugins/register-element-plus-menu.js') && exists('src/plugins/register-element-plus-drawer.js'), 'route EP register plugins missing')
+assert(read('src/views/user/CompetitionHub.vue').includes('registerElementPlusTable'), 'CompetitionHub must register ElTable')
+assert(read('src/components/layout/AppTopNav.vue').includes('registerElementPlusMenu'), 'AppTopNav must register ElMenu')
+assert(read('src/components/matches/ChangelogButton.vue').includes('registerElementPlusDrawer'), 'ChangelogButton must register ElDrawer')
+assert(/\bElTable\b/.test(adminEp) && /\bElMenu\b/.test(adminEp) && /\bElDrawer\b/.test(adminEp), 'admin register must include Table/Menu/Drawer after user deferral')
+assert(read('../docs/ops.md').includes('Round 7 — Host edge CSP Report-Only snippet'), 'ops host CSP-RO copy-paste snippet missing')
+assert(read('scripts/prerender-meta.mjs').includes('sanitizeManifestLinks') && read('scripts/prerender-meta.mjs').includes('/site.webmanifest'), 'prerender must keep single site.webmanifest')
+
 console.log('Smoke routes passed')
 

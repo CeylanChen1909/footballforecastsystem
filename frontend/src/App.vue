@@ -1,6 +1,6 @@
 <template>
   <router-view v-if="!legalGateVisible" />
-  <AgentLauncher v-if="!legalGateVisible && showAgentLauncher" />
+  <AgentLauncher v-if="!legalGateVisible && showAgentLauncher && agentLauncherReady" />
   <AuthDialog v-if="!legalGateVisible" />
   <ConsentBanner v-if="!legalGateVisible" />
   <LegalConsentGate :visible="legalGateVisible" @accepted="handleLegalAccepted" />
@@ -15,7 +15,8 @@ import { analyticsApi, userApi } from './api'
 import { canTrackAnalytics } from './utils/privacyConsent'
 import { hasLegalConsent, saveLegalConsent } from './utils/legalConsent'
 
-const AgentLauncher = defineAsyncComponent(() => import('./components/agent/AgentLauncher.vue'))
+const AgentLauncher = defineAsyncComponent(() => import('./components/layout/AgentLauncher.vue'))
+const agentLauncherReady = ref(false)
 const AuthDialog = defineAsyncComponent(() => import('./components/auth/AuthDialog.vue'))
 const ConsentBanner = defineAsyncComponent(() => import('./components/privacy/ConsentBanner.vue'))
 
@@ -31,7 +32,19 @@ const handleAuthRequired = event => {
   if (userStore.token) userStore.logout()
   userStore.openAuthDialog(event?.detail?.redirect || '')
 }
-onMounted(() => window.addEventListener('football-auth-required', handleAuthRequired))
+const armAgentLauncher = () => {
+  if (agentLauncherReady.value) return
+  const enable = () => { agentLauncherReady.value = true }
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(enable, { timeout: 2500 })
+  } else {
+    setTimeout(enable, 1200)
+  }
+}
+onMounted(() => {
+  window.addEventListener('football-auth-required', handleAuthRequired)
+  armAgentLauncher()
+})
 onBeforeUnmount(() => window.removeEventListener('football-auth-required', handleAuthRequired))
 const syncLegalConsent = async token => {
   const sequence = ++legalConsentSyncSequence
@@ -64,6 +77,7 @@ const handleLegalAccepted = () => {
   legalGateVisible.value = false
 }
 watch(() => userStore.token, syncLegalConsent, { immediate: true })
+watch(legalGateVisible, (hidden) => { if (!hidden) armAgentLauncher() })
 watch(() => route.fullPath, (path) => {
   if (!canTrackAnalytics()) return
   analyticsApi.track('page_view', { page: path }).catch(() => {})

@@ -46,7 +46,18 @@ export default defineConfig({
           if (normalized.includes('/src/views/admin/') || normalized.includes('/src/components/charts/')) {
             return 'admin-app'
           }
-          if (normalized.includes('/src/views/user/Agent.vue') || normalized.includes('/src/components/agent/')) {
+          // Keep stores/api/utils out of feature chunks so the entry never
+          // statically imports agent-app / admin-app for shared helpers.
+          if (
+            normalized.includes('/src/stores/') ||
+            normalized.includes('/src/api/') ||
+            normalized.includes('/src/utils/')
+          ) {
+            return 'app-shared'
+          }
+          // Agent.vue only in agent-app. AgentLauncher is under components/layout and stays
+          // a tiny async chunk so App.vue never pulls the Agent shell on first paint.
+          if (normalized.includes('/src/views/user/Agent.vue')) {
             return 'agent-app'
           }
           if (normalized.includes('/src/views/user/Prediction.vue') || normalized.includes('/src/components/prediction/')) {

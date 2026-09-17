@@ -154,3 +154,23 @@ Public HTTPS terminates at `/etc/nginx/sites-enabled/chenfootball.asia`. That ed
 3. If Cloudflare sits in front, avoid stacking yet another CSP in the dashboard unless Report-Only is used for experiments.
 
 Canonical PWA manifest is `/site.webmanifest`. Legacy `/manifest.webmanifest` is aliased to the same file.
+
+## Round 7 — Host edge CSP Report-Only snippet
+
+CSP-Report-Only is already set on **container** frontend nginx (`frontend/nginx.conf`). The public HTTPS edge at `/etc/nginx/sites-enabled/chenfootball.asia` should **not** get a second enforcing CSP.
+
+If you want the edge to emit Report-Only as well (e.g. Cloudflare strips proxied RO headers, or you are A/B testing before promoting a stricter policy), copy **only** the Report-Only line — never the enforcing `Content-Security-Policy` — into the edge `server` (or the TLS `location /` that proxies to `:3000`):
+
+```nginx
+# OPTIONAL — edge Report-Only only. Do NOT add an enforcing Content-Security-Policy here
+# while container nginx still emits one (duplicate enforcing CSPs break the SPA).
+add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" always;
+```
+
+After pasting: `nginx -t && systemctl reload nginx` (or `nginx -s reload`). Confirm with:
+
+```bash
+curl -sI https://chenfootball.asia/ | tr -d '\r' | grep -i content-security-policy
+```
+
+You should see one enforcing CSP (from the container) and one or two Report-Only lines. If the SPA breaks, remove the edge line immediately — keep container nginx as source of truth.

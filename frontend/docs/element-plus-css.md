@@ -21,3 +21,13 @@ Admin-only widgets moved out of the entry: Aside, DatePicker, Descriptions, Divi
 
 ## Rollback
 Restore full registration in `main.js` and merge admin CSS back into `element-plus-on-demand.js` if an admin widget style is missing.
+
+## Round 7
+Table / Menu / Drawer left the user-shell entry:
+
+- `register-element-plus-menu.js` — `AppTopNav.vue` (+ admin register)
+- `register-element-plus-table.js` — `CompetitionHub.vue` (+ admin register)
+- `register-element-plus-drawer.js` — `ChangelogButton.vue` (async on matches) (+ admin register)
+
+Agent shell: `agent-app` chunk is only `Agent.vue`. `AgentLauncher` lives under `components/layout` and loads after idle; stores/api/utils go to `app-shared` so the entry never statically imports `agent-app`.
+

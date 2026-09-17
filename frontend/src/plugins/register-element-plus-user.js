@@ -1,13 +1,14 @@
 /**
- * User-shell Element Plus registration (commercial polish r6).
+ * User-shell Element Plus registration (commercial polish r6/r7).
  * Admin-only widgets: register-element-plus-admin.js (loaded with /admin).
+ * Heavy route widgets (Table/Menu/Drawer): register-element-plus-{table,menu,drawer}.js (r7).
  */
 import {
   ElAlert, ElAvatar, ElBadge, ElButton, ElCard, ElCheckbox, ElContainer,
-  ElCollapse, ElCollapseItem, ElDialog, ElDrawer, ElDropdown, ElDropdownItem, ElDropdownMenu,
-  ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain, ElMenu, ElMenuItem,
+  ElCollapse, ElCollapseItem, ElDialog, ElDropdown, ElDropdownItem, ElDropdownMenu,
+  ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain,
   ElOption, ElProgress, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
-  ElTabPane, ElTable, ElTableColumn, ElTabs, ElTag, ElTooltip, ElLoading
+  ElTabPane, ElTabs, ElTag, ElTooltip, ElLoading
 } from 'element-plus'
 import '../styles/element-plus-on-demand.js'
 import {
@@ -19,10 +20,10 @@ import {
 
 const elementComponents = [
   ElAlert, ElAvatar, ElBadge, ElButton, ElCard, ElCheckbox, ElContainer,
-  ElCollapse, ElCollapseItem, ElDialog, ElDrawer, ElDropdown, ElDropdownItem, ElDropdownMenu,
-  ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain, ElMenu, ElMenuItem,
+  ElCollapse, ElCollapseItem, ElDialog, ElDropdown, ElDropdownItem, ElDropdownMenu,
+  ElForm, ElFormItem, ElHeader, ElEmpty, ElIcon, ElInput, ElMain,
   ElOption, ElProgress, ElRadioButton, ElRadioGroup, ElSelect, ElSkeleton,
-  ElTabPane, ElTable, ElTableColumn, ElTabs, ElTag, ElTooltip
+  ElTabPane, ElTabs, ElTag, ElTooltip
 ]
 
 const elementIcons = {

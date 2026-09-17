@@ -49,9 +49,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, ref } from 'vue'
 import { Clock } from '@element-plus/icons-vue'
 import { changelogApi } from '../../api'
+import { registerElementPlusDrawer } from '../../plugins/register-element-plus-drawer'
+
+registerElementPlusDrawer(getCurrentInstance()?.appContext.app)
 
 const STORAGE_KEY = 'football_changelog_last_seen'
 const visible = ref(false)

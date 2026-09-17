@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Trophy } from '@element-plus/icons-vue'
@@ -152,6 +152,9 @@ import PageState from '../../components/layout/PageState.vue'
 import { analyticsApi, crawlerApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
+import { registerElementPlusTable } from '../../plugins/register-element-plus-table'
+
+registerElementPlusTable(getCurrentInstance()?.appContext.app)
 
 const router = useRouter()
 const goMatchesDiscover = () => {
