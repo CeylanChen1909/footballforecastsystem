@@ -116,4 +116,7 @@ const composeProd = read('../docker-compose.prod.yml')
 assert(composeProd.includes('aliases:') && composeProd.includes('- nacos') && composeProd.includes('- football-nacos'), 'nacos network aliases missing from compose')
 assert(read('../docs/ops.md').includes('Nacos network alias persistence'), 'ops nacos alias persistence doc missing')
 
+assert(about.includes('about-trust') && about.includes('chenfootball.asia') && about.includes('trust-grid'), 'about trust/contact section is missing')
+assert(read('src/main.js').includes('element-plus/theme-chalk/base.css') && !read('src/main.js').includes('element-plus/dist/index.css'), 'element-plus should use on-demand chalk CSS, not full dist index')
 console.log('Smoke routes passed')
+

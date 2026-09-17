@@ -85,4 +85,13 @@ const year = new Date().getFullYear()
   .footer-links a { min-height: 28px; display: inline-flex; align-items: center; font-size: 12px; }
   .footer-note { margin-top: 2px; }
 }
+/* r4 a11y footer */
+.footer-links a:focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+@media (pointer: coarse) {
+  .footer-links a { min-height: 40px; padding: 4px 2px; }
+}
 </style>

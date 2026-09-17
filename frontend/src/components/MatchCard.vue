@@ -409,4 +409,20 @@ const formatTime = match => {
   }
   .score { min-width: 0; }
 }
+/* r4 a11y card */
+.action-primary:focus-visible,
+.action-details:focus-visible,
+.favorite-btn:focus-visible,
+.more-btn:focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .favorite-btn,
+  .more-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .action-primary { min-height: 40px; }
+}
 </style>

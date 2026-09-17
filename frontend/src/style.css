@@ -550,3 +550,36 @@ button:disabled,
 .ff-page-shell > .matches-layout {
   flex: 1 1 auto;
 }
+
+
+/* r4 a11y */
+:root {
+  --ff-text-muted: #5f6c64;
+  --ff-text-faint: #6f7c74;
+}
+a:focus-visible,
+button:focus-visible,
+.el-button:focus-visible,
+.router-link-active:focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 2px;
+}
+.ff-touch-target,
+.date-rail-arrow,
+.global-search-btn,
+.mobile-menu-toggle {
+  min-width: 40px;
+  min-height: 40px;
+}
+@media (pointer: coarse) {
+  .el-button {
+    min-height: 40px;
+  }
+  .footer-links a,
+  .legal-toc a {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
