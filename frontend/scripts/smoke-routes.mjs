@@ -117,6 +117,6 @@ assert(composeProd.includes('aliases:') && composeProd.includes('- nacos') && co
 assert(read('../docs/ops.md').includes('Nacos network alias persistence'), 'ops nacos alias persistence doc missing')
 
 assert(about.includes('about-trust') && about.includes('chenfootball.asia') && about.includes('trust-grid'), 'about trust/contact section is missing')
-assert(read('src/main.js').includes('element-plus/theme-chalk/base.css') && !read('src/main.js').includes('element-plus/dist/index.css'), 'element-plus should use on-demand chalk CSS, not full dist index')
+assert(read('src/main.js').includes('element-plus-on-demand') && !read('src/main.js').includes('element-plus/dist/index.css') && exists('src/styles/element-plus-on-demand.js') && (read('src/styles/element-plus-on-demand.js').includes('theme-chalk/base.css') || read('src/styles/element-plus-on-demand.js').includes('components/alert/style/css')), 'element-plus should use on-demand chalk CSS module, not full dist index')
 console.log('Smoke routes passed')
 
