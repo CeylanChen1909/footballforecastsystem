@@ -38,6 +38,12 @@
           </button>
         </nav>
 
+        <PredictionDiscovery
+          :items="hotMatches"
+          :team-name-mode="teamNameMode"
+          @predict="goPredict"
+        />
+
         <div class="matches-workspace">
           <aside class="matches-focus-sidebar" aria-label="比赛焦点侧栏" :class="{ 'is-collapsed': focusCollapsed }">
             <div class="focus-collapse-bar">
@@ -217,7 +223,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { analyticsApi, crawlerApi, favoriteApi, matchApi, userApi } from '../../api'
@@ -229,11 +235,14 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import MatchCardSkeleton from '../../components/matches/MatchCardSkeleton.vue'
 import MatchCard from '../../components/MatchCard.vue'
-import MatchFocusRail from '../../components/matches/MatchFocusRail.vue'
-import ChangelogButton from '../../components/matches/ChangelogButton.vue'
+import PredictionDiscovery from '../../components/matches/PredictionDiscovery.vue'
 import { getBusinessDate } from '../../utils/match'
 import { getTeamSearchTokens, normalizeTeamSearch } from '../../utils/teamNames'
 import { useMatchRecommendations } from '../../composables/useMatchRecommendations'
+
+// Defer focus rail + changelog off the matches critical path (LCP: date rail + list/skeleton).
+const MatchFocusRail = defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))
+const ChangelogButton = defineAsyncComponent(() => import('../../components/matches/ChangelogButton.vue'))
 
 const router = useRouter()
 const route = useRoute()
@@ -631,6 +640,13 @@ const openMatchDetails = async (match) => {
   }
 }
 
+
+const scrollToPredictionDiscovery = async () => {
+  await nextTick()
+  const el = document.getElementById('prediction-discovery')
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const scrollToMatchList = () => {
   document.querySelector('.match-list-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
@@ -926,6 +942,11 @@ onMounted(async () => {
   }
   reminderTimer = window.setInterval(checkMatchReminders, 60 * 1000)
 })
+
+
+watch(() => route.query.discover, (value) => {
+  if (value === 'predict') scrollToPredictionDiscovery()
+}, { immediate: true })
 
 onBeforeUnmount(() => {
   if (reminderTimer) window.clearInterval(reminderTimer)

@@ -7,6 +7,7 @@
       </div>
       <nav class="footer-links" aria-label="页脚导航">
         <router-link to="/matches">比赛</router-link>
+        <router-link to="/matches?discover=predict">精选预测</router-link>
         <router-link to="/competitions">赛事资料</router-link>
         <router-link to="/agent">Agent</router-link>
         <router-link to="/about">关于</router-link>
@@ -73,6 +74,11 @@ const year = new Date().getFullYear()
   font-size: 11px;
 }
 @media (max-width: 680px) {
-  .app-footer-inner { padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .app-footer-inner {
+    padding: 16px 14px calc(72px + env(safe-area-inset-bottom, 0px));
+    gap: 8px;
+  }
+  .footer-links { gap: 10px 12px; }
+  .footer-note { margin-top: 2px; }
 }
 </style>

@@ -126,6 +126,14 @@
         </PageSection>
       </section>
 
+      <aside class="hub-predict-entry" aria-label="预测入口">
+        <div>
+          <strong>想看单场分析？</strong>
+          <p>从比赛焦点进入精选预测，覆盖与模型质量会在预测页标明。</p>
+        </div>
+        <router-link class="hub-predict-link" to="/matches?discover=predict">浏览精选预测</router-link>
+      </aside>
+
     </el-main>
       <AppFooter />
   </div>
@@ -455,5 +463,30 @@ watch(() => route.query.league, () => {
 @keyframes standings-skeleton { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) {
   .standings-skeleton-row i, .standings-skeleton-row b, .standings-skeleton-row em { animation: none; }
+}
+
+.hub-predict-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 8px;
+  padding: 14px 16px;
+  border: 1px dashed color-mix(in srgb, var(--ff-primary) 35%, var(--ff-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ff-primary-soft) 40%, var(--ff-surface));
+}
+.hub-predict-entry strong { color: var(--ff-text-strong); font-size: 13px; }
+.hub-predict-entry p { margin: 4px 0 0; color: var(--ff-text-muted); font-size: 12px; line-height: 1.5; }
+.hub-predict-link {
+  flex: none;
+  color: var(--ff-primary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hub-predict-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 680px) {
+  .hub-predict-entry { flex-direction: column; align-items: flex-start; }
 }
 </style>

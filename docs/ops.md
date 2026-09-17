@@ -85,3 +85,36 @@ curl -fsS https://chenfootball.asia/api/actuator/health
 
 Do not scrape `.env` secrets into tickets while debugging.
 
+## Nacos network alias persistence
+
+Java services use `NACOS_ADDR=nacos:8848`. Compose service name is `nacos` with `container_name: football-nacos`.
+
+`docker-compose.prod.yml` pins both DNS aliases on the `football-network` attachment:
+
+```yaml
+nacos:
+  networks:
+    football-network:
+      aliases:
+        - nacos
+        - football-nacos
+```
+
+Gateway / user / business `depends_on` nacos with `condition: service_healthy`, so they wait for Nacos before joining.
+
+### After recreate / if `/api/actuator/health` is 502
+
+1. Check DNS: `docker exec football-gateway getent hosts nacos`
+2. If missing, re-attach **with both aliases** (do not recreate the whole stack):
+
+```bash
+NET=footballforecastsystem_football-network
+docker network disconnect "$NET" football-nacos 2>/dev/null || true
+docker network connect --alias nacos --alias football-nacos "$NET" football-nacos
+docker exec football-gateway getent hosts nacos
+# restart gateway only if it stays down:
+# docker compose -f docker-compose.prod.yml restart football-gateway
+curl -fsS http://127.0.0.1:8082/actuator/health
+```
+
+Prefer `docker compose … up -d nacos` (uses compose aliases) over raw `docker run` so aliases stay declared in the project file.

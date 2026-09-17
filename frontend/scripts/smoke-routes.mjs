@@ -104,3 +104,16 @@ assert(sitemapXml.includes('/about') && sitemapXml.includes('/terms'), 'sitemap 
 assert(!read('src/main.js').includes('VideoCamera') && !read('src/main.js').includes('MagicStick'), 'unused icons remain in main entry')
 assert(routes.includes("() => import('../views/user/Matches.vue')") && routes.includes("() => import('../views/user/About.vue')"), 'route-level lazy imports missing')
 console.log(`Smoke checks passed: ${new Date().toISOString()}`)
+
+assert(matches.includes('PredictionDiscovery') && matches.includes('defineAsyncComponent'), 'matches prediction discovery or async focus chunking is missing')
+assert(exists('src/components/matches/PredictionDiscovery.vue'), 'PredictionDiscovery component is missing')
+assert(read('src/components/matches/PredictionDiscovery.vue').includes('精选预测入口'), 'prediction discovery copy is missing')
+assert(footer.includes('discover=predict') && footer.includes('精选预测'), 'footer prediction discovery link is missing')
+assert(competition.includes('浏览精选预测') && competition.includes('hub-predict-entry'), 'competition hub prediction entry is missing')
+assert(read('src/App.vue').includes('defineAsyncComponent'), 'app chrome should be async-chunked')
+assert(read('vite.config.js').includes('modulePreload') && read('vite.config.js').includes('@vue/'), 'vite chunking/modulePreload audit changes missing')
+const composeProd = read('../docker-compose.prod.yml')
+assert(composeProd.includes('aliases:') && composeProd.includes('- nacos') && composeProd.includes('- football-nacos'), 'nacos network aliases missing from compose')
+assert(read('../docs/ops.md').includes('Nacos network alias persistence'), 'ops nacos alias persistence doc missing')
+
+console.log('Smoke routes passed')

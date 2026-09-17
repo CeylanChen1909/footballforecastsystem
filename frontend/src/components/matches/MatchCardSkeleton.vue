@@ -63,6 +63,21 @@
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
 }
+@media (max-width: 680px) {
+  .match-card-skeleton {
+    min-height: 148px;
+    padding: 12px;
+    gap: 10px;
+  }
+  .skeleton-team-row {
+    grid-template-columns: 24px minmax(0, 1fr) 40px minmax(0, 1fr) 24px;
+    gap: 6px;
+  }
+  .sk-logo, .sk-circle { width: 24px; height: 24px; }
+  .skeleton-actions { gap: 6px; }
+  .sk-btn { width: 76px; height: 26px; }
+  .sk-btn.narrow { width: 64px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; }
 }

@@ -9,11 +9,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     minify: 'esbuild',
     esbuild: { drop: ['debugger'] },
+    modulePreload: { polyfill: true },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
-          const normalized = id.replaceAll('\\\\', '/')
+          const normalized = id.replace(/\\/g, '/')
           if (normalized.includes('/echarts')) return 'echarts'
           if (normalized.includes('/@element-plus/icons-vue')) return 'element-plus-icons'
           if (normalized.includes('/element-plus/es/components/')) {
@@ -22,8 +23,8 @@ export default defineConfig({
             if (match && heavy.has(match[1])) return `element-${match[1]}`
           }
           if (normalized.includes('/element-plus')) return 'element-plus-core'
-          if (normalized.includes('/vue/') || normalized.includes('/vue-router') || normalized.includes('/pinia')) return 'vue-vendor'
-          if (id.includes('axios')) return 'http'
+          if (normalized.includes('/vue/') || normalized.includes('/@vue/') || normalized.includes('/vue-router') || normalized.includes('/pinia')) return 'vue-vendor'
+          if (normalized.includes('/axios')) return 'http'
           return undefined
         }
       }

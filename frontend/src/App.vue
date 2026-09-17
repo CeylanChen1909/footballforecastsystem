@@ -7,16 +7,17 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from './stores/user'
-import AgentLauncher from './components/agent/AgentLauncher.vue'
-import AuthDialog from './components/auth/AuthDialog.vue'
-import ConsentBanner from './components/privacy/ConsentBanner.vue'
 import LegalConsentGate from './components/privacy/LegalConsentGate.vue'
 import { analyticsApi, userApi } from './api'
 import { canTrackAnalytics } from './utils/privacyConsent'
 import { hasLegalConsent, saveLegalConsent } from './utils/legalConsent'
+
+const AgentLauncher = defineAsyncComponent(() => import('./components/agent/AgentLauncher.vue'))
+const AuthDialog = defineAsyncComponent(() => import('./components/auth/AuthDialog.vue'))
+const ConsentBanner = defineAsyncComponent(() => import('./components/privacy/ConsentBanner.vue'))
 
 const route = useRoute()
 const userStore = useUserStore()

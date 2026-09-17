@@ -140,8 +140,13 @@ services:
     volumes:
       - nacos_data:/home/nacos/data
       - ./nacos-config/nacos-logback.xml:/home/nacos/conf/nacos-logback.xml:ro
+    # Keep DNS names stable across recreate: services resolve NACOS_ADDR=nacos:8848.
+    # Explicit aliases survive compose recreate better than relying on container_name alone.
     networks:
-      - football-network
+      football-network:
+        aliases:
+          - nacos
+          - football-nacos
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
       interval: 15s
