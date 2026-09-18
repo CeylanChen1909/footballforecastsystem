@@ -268,14 +268,15 @@ const formatTime = match => {
 .is-focus { box-shadow: inset 2px 0 0 var(--ff-primary); }
 .action-copy-short { display: none; }
 @media (max-width: 720px) {
-  .match-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 8px 10px; gap: 6px; }
-  .team-row { gap: 6px; }
-  .action-area { width: auto; display: flex; gap: 4px; }
+  .match-card { grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: 8px 10px 6px; gap: 4px; }
+  .team-row { gap: 8px; }
+  .team-name { font-size: 14px; }
+  .action-area { width: 100%; display: flex; justify-content: flex-end; gap: 4px; }
   .action-copy-full { display: none; }
   .action-copy-short { display: inline; }
-  .action-primary { width: auto; min-width: 0; min-height: 32px; height: 32px; padding: 0 8px; }
+  .action-primary { width: auto; min-width: 0; min-height: 32px; height: 32px; padding: 0 8px; flex: none; }
   .action-details { display: none; }
-  .favorite-btn, .more-btn { width: 36px; height: 36px; }
+  .favorite-btn, .more-btn { width: 36px; height: 36px; flex: none; }
 }
 @media (pointer: coarse) {
   .favorite-btn, .more-btn { width: 36px; height: 36px; }
