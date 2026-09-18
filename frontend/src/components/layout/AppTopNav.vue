@@ -50,7 +50,7 @@
         </template>
       </el-dropdown>
     </div>
-    <el-dialog v-model="searchVisible" title="全局搜索" width="min(620px, 92vw)" append-to-body @opened="focusSearchInput">
+    <el-dialog v-if="dialogsReady" v-model="searchVisible" title="全局搜索" width="min(620px, 92vw)" append-to-body @opened="focusSearchInput">
       <el-input ref="searchInputRef" v-model="searchKeyword" clearable autofocus placeholder="搜索球队、联赛或比赛（支持中英文别名）" @keyup.enter="runSearch" @input="onSearchInput" />
       <div v-if="searchLoading" class="global-search-state">正在搜索…</div>
       <div v-else-if="hasSearchHits" class="global-search-results">
@@ -91,7 +91,7 @@
         </div>
       </div>
     </el-dialog>
-    <el-dialog v-model="notificationVisible" title="通知中心" width="min(520px, 92vw)" append-to-body>
+    <el-dialog v-if="dialogsReady" v-model="notificationVisible" title="通知中心" width="min(520px, 92vw)" append-to-body>
       <div class="notification-head">
         <span>收藏比赛后将在开赛前站内提醒；也可开启浏览器通知。</span>
         <el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">全部已读</el-button>
@@ -118,7 +118,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
-import { computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { crawlerApi, searchApi, userApi } from '../../api'
 import { expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
 import { ArrowDown, ChatLineSquare, Football, Notebook, User, SwitchButton, Setting, Search, Bell, Menu } from '@element-plus/icons-vue'
@@ -136,6 +136,7 @@ const props = defineProps({
 
 const router = useRouter()
 const userStore = useUserStore()
+const dialogsReady = ref(false)
 const searchVisible = ref(false)
 const searchLoading = ref(false)
 const searchKeyword = ref('')
@@ -370,7 +371,7 @@ const loadNotifications = async ({ silent = false } = {}) => {
     if (!silent) notificationLoading.value = false
   }
 }
-const openNotifications = async () => { ensureDialog(); notificationVisible.value = true; await loadNotifications() }
+const openNotifications = async () => { ensureDialog(); await nextTick(); notificationVisible.value = true; await loadNotifications() }
 const markNotification = async item => {
   if (!item.read_at) {
     await userApi.readNotification(item.id).catch(() => {})
@@ -405,8 +406,8 @@ const stopNotificationPolling = () => {
 }
 
 
-const ensureDialog = () => { registerElementPlusDialog(epApp) }
-const openSearch = () => { ensureDialog(); searchVisible.value = true }
+const ensureDialog = () => { registerElementPlusDialog(epApp); dialogsReady.value = true }
+const openSearch = async () => { ensureDialog(); await nextTick(); searchVisible.value = true }
 const handleSelect = (index) => {
   mobileMenuOpen.value = false
   if (index === props.activePath) return

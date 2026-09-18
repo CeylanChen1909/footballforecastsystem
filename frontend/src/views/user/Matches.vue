@@ -1276,11 +1276,11 @@ onBeforeUnmount(() => {
 .main-content { overflow-x: clip; }
 .matches-page :deep(.el-container),
 .matches-page :deep(.el-main) { min-width: 0; max-width: 100%; overflow-x: clip; }
-.date-rail-item { overflow: hidden; }
-.date-rail-item small { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.date-rail-item { overflow: visible; }
+.date-rail-item small { white-space: normal; line-height: 1.25; overflow: visible; text-overflow: clip; }
 @media (max-width: 768px) {
   .date-rail-arrow { display: flex; flex: 0 0 40px; width: 40px; min-width: 40px; min-height: 44px; }
-  .date-rail-item { flex: 0 0 76px; min-width: 76px; min-height: 56px; padding: 8px; }
+  .date-rail-item { flex: 0 0 92px; min-width: 92px; min-height: 64px; padding: 8px 10px; }
   .date-group { padding: 0; }
   .main-content { padding: 10px; }
 }
