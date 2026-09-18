@@ -1,7 +1,7 @@
 {
   "name": "ChenFootball - 足球赛程与预测",
   "short_name": "ChenFootball",
-  "description": "足球赛程、赛事资料与智能预测",
+  "description": "赛程、比分与预测概率。标明数据覆盖与质量门槛。",
   "start_url": "/matches",
   "scope": "/",
   "display": "standalone",

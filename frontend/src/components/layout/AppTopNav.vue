@@ -98,12 +98,8 @@
       </div>
       <div v-if="notificationLoading" class="global-search-state">正在加载通知…</div>
       <div v-else-if="notifications.length === 0" class="notification-empty">
-        <el-empty description="暂无通知">
-          <template #description>
-            <p>暂无通知</p>
-            <p class="notification-empty-hint">收藏比赛后将在开赛前站内提醒</p>
-          </template>
-        </el-empty>
+        <p class="notification-empty-title">暂无通知</p>
+        <p class="notification-empty-hint">收藏比赛后，开赛前 30 分钟会写在这里。</p>
         <div class="notification-empty-actions">
           <el-button type="primary" plain size="small" @click="goBrowse('/matches')">去收藏一场比赛</el-button>
           <el-button v-if="browserNotifyState === 'default'" size="small" plain @click="requestBrowserNotify">开启浏览器通知</el-button>
@@ -491,6 +487,7 @@ onBeforeUnmount(() => {
 .global-search-state { padding:20px 0; text-align:center; }
 .global-search-empty-links { display:flex; justify-content:center; gap:12px; margin-top:8px; }
 .notification-empty { padding:8px 0 4px; text-align:center; }
+.notification-empty-title { margin: 10px 0 0; color: var(--ff-text-strong); font-size: 14px; font-weight: 700; }
 .notification-empty-hint { margin:6px 0 0; color:var(--ff-text-muted); font-size:12px; }
 .notification-empty-actions { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; margin-top:4px; }
 

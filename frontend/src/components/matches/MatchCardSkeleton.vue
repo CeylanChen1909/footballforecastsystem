@@ -25,60 +25,38 @@
 <style scoped>
 .match-card-skeleton {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--ff-border);
-  border-radius: var(--ff-radius-md, 12px);
-  background: var(--ff-surface);
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--ff-border);
+  border-radius: 0;
+  background: #fff;
   min-width: 0;
-  min-height: 132px;
+  min-height: 56px;
 }
 .skeleton-team-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 52px minmax(0, 1fr) 28px;
+  grid-template-columns: 22px minmax(0, 1fr) 48px minmax(0, 1fr) 22px;
   gap: 8px;
   align-items: center;
 }
-.skeleton-meta, .skeleton-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
+.skeleton-meta { display: none; }
+.skeleton-actions { display: flex; gap: 6px; justify-content: flex-end; }
 .sk {
   display: block;
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--ff-surface-soft) 0%, #eef3f0 45%, var(--ff-surface-soft) 100%);
-  background-size: 200% 100%;
-  animation: sk-shimmer 1.2s ease-in-out infinite;
+  border-radius: 3px;
+  background: #e7eeea;
 }
-.sk-logo, .sk-circle { width: 28px; height: 28px; border-radius: 999px; }
-.sk-name { height: 14px; width: 100%; }
-.sk-score { height: 14px; width: 100%; border-radius: 6px; }
-.sk-chip { height: 18px; width: 72px; border-radius: 999px; }
-.sk-chip.short { width: 48px; }
-.sk-btn { height: 28px; width: 88px; border-radius: 8px; }
-.sk-btn.narrow { width: 72px; }
-@keyframes sk-shimmer {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
-}
-@media (max-width: 680px) {
-  .match-card-skeleton {
-    min-height: 148px;
-    padding: 12px;
-    gap: 10px;
-  }
-  .skeleton-team-row {
-    grid-template-columns: 24px minmax(0, 1fr) 40px minmax(0, 1fr) 24px;
-    gap: 6px;
-  }
-  .sk-logo, .sk-circle { width: 24px; height: 24px; }
-  .skeleton-actions { gap: 6px; }
-  .sk-btn { width: 76px; height: 26px; }
-  .sk-btn.narrow { width: 64px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sk { animation: none; }
+.sk-logo, .sk-circle { width: 22px; height: 22px; border-radius: 2px; }
+.sk-name { height: 12px; width: 100%; }
+.sk-score { height: 14px; width: 100%; }
+.sk-chip { display: none; }
+.sk-btn { height: 28px; width: 64px; }
+.sk-btn.narrow { width: 28px; }
+@media (max-width: 720px) {
+  .match-card-skeleton { grid-template-columns: 1fr; min-height: 72px; }
+  .skeleton-actions { justify-content: flex-start; }
 }
 </style>

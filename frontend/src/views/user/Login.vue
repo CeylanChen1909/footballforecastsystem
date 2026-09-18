@@ -58,7 +58,7 @@
       </el-tabs>
 
       <div class="login-footnote">登录后可同步收藏、预测历史与提醒设置；没有账号可直接注册。<router-link to="/privacy">隐私与数据说明</router-link></div>
-      <div class="login-footnote">© ChenFootball · 智能预测平台</div>
+      <div class="login-footnote">© ChenFootball · 赛程与预测</div>
     </main>
     <el-dialog v-model="resetVisible" title="通过邮箱重置密码" width="min(420px, 92vw)">
       <el-form label-position="top">

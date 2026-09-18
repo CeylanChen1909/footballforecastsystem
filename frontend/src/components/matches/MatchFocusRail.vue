@@ -2,7 +2,7 @@
   <section class="focus-rail" aria-labelledby="match-focus-title">
     <div class="focus-head">
       <div>
-        <span class="focus-kicker">FOCUS</span>
+        <span class="focus-kicker">赛程</span>
         <h2 id="match-focus-title">比赛焦点</h2>
       </div>
       <div class="focus-head-actions">
@@ -103,7 +103,7 @@ const onLogoError = event => { event.target.style.display = 'none' }
 <style scoped>
 .focus-rail { margin: 0 0 18px; padding: 18px; border: 1px solid var(--ff-border); border-radius: var(--ff-radius-lg); background: var(--ff-surface); width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
 .focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; min-width:0; flex-wrap:wrap; }
-.focus-kicker { color:var(--ff-primary); font:700 10px/1 var(--ff-mono); letter-spacing:.14em; }
+.focus-kicker { color:var(--ff-text-muted); font:600 12px/1.2 'PingFang SC','Microsoft YaHei',sans-serif; letter-spacing:0; }
 .focus-head h2 { margin:6px 0 3px; color:var(--ff-text-strong); font-size:18px; letter-spacing:-.02em; }
 .focus-head p { margin:0; color:var(--ff-text-muted); font-size:12px; }
 .focus-head-actions { display:flex; align-items:center; gap:10px; color:var(--ff-text-faint); font-size:12px; white-space:nowrap; }

@@ -4,20 +4,20 @@
     <main id="app-main" class="legal-main" tabindex="-1">
       <p class="legal-lead">ChenFootball 是面向球迷的足球赛程与预测站点，帮助你快速查看比赛、联赛资料与模型分析，并在关键位置标明数据覆盖与可信度边界。</p>
 
-      <section class="trust-grid" aria-label="信任要点">
-        <article class="trust-card">
-          <strong>公开赛程</strong>
-          <p>比赛列表与联赛积分来自主爬虫同步快照，页面会标注数据状态。</p>
-        </article>
-        <article class="trust-card">
-          <strong>预测边界</strong>
-          <p>概率与结论仅供参考；样本不足或未过质量门槛时会明确提示。</p>
-        </article>
-        <article class="trust-card">
-          <strong>隐私可控</strong>
-          <p>匿名统计可撤回；账号资料可在个人中心管理，详见隐私说明。</p>
-        </article>
-      </section>
+      <dl class="trust-facts trust-grid" aria-label="信任要点">
+        <div>
+          <dt>公开赛程</dt>
+          <dd>比赛列表与联赛积分来自主爬虫同步快照，页面会标注数据状态。</dd>
+        </div>
+        <div>
+          <dt>预测边界</dt>
+          <dd>概率与结论仅供参考；样本不足或未过质量门槛时会明确提示。</dd>
+        </div>
+        <div>
+          <dt>隐私可控</dt>
+          <dd>匿名统计可撤回；账号资料可在个人中心管理，详见隐私说明。</dd>
+        </div>
+      </dl>
 
       <nav class="legal-toc" aria-label="关于目录">
         <a href="#about-product">产品定位</a>
@@ -74,21 +74,10 @@ import { Football } from '@element-plus/icons-vue'
 .legal-lead { color: var(--ff-text-muted); margin-bottom: 8px; }
 .legal-main h2 { margin: 26px 0 8px; color: var(--ff-primary); font-size: 18px; scroll-margin-top: 84px; }
 .legal-main p { color: var(--ff-text-muted); }
-.trust-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 18px 0 8px;
-}
-.trust-card {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--ff-border);
-  border-radius: 10px;
-  background: var(--ff-surface-soft);
-}
-.trust-card strong { display: block; color: var(--ff-text-strong); font-size: 13px; margin-bottom: 4px; }
-.trust-card p { margin: 0; color: var(--ff-text-muted); font-size: 12px; line-height: 1.55; }
+.trust-facts { margin: 16px 0 4px; border-top: 1px solid var(--ff-border); }
+.trust-facts > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ff-border); }
+.trust-facts dt { margin: 0; color: var(--ff-text-strong); font-size: 13px; font-weight: 700; }
+.trust-facts dd { margin: 0; color: var(--ff-text-muted); font-size: 13px; line-height: 1.55; }
 .trust-list { margin: 8px 0 0; padding-left: 1.15em; color: var(--ff-text-muted); }
 .trust-list li { margin: 6px 0; }
 .trust-list a { color: var(--ff-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
@@ -102,6 +91,6 @@ import { Football } from '@element-plus/icons-vue'
 .legal-actions :deep(.el-button) { min-height: 40px; }
 @media (max-width: 680px) {
   .legal-main { padding:28px 16px 40px; }
-  .trust-grid { grid-template-columns: 1fr; }
+  .trust-facts > div { grid-template-columns: 1fr; gap: 2px; }
 }
 </style>

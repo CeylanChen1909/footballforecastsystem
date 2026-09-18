@@ -3,7 +3,7 @@
     <div class="app-footer-inner">
       <div class="footer-brand">
         <strong>ChenFootball</strong>
-        <span>足球赛程 · 赛事资料 · 智能预测</span>
+        <span>赛程、比分与预测概率</span>
       </div>
       <nav class="footer-links" aria-label="页脚导航">
         <router-link to="/matches">比赛</router-link>

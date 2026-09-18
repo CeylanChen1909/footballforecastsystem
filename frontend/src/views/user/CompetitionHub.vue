@@ -9,7 +9,7 @@
 
     <el-main id="app-main" class="main-content" tabindex="-1">
       <section class="hub-grid">
-        <PageSection class="standings-panel" title="联赛积分榜" subtitle="以当前已采集赛季为准，点击球队查看资料">
+        <PageSection class="standings-panel" title="联赛积分榜" subtitle="按已同步赛季显示，点球队看资料">
           <template #actions>
             <div class="standings-toolbar" aria-label="积分榜筛选与操作">
               <div class="toolbar-group toolbar-primary">
@@ -108,7 +108,7 @@
           <PageState v-else title="该联赛暂无积分榜" :description="qualityMessage || '当前没有已同步的榜单数据。可切换联赛/赛季，稍后刷新，或先从赛程浏览单场分析。'" action-text="浏览赛程与预测" @action="goMatchesDiscover" />
         </PageSection>
 
-        <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从联赛名单进入球队资料，不再依赖资讯聚合">
+        <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从积分榜名单进入球队资料">
           <template #actions>
             <el-input v-model="clubKeyword" class="club-search" clearable size="small" placeholder="搜索球队" aria-label="搜索球队" />
           </template>
@@ -393,8 +393,8 @@ watch(() => route.query.league, () => {
 .form-strip { display:inline-flex; max-width:100%; overflow:hidden; color:var(--ff-text-muted); font-family:var(--ff-mono); font-size:11px; letter-spacing:1px; white-space:nowrap; }
 .team-cell { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; color:var(--ff-text); font-weight:600; text-align:left; cursor:pointer; }
 .team-cell:hover { color:var(--ff-primary); }.team-cell img,.mini-logo { width:26px; height:26px; object-fit:contain; flex:none; }.mini-logo { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--ff-primary-soft); color:var(--ff-primary); font-size:11px; }
-.club-search { width:180px; }.club-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.club-card { display:flex; align-items:center; gap:9px; min-width:0; padding:10px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer; transition:border-color var(--ff-transition-fast),background var(--ff-transition-fast); }
+.club-search { width:180px; }.club-grid { display:grid; grid-template-columns:1fr; gap:0; border:1px solid var(--ff-border); border-radius:6px; overflow:hidden; }
+.club-card { display:flex; align-items:center; gap:9px; min-width:0; padding:9px 10px; border:0; border-bottom:1px solid var(--ff-border); border-radius:0; background:#fff; color:var(--ff-text); text-align:left; cursor:pointer; }
 .club-card:hover,.club-card:focus-visible { border-color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }.club-card img,.club-logo-placeholder { width:32px; height:32px; object-fit:contain; flex:none; }.club-logo-placeholder { display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:var(--ff-bg-alt); color:var(--ff-primary); font-weight:700; }.club-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:700; }.club-meta { margin-left:auto; color:var(--ff-text-faint); font-size:10px; white-space:nowrap; }.club-arrow { margin-left:auto; color:var(--ff-primary); font-size:18px; opacity:.6; transition:opacity var(--ff-transition-fast); }.club-card:hover .club-arrow,.club-card:focus-visible .club-arrow { opacity:1; }
 @media (max-width: 980px) { .hub-grid { grid-template-columns:1fr; } }
 @media (max-width: 680px) {
@@ -479,9 +479,11 @@ watch(() => route.query.league, () => {
   gap: 12px;
   margin: 4px 0 8px;
   padding: 14px 16px;
-  border: 1px dashed color-mix(in srgb, var(--ff-primary) 35%, var(--ff-border));
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--ff-primary-soft) 40%, var(--ff-surface));
+  border: 0;
+  border-top: 1px solid var(--ff-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 2px;
 }
 .hub-predict-entry strong { color: var(--ff-text-strong); font-size: 13px; }
 .hub-predict-entry p { margin: 4px 0 0; color: var(--ff-text-muted); font-size: 12px; line-height: 1.5; }

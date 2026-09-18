@@ -181,3 +181,8 @@ Host edge (`/etc/nginx/sites-available/chenfootball.asia`) already sets:
 `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
 
 Container `frontend/nginx.conf` therefore only adds app-level `Content-Security-Policy` (+ Report-Only) and `Permissions-Policy` (plus Cache-Control where needed). Do not re-add XCTO/XFO/Referrer inside the container or responses will stack duplicates.
+
+## Round 9 — Fixture density, not template chrome
+
+Match list is a single-column fixture board (league bar + rows), not an auto-fill card grid. English PREDICT/FOCUS kickers, the four-step onboarding strip, the three-card About grid, and the generic “智能预测” meta line are gone. Empty/error uses a left-rule state row; notifications no longer use the default Element Plus empty illustration. Distinctive copy: 数据覆盖与质量门槛.
+

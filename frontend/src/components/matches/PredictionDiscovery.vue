@@ -7,9 +7,9 @@
   >
     <div class="discovery-head">
       <div class="discovery-copy">
-        <span class="discovery-kicker">PREDICT</span>
+        <span class="discovery-kicker">焦点</span>
         <h2 id="prediction-discovery-title">精选预测入口</h2>
-        <p>从焦点赛程快速进入单场分析，不额外刷屏。</p>
+        <p>点开看本场概率与数据覆盖。</p>
       </div>
       <span class="discovery-more">来自比赛焦点</span>
     </div>
@@ -54,99 +54,94 @@ const isFinished = match => isFinishedMatch(match)
 
 <style scoped>
 .prediction-discovery {
-  margin: 0 0 14px;
-  padding: 14px 16px;
-  border: 1px solid var(--ff-border);
-  border-radius: var(--ff-radius-lg, 14px);
-  background: color-mix(in srgb, var(--ff-primary-soft) 55%, var(--ff-surface));
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   min-width: 0;
+  max-width: 100%;
 }
 .discovery-head {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 6px;
+  min-width: 0;
 }
 .discovery-kicker {
-  color: var(--ff-primary);
-  font: 700 10px/1 var(--ff-mono);
-  letter-spacing: .14em;
-}
-.discovery-copy h2 {
-  margin: 5px 0 2px;
-  color: var(--ff-text-strong);
-  font-size: 15px;
-  letter-spacing: -.02em;
-}
-.discovery-copy p {
-  margin: 0;
   color: var(--ff-text-muted);
   font-size: 12px;
-  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.discovery-copy { min-width: 0; }
+.discovery-copy h2 {
+  margin: 0;
+  color: var(--ff-text-strong);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.discovery-copy p {
+  margin: 2px 0 0;
+  color: var(--ff-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 .discovery-more {
   flex: none;
-  color: var(--ff-primary);
+  color: var(--ff-text-faint);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 .discovery-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+  min-width: 0;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
 }
 .discovery-chip {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: min(280px, 78vw);
+  min-height: 40px;
   min-width: 0;
-  padding: 10px 11px;
+  padding: 6px 10px;
   border: 1px solid var(--ff-border);
-  border-radius: 10px;
-  background: var(--ff-surface);
+  border-radius: 4px;
+  background: #fff;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color .16s ease, background .16s ease;
 }
 .discovery-chip:hover,
 .discovery-chip:focus-visible {
   border-color: var(--ff-primary);
-  background: var(--ff-surface-soft);
   outline: none;
 }
-.discovery-league,
-.discovery-cta {
-  color: var(--ff-text-faint);
-  font-size: 11px;
-}
+.discovery-league { display: none; }
 .discovery-chip strong {
-  display: block;
   min-width: 0;
   overflow: hidden;
   color: var(--ff-text-strong);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.discovery-chip em {
-  color: var(--ff-text-faint);
-  font-style: normal;
-  font-weight: 600;
-}
-.discovery-cta {
-  color: var(--ff-primary);
-  font-weight: 700;
-}
-@media (max-width: 980px) {
-  .discovery-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+.discovery-chip em { color: var(--ff-text-faint); font-style: normal; font-weight: 600; }
+.discovery-cta { flex: none; color: var(--ff-primary); font-size: 12px; font-weight: 700; }
 @media (max-width: 680px) {
-  .prediction-discovery { padding: 12px; margin-bottom: 12px; }
   .discovery-head { flex-wrap: wrap; }
-  .discovery-list { grid-template-columns: 1fr; }
-  .discovery-chip strong { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .discovery-more { display: none; }
 }
 </style>

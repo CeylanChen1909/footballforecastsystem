@@ -12,15 +12,7 @@
     </AppTopNav>
 
     <div v-if="onboardingVisible" class="matches-onboarding" role="region" aria-label="使用引导">
-      <div class="matches-onboarding-copy">
-        <strong>快速上手</strong>
-        <ol>
-          <li>看赛程</li>
-          <li>看预测</li>
-          <li>收藏提醒</li>
-          <li>试试 Agent</li>
-        </ol>
-      </div>
+      <p class="matches-onboarding-copy">收藏一场比赛，开赛前 30 分钟在通知里提醒。</p>
       <button type="button" class="matches-onboarding-dismiss" aria-label="关闭引导" @click="dismissOnboarding">知道了</button>
     </div>
 
@@ -68,7 +60,7 @@
           </aside>
 
           <!-- 比赛列表 -->
-          <PageSection class="match-list-panel" title="比赛列表" subtitle="点击上方日期查看当天的比赛" variant="compact">
+          <PageSection class="match-list-panel" title="当日赛程" subtitle="点开看概率、数据覆盖与质量门槛" variant="compact">
             <template #actions>
               <div class="match-list-actions">
                 <el-select v-model="selectedLeague" class="league-filter" size="small" aria-label="按联赛筛选" popper-class="league-filter-popper">
@@ -1212,6 +1204,85 @@ onBeforeUnmount(() => {
 }
 @media (max-width: 620px) {
   .matches-skeleton { grid-template-columns: 1fr; }
+}
+
+
+/* r9 fixture board: list density, contained date rail */
+.matches-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--ff-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.matches-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--ff-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+}
+.date-group {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 10px;
+}
+.date-group:hover { background: transparent; border-color: transparent; }
+.date-group-heading { padding: 0 0 8px; margin-bottom: 8px; }
+.date-group-heading strong { font-size: 15px; font-weight: 700; letter-spacing: 0; }
+.league-group { margin-bottom: 12px; }
+.league-group-header {
+  margin-bottom: 0;
+  padding: 6px 10px;
+  background: #f3f6f4;
+  border: 1px solid var(--ff-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+.league-group-header::after { display: none; }
+.league-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
+.league-group .matches-grid { border-radius: 0 0 6px 6px; }
+.match-count-tag {
+  background: transparent;
+  color: var(--ff-text-muted);
+  box-shadow: none;
+  padding: 0 2px;
+  border-radius: 0;
+}
+.match-count-num { color: var(--ff-text-strong); font-size: 15px; font-weight: 700; }
+.match-count-unit { font-size: 12px; }
+.matches-onboarding {
+  margin: 8px clamp(12px, 2vw, 22px) 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ff-border);
+  background: #fff;
+}
+.matches-onboarding-copy {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ff-text);
+}
+.matches-page,
+.matches-layout,
+.main-content { overflow-x: clip; }
+.matches-page :deep(.el-container),
+.matches-page :deep(.el-main) { min-width: 0; max-width: 100%; overflow-x: clip; }
+.date-rail-item { overflow: hidden; }
+.date-rail-item small { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+@media (max-width: 768px) {
+  .date-rail-arrow { display: flex; flex: 0 0 40px; width: 40px; min-width: 40px; min-height: 44px; }
+  .date-rail-item { flex: 0 0 76px; min-width: 76px; min-height: 56px; padding: 8px; }
+  .date-group { padding: 0; }
+  .main-content { padding: 10px; }
 }
 
 </style>

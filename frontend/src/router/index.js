@@ -96,9 +96,9 @@ const TITLES = {
 }
 
 const SITE_ORIGIN = 'https://chenfootball.asia'
-const DEFAULT_DESCRIPTION = 'ChenFootball 提供足球赛程、赛事资料与智能预测，帮助你快速了解比赛信息与分析结果。'
+const DEFAULT_DESCRIPTION = 'ChenFootball 按日列出已同步赛程，点开看预测概率、数据覆盖与质量门槛。不提供投注建议。'
 const DESCRIPTIONS = {
-  '/matches': '浏览今日与近期足球赛程，查看联赛筛选、收藏与开赛提醒。',
+  '/matches': '按日查看已同步赛程，点开看预测概率、数据覆盖与质量门槛。',
   '/competitions': '查看联赛积分榜、参赛俱乐部与球队资料。',
   '/privacy': '了解 ChenFootball 如何保存、使用与删除账号及赛程相关数据。',
   '/about': '了解 ChenFootball 的产品定位、数据来源、模型边界与免责声明。',
