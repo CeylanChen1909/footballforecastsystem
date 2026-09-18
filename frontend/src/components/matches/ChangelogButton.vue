@@ -7,7 +7,6 @@
     aria-controls="matches-changelog-drawer"
     @click="openChangelog"
   >
-    <span v-if="hasUnread" class="changelog-pulse" aria-hidden="true"></span>
     <el-icon class="changelog-icon" aria-hidden="true"><Clock /></el-icon>
     <span class="changelog-label">更新日志</span>
   </button>
@@ -180,6 +179,24 @@ onMounted(loadEntries)
     padding: 0;
     justify-content: center;
   }
+}
+.changelog-label { display: none; }
+.changelog-pulse { display: none; }
+.changelog-trigger {
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  color: var(--ff-text-muted);
+  box-shadow: none;
+}
+.changelog-trigger:hover {
+  transform: none;
+  border-color: transparent;
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text);
 }
 @media (prefers-reduced-motion: reduce) { .changelog-trigger, .changelog-pulse { animation: none; transition: none; } }
 </style>

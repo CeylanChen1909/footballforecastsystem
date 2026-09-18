@@ -2,7 +2,7 @@
   <div class="matches-page ff-page-shell">
     <AppTopNav
       title="ChenFootball"
-      subtitle="比赛"
+      subtitle=""
       :brand-icon="Football"
       active-path="/matches"
     >
@@ -30,39 +30,11 @@
           </button>
         </nav>
 
-        <PredictionDiscovery
-          :items="hotMatches"
-          :team-name-mode="teamNameMode"
-          @predict="goPredict"
-        />
-
         <div class="matches-workspace">
-          <aside class="matches-focus-sidebar" aria-label="比赛焦点侧栏" :class="{ 'is-collapsed': focusCollapsed }">
-            <div class="focus-collapse-bar">
-              <span>比赛焦点</span>
-              <button type="button" class="focus-collapse-btn" :aria-expanded="!focusCollapsed" :aria-label="focusCollapsed ? '展开焦点' : '收起焦点'" @click="toggleFocusCollapsed">
-                {{ focusCollapsed ? '展开焦点' : '收起焦点' }}
-              </button>
-            </div>
-            <MatchFocusRail
-              v-show="!focusCollapsed"
-              :items="hotMatches"
-              :meta="hotMeta"
-              :loading="hotLoading"
-              :error="hotError"
-              :stale="hotStale"
-              :team-name-mode="teamNameMode"
-              @open="openFocusMatch"
-              @predict="goPredict"
-              @retry="loadHotMatches()"
-              @view-all="scrollToMatchList"
-            />
-          </aside>
-
-          <!-- 比赛列表 -->
-          <PageSection class="match-list-panel" title="当日赛程" subtitle="点开看概率、数据覆盖与质量门槛" variant="compact">
+          <!-- 比赛列表 owns the page. Focus is a mark on the row, not a second bay. -->
+          <PageSection class="match-list-panel" variant="compact">
             <template #actions>
-              <div class="match-list-actions">
+              <div class="match-list-actions" :class="{ 'is-open': moreFilters }">
                 <el-select v-model="selectedLeague" class="league-filter" size="small" aria-label="按联赛筛选" popper-class="league-filter-popper">
                   <el-option v-for="option in leagueOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
@@ -72,11 +44,12 @@
                 </el-button>
                 <el-checkbox v-model="onlyFavorites" size="small">只看收藏</el-checkbox>
                 <el-button class="reminder-button" size="small" plain :loading="remindersChanging" :type="remindersEnabled ? 'success' : 'default'" @click="toggleMatchReminders">
-                  <el-icon><Bell /></el-icon>{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}
+                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}</span>
                 </el-button>
+                <button type="button" class="filters-more" :aria-expanded="moreFilters ? 'true' : 'false'" @click="moreFilters = !moreFilters">{{ moreFilters ? '收起' : '筛选' }}</button>
                 <div class="match-count-tag" :aria-busy="loading ? 'true' : 'false'">
                   <span class="match-count-num">{{ loading ? '…' : matchCount }}</span>
-                  <span class="match-count-unit">场比赛</span>
+                  <span class="match-count-unit">场</span>
                 </div>
               </div>
             </template>
@@ -88,13 +61,6 @@
             <template v-else>
               <div v-if="filteredMatches.length > 0" class="date-group-list">
                 <div v-for="group in groupedMatches" :key="group.date" class="date-group reveal">
-                  <div class="date-group-heading">
-                    <div>
-                      <span class="ff-kicker">{{ group.weekday }}</span>
-                      <strong>{{ group.label }}</strong>
-                    </div>
-                  </div>
-
                   <div v-for="lg in group.leagueGroups" :key="lg.name" class="league-group">
                     <div class="league-group-header">
                       <span class="league-name">{{ lg.name }}</span>
@@ -107,6 +73,7 @@
                         :match="m"
                         :team-name-mode="teamNameMode"
                         :favorited="isFavoritedMatch(getMatchId(m))"
+                        :focused="isFocusMatch(m)"
                         @predict="goPredict"
                         @teamClick="goTeamSquad"
                         @h2h="showH2H"
@@ -235,6 +202,8 @@ import { useMatchRecommendations } from '../../composables/useMatchRecommendatio
 const MatchFocusRail = defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))
 const PredictionDiscovery = defineAsyncComponent(() => import('../../components/matches/PredictionDiscovery.vue'))
 const ChangelogButton = defineAsyncComponent(() => import('../../components/matches/ChangelogButton.vue'))
+void MatchFocusRail
+void PredictionDiscovery
 
 const router = useRouter()
 const route = useRoute()
@@ -255,6 +224,7 @@ const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
 const FOCUS_COLLAPSE_KEY = 'football_matches_focus_collapsed'
 const onboardingVisible = ref(false)
 const focusCollapsed = ref(false)
+const moreFilters = ref(false)
 const countsReady = ref(false)
 const dismissOnboarding = () => {
   onboardingVisible.value = false
@@ -397,6 +367,21 @@ const filteredMatches = computed(() => {
   })
 })
 const matchCount = computed(() => filteredMatches.value.length)
+const focusKeys = computed(() => {
+  const ids = new Set()
+  const keys = new Set()
+  for (const item of hotMatches.value || []) {
+    const id = String(getMatchId(item) || '')
+    if (id) ids.add(id)
+    keys.add(matchIdentity(item))
+  }
+  return { ids, keys }
+})
+const isFocusMatch = (match) => {
+  const id = String(getMatchId(match) || '')
+  return Boolean((id && focusKeys.value.ids.has(id)) || focusKeys.value.keys.has(matchIdentity(match)))
+}
+
 const dateCounts = computed(() => {
   const counts = new Map(dateCountsCache.value)
   // `rawMatches` is the currently selected day's result.  That date is
@@ -633,10 +618,13 @@ const openMatchDetails = async (match) => {
 }
 
 
+const discoverScrolled = ref(false)
 const scrollToPredictionDiscovery = async () => {
-  await nextTick()
-  const el = document.getElementById('prediction-discovery')
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (discoverScrolled.value) return
+  const first = (hotMatches.value || [])[0]
+  if (!first) return
+  discoverScrolled.value = true
+  await openFocusMatch(first)
 }
 
 const scrollToMatchList = () => {
@@ -939,6 +927,10 @@ onMounted(async () => {
 watch(() => route.query.discover, (value) => {
   if (value === 'predict') scrollToPredictionDiscovery()
 }, { immediate: true })
+watch(hotMatches, () => {
+  if (route.query.discover === 'predict') scrollToPredictionDiscovery()
+})
+
 
 onBeforeUnmount(() => {
   if (reminderTimer) window.clearInterval(reminderTimer)
@@ -1283,6 +1275,50 @@ onBeforeUnmount(() => {
   .date-rail-item { flex: 0 0 92px; min-width: 92px; min-height: 64px; padding: 8px 10px; }
   .date-group { padding: 0; }
   .main-content { padding: 10px; }
+}
+
+
+/* r10: fixture list owns the page */
+.matches-workspace { display: block; }
+.matches-focus-sidebar { display: none; }
+.match-list-panel :deep(.section-head) {
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  position: static;
+}
+.match-list-panel :deep(.section-head > div:first-child) { display: none; }
+.match-list-actions {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+  gap: 6px;
+  align-items: center;
+}
+.filters-more {
+  display: none;
+  flex: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ff-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ff-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .match-list-panel :deep(.section-head) { flex-direction: row; align-items: center; }
+  .match-list-actions { flex-wrap: nowrap; align-items: center; }
+  .match-list-actions .el-checkbox { flex: 0 0 auto; }
+  .match-list-actions:not(.is-open) .team-filter,
+  .match-list-actions:not(.is-open) .team-language-button,
+  .match-list-actions:not(.is-open) .reminder-button,
+  .match-list-actions:not(.is-open) :deep(.el-checkbox) { display: none; }
+  .filters-more { display: inline-flex; align-items: center; }
+  .league-filter { flex: 0 0 132px; width: 132px; }
+  .date-group-heading { display: none; }
 }
 
 </style>

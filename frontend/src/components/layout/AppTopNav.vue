@@ -7,7 +7,7 @@
       </div>
       <div class="brand-text">
         <div class="brand-title" :title="title">{{ title }}</div>
-        <div class="brand-subtitle" :title="subtitle">{{ subtitle }}</div>
+        <div v-if="subtitle" class="brand-subtitle" :title="subtitle">{{ subtitle }}</div>
       </div>
     </div>
 

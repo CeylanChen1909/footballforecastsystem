@@ -1,5 +1,5 @@
 <template>
-  <div class="match-card" :data-match-id="getMatchId(match)">
+  <div class="match-card" :class="{ 'is-focus': focused }" :data-match-id="getMatchId(match)">
     <div class="match-info">
       <div class="team-row">
         <div class="team">
@@ -29,6 +29,7 @@
           {{ match.league.round }}
         </div>
         <div class="status">
+          <span v-if="focused" class="focus-mark">焦点</span>
           <el-tag :type="statusType" size="small" effect="plain">
             <span v-if="isLive" class="live-dot"></span>{{ statusLabel }}
           </el-tag>
@@ -37,8 +38,8 @@
     </div>
     <div class="action-area" aria-label="比赛操作">
       <el-button class="action-primary" type="primary" size="small" plain :aria-label="primaryActionLabel + '：打开本场分析'" @click.stop="$emit('predict', match)">
-        <el-icon><TrendCharts /></el-icon>
-        {{ primaryActionLabel }}
+        <span class="action-copy-full">{{ primaryActionLabel }}</span>
+        <span class="action-copy-short">{{ isFinished ? '复盘' : '预测' }}</span>
       </el-button>
       <el-button class="action-details" size="small" plain @click.stop="$emit('details', match)">
         赛事数据
@@ -79,7 +80,7 @@ import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatc
 import { getTeamDisplayName } from '../utils/teamNames'
 import { getMediaAssetUrl } from '../utils/mediaAsset'
 
-const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
+const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, focused: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
 const emit = defineEmits(['predict', 'teamClick', 'h2h', 'agent', 'details', 'favorite-match'])
 
 const fixture = computed(() => ({
@@ -263,23 +264,21 @@ const formatTime = match => {
   outline: 2px solid var(--ff-primary);
   outline-offset: 2px;
 }
+.focus-mark { margin-right: 6px; color: var(--ff-primary); font-size: 11px; font-weight: 700; }
+.is-focus { box-shadow: inset 2px 0 0 var(--ff-primary); }
+.action-copy-short { display: none; }
 @media (max-width: 720px) {
-  .match-card { grid-template-columns: minmax(0, 1fr); padding: 10px; gap: 8px; }
+  .match-card { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 8px 10px; gap: 6px; }
   .team-row { gap: 6px; }
-  .action-area {
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px 40px;
-  }
-  .action-primary, .action-details { min-height: 40px; height: 40px; width: 100%; }
-  .favorite-btn, .more-btn { width: 40px; height: 40px; }
-}
-@media (max-width: 420px) {
-  .action-area { grid-template-columns: minmax(0, 1fr) 40px 40px; }
+  .action-area { width: auto; display: flex; gap: 4px; }
+  .action-copy-full { display: none; }
+  .action-copy-short { display: inline; }
+  .action-primary { width: auto; min-width: 0; min-height: 32px; height: 32px; padding: 0 8px; }
   .action-details { display: none; }
+  .favorite-btn, .more-btn { width: 36px; height: 36px; }
 }
 @media (pointer: coarse) {
-  .favorite-btn, .more-btn { width: 40px; height: 40px; }
-  .action-primary { min-height: 40px; }
+  .favorite-btn, .more-btn { width: 36px; height: 36px; }
+  .action-primary { min-height: 36px; height: 36px; }
 }
 </style>
