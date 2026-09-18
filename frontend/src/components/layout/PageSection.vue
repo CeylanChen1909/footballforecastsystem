@@ -31,6 +31,10 @@ const variantClass = computed(() => (props.variant ? `is-${props.variant}` : '')
 <style scoped>
 .page-section {
   padding: 18px 20px;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   transition: border-color var(--ff-transition-fast), background-color var(--ff-transition-fast);
 }
 
@@ -54,7 +58,10 @@ const variantClass = computed(() => (props.variant ? `is-${props.variant}` : '')
   margin-bottom: 16px;
   padding-bottom: 13px;
   border-bottom: 1px solid var(--ff-border);
+  min-width: 0;
+  flex-wrap: wrap;
 }
+.section-head > div:first-child { min-width: 0; flex: 1 1 auto; }
 
 .section-title {
   font-size: 15px;

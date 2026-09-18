@@ -107,6 +107,7 @@
       </el-form>
       <template #footer><el-button @click="profileDialogVisible = false">取消</el-button><el-button type="primary" :loading="profileSaving" @click="saveProfile">保存</el-button></template>
     </el-dialog>
+      <AppFooter />
   </div>
 </template>
 
@@ -117,6 +118,7 @@ import { useUserStore } from '../../stores/user'
 import { predictionApi, favoriteApi, userApi } from '../../api'
 import { authStorage } from '../../utils/authStorage'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageState from '../../components/layout/PageState.vue'
 import { Camera, ChatLineSquare, Collection, Football, Lock, User } from '@element-plus/icons-vue'

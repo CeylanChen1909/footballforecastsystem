@@ -4,18 +4,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/lcp-html-order.mjs && node scripts/prerender-meta.mjs",
     "preview": "vite preview",
     "test": "npm run test:smoke && npm run test:perf",
     "test:smoke": "node scripts/smoke-routes.mjs",
-    "test:perf": "node scripts/perf-budget.mjs"
+    "test:perf": "node scripts/perf-budget.mjs",
+    "test:chunks": "node scripts/chunk-audit.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.0",
     "axios": "^1.6.0",
     "echarts": "^5.6.0",
     "element-plus": "^2.6.0",
-    "openai": "^6.39.0",
     "pinia": "^2.1.0",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"

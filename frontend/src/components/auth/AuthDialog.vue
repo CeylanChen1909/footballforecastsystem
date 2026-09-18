@@ -37,6 +37,13 @@
       </el-tab-pane>
 
       <el-tab-pane label="注册" name="register">
+        <ul class="register-value-props" aria-label="注册可获得的能力">
+          <li>开赛提醒与站内通知</li>
+          <li>收藏同步跨设备</li>
+          <li>预测历史可回看</li>
+          <li>解锁 Agent 问答</li>
+        </ul>
+        <p class="register-why">图形验证与邮箱验证码用于保护账号安全，不是额外门槛。</p>
         <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top" @submit.prevent="handleRegister">
           <el-form-item label="邮箱" prop="email">
             <el-input v-model="registerForm.email" placeholder="用于登录和接收验证码" prefix-icon="Message" clearable size="large" />
@@ -78,11 +85,14 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Football } from '@element-plus/icons-vue'
 import { useUserStore } from '../../stores/user'
+import { registerElementPlusDialog } from '../../plugins/register-element-plus-dialog'
+
+registerElementPlusDialog(getCurrentInstance()?.appContext.app)
 import { userApi } from '../../api'
 import ImageCaptcha from './ImageCaptcha.vue'
 
@@ -164,7 +174,7 @@ const refreshRegisterCaptcha = async () => {
     registerForm.captchaId = data?.captchaId || ''
     registerCaptchaImage.value = data?.image || ''
   } catch (error) {
-    ElMessage.error(error?.message || '图形验证码加载失败')
+    ElMessage.error(error?.message || '图形验证加载失败，请刷新后重试')
   }
 }
 
@@ -184,7 +194,7 @@ const sendRegisterCode = async () => {
     registerCaptchaVerified.value = true
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 
 const sendResetCode = async () => {
@@ -195,7 +205,7 @@ const sendResetCode = async () => {
     ElMessage.success(result?.delivery === 'console' ? '验证码已写入后端开发日志' : '验证码已发送，请查收邮件')
     resetCodeCountdown.value = 60
     resetCodeTimer = window.setInterval(() => { resetCodeCountdown.value -= 1; if (resetCodeCountdown.value <= 0) { window.clearInterval(resetCodeTimer); resetCodeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码发送失败') }
+  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
 }
 
 const goAfterLogin = () => {
@@ -219,7 +229,7 @@ const handleLogin = async () => {
       goAfterLogin()
     }
   } catch (error) {
-    ElMessage.error(error?.message || '登录失败，请稍后重试')
+    ElMessage.error(error?.message || '登录未成功，请确认账号密码后重试')
   } finally {
     loading.value = false
   }
@@ -236,7 +246,7 @@ const handleRegister = async () => {
       loginForm.password = ''
     }
   } catch (error) {
-    ElMessage.error(error?.message || '注册失败，请稍后重试')
+    ElMessage.error(error?.message || '注册未完成，请检查验证码与密码后重试')
   } finally {
     loading.value = false
   }
@@ -253,7 +263,7 @@ const handleReset = async () => {
     loginForm.account = resetForm.email
     loginForm.password = ''
     activeTab.value = 'login'
-  } catch (error) { ElMessage.error(error?.message || '密码重置失败') } finally { loading.value = false }
+  } catch (error) { ElMessage.error(error?.message || '密码重置未完成，请确认验证码后重试') } finally { loading.value = false }
 }
 </script>
 
@@ -271,4 +281,7 @@ const handleReset = async () => {
 .guest-link { display:block; margin:18px auto 0; border:0; padding:0; color:var(--ff-text-muted); background:transparent; font-size:12px; cursor:pointer; }
 .guest-link:hover { color:var(--ff-primary); }
 .aux-link { display:block; margin:12px auto 0; border:0; padding:0; color:var(--ff-primary); background:transparent; font-size:12px; cursor:pointer; }.aux-link:hover { text-decoration:underline; }.terms-note { margin:12px 0 0; color:var(--ff-text-faint); font-size:11px; line-height:1.5; text-align:center; }.terms-note a { color:var(--ff-primary); }
+.register-value-props { margin:0 0 10px; padding:10px 12px 10px 28px; border:1px solid var(--ff-border); border-radius:10px; background:var(--ff-surface-quiet); color:var(--ff-text); font-size:12px; line-height:1.7; }
+.register-value-props li { list-style:disc; }
+.register-why { margin:0 0 12px; color:var(--ff-text-muted); font-size:11px; line-height:1.5; }
 </style>

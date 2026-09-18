@@ -232,11 +232,18 @@ public interface CrawlerMatchMapper extends BaseMapper<CrawlerMatch> {
     }
 
     default List<CrawlerMatch> searchMatches(String keyword) {
+        if (keyword == null || keyword.isBlank()) return List.of();
+        String normalized = keyword.trim();
+        String full = "%" + normalized.toLowerCase(java.util.Locale.ROOT) + "%";
+        // Case-insensitive full-phrase match across league and both teams.
+        // Multi-word aliases are expanded by GlobalSearchController; avoid
+        // token OR here so "Manchester City" does not degrade to "%city%".
         return selectList(Wrappers.<CrawlerMatch>lambdaQuery()
-                .and(w -> w.like(CrawlerMatch::getLeagueName, keyword)
-                        .or().like(CrawlerMatch::getHomeTeamName, keyword)
-                        .or().like(CrawlerMatch::getAwayTeamName, keyword))
-                .orderByDesc(CrawlerMatch::getMatchTime));
+                .and(outer -> outer.apply("LOWER(IFNULL(league_name,'')) LIKE {0}", full)
+                        .or().apply("LOWER(IFNULL(home_team_name,'')) LIKE {0}", full)
+                        .or().apply("LOWER(IFNULL(away_team_name,'')) LIKE {0}", full))
+                .orderByDesc(CrawlerMatch::getMatchTime)
+                .last("LIMIT 50"));
     }
 
     default List<CrawlerMatch> findRecentByTeamName(String teamName, int limit) {

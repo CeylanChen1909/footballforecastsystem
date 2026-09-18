@@ -19,18 +19,68 @@
           </div>
           <div class="report-heading-meta">
             <el-tag :type="statusType" size="small">{{ fixtureStatusLabel }}</el-tag>
-            <div class="report-confidence"><span>概率分离度</span><strong>{{ confidenceValue }}</strong><small>{{ confidenceLabel }}</small></div>
+            <div class="report-confidence">
+              <span>概率分离度</span>
+              <strong>{{ confidenceValue }}</strong>
+              <small>{{ confidenceLabel }}</small>
+              <el-tag v-if="coverageBadge" class="coverage-badge" size="small" :type="coverageBadge.type" effect="plain">{{ coverageBadge.text }}</el-tag>
+              <small v-if="dataFreshnessLabel" class="freshness-label">{{ dataFreshnessLabel }}</small>
+            </div>
           </div>
         </section>
 
-        <el-alert v-if="matchLoadError" :title="matchLoadError" type="warning" show-icon :closable="false" class="inline-status" />
-
-        <div v-if="!predictionResult && predictionStatus !== 'LOADING'" class="prediction-state-panel" :class="`state-${String(predictionStatus).toLowerCase()}`">
-          <div class="state-icon"><el-icon><TrendCharts /></el-icon></div>
-          <div class="state-copy"><strong>{{ predictionStatusTitle }}</strong><span>{{ predictionStatusDescription }}</span></div>
-          <el-button v-if="['ERROR', 'FAILED', 'TIMEOUT'].includes(predictionStatus)" size="small" plain @click="doPredict">重新检查</el-button>
-          <el-button v-else-if="predictionStatus === 'UNAVAILABLE'" size="small" plain @click="backToMatches">查看其他比赛</el-button>
+        <PageState
+          v-if="fixtureNotFound"
+          title="未找到这场比赛"
+          description="这场比赛已经从当前赛程中移除，或链接中的比赛 ID 无效。请返回比赛列表重新选择。"
+          action-text="返回比赛列表"
+          @action="backToMatches"
+        />
+        <div v-else-if="loading && !predictionResult && !matchLoadError" class="prediction-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载比赛与预测">
+          <PageState type="loading" title="正在加载比赛与预测" description="正在读取赛程详情与统一预测快照…" :size="32" />
+          <div class="prediction-skeleton-card" aria-hidden="true">
+            <i class="sk-line sk-wide"></i>
+            <div class="sk-prob-grid"><i></i><i></i><i></i></div>
+            <i class="sk-line sk-mid"></i>
+          </div>
         </div>
+        <PageState
+          v-else-if="matchLoadError && !predictionResult"
+          type="error"
+          title="比赛详情加载失败"
+          :description="matchLoadError"
+          action-text="重试"
+          @action="loadMatch"
+        />
+        <PageState
+          v-else-if="!predictionResult && predictionStatus === 'LOADING'"
+          type="loading"
+          :title="predictionStatusTitle"
+          :description="predictionStatusDescription"
+          :size="32"
+        />
+        <PageState
+          v-else-if="!predictionResult && ['ERROR', 'FAILED', 'TIMEOUT'].includes(predictionStatus)"
+          type="error"
+          :title="predictionStatusTitle"
+          :description="predictionStatusDescription"
+          action-text="重新检查"
+          @action="doPredict"
+        />
+        <PageState
+          v-else-if="!predictionResult && predictionStatus === 'UNAVAILABLE'"
+          title="本场暂无可用预测"
+          :description="predictionStatusDescription"
+          action-text="查看其他比赛"
+          @action="backToMatches"
+        />
+        <PageState
+          v-else-if="!predictionResult && predictionStatus === 'PENDING'"
+          type="loading"
+          :title="predictionStatusTitle"
+          :description="predictionStatusDescription"
+          :size="32"
+        />
 
         <el-card v-if="predictionResult" class="decision-card" shadow="never">
           <div class="decision-card-head">
@@ -63,7 +113,8 @@
             :home-name="fixtureData?.teams?.home?.name || '主队'"
             :away-name="fixtureData?.teams?.away?.name || '客队'"
             :probabilities="normalizedProbabilities"
-            :warning="predictionHasWarning"
+            :warning="predictionHasWarning || dataInsufficient"
+            :hint="probabilityHint"
             :home-color="homeColor"
             :draw-color="drawColor"
             :away-color="awayColor"
@@ -100,9 +151,9 @@
             <div class="card-header"><span>比赛信息</span><div class="header-actions"><el-tag v-if="loading" size="small" type="info">读取中…</el-tag><el-button size="small" text @click="showH2H"><el-icon><DataLine /></el-icon>查看交锋</el-button></div></div>
           </template>
           <div class="match-detail">
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.home?.name || '主队'}阵容`" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">主</div><div class="team-name-lg">{{ fixtureData?.teams?.home?.name || '主队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.home?.name || '主队'}阵容`" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">主</div><div class="team-name-lg">{{ fixtureData?.teams?.home?.name || '主队' }}</div><small>查看阵容</small></div>
             <div class="vs-block"><div v-if="hasScore" class="final-score">{{ fixtureData.goals.home }} - {{ fixtureData.goals.away }}</div><div class="vs-label">VS</div><div class="match-date">{{ formatDate(fixtureData?.fixture?.date) }}</div><div class="match-venue" v-if="fixtureData?.fixture?.venue?.name">{{ fixtureData.fixture.venue.name }}</div></div>
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.away?.name || '客队'}阵容`" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="big-logo" /><div v-else class="logo-placeholder">客</div><div class="team-name-lg">{{ fixtureData?.teams?.away?.name || '客队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.away?.name || '客队'}阵容`" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">客</div><div class="team-name-lg">{{ fixtureData?.teams?.away?.name || '客队' }}</div><small>查看阵容</small></div>
           </div>
         </el-card>
 
@@ -161,6 +212,7 @@
 
         </div>
     </el-main>
+      <AppFooter />
   </div>
 </template>
 
@@ -171,7 +223,9 @@ import { analyticsApi, crawlerApi, favoriteApi, predictionApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { normalizeProbability, normalizeProbabilities, parseFeatureString } from '../../utils/prediction'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import AppFooter from '../../components/layout/AppFooter.vue'
+import PageState from '../../components/layout/PageState.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PredictionProbabilityPanel from '../../components/prediction/PredictionProbabilityPanel.vue'
 import PredictionModelQuality from '../../components/prediction/PredictionModelQuality.vue'
@@ -234,7 +288,8 @@ const isLoggedIn = computed(() => Boolean(userStore.token))
 const predictionStatusTitle = computed(() => ({
   LOADING: '正在读取比赛与预测状态',
   PENDING: '统一预测准备中',
-  UNAVAILABLE: '本场暂不生成预测',
+  UNAVAILABLE: '本场暂无可用预测',
+  EMPTY: '暂无预测数据',
   ERROR: '暂时无法读取预测结果',
   FAILED: '预测快照生成失败',
   TIMEOUT: '预测准备时间较长'
@@ -242,16 +297,73 @@ const predictionStatusTitle = computed(() => ({
 const predictionStatusDescription = computed(() => {
   if (fixtureNotFound.value) return '这场比赛已经从当前赛程中移除，或链接中的比赛 ID 无效。请返回比赛列表重新选择。'
   if (predictionStatus.value === 'PENDING') return '系统会自动检查最新快照，不需要重复提交或连续点击。'
-  if (predictionStatus.value === 'UNAVAILABLE') return matchLoadError.value || '可能是联赛未覆盖、历史样本不足或赛前数据尚未同步。可以先查看其他比赛。'
+  if (predictionStatus.value === 'UNAVAILABLE' || predictionStatus.value === 'EMPTY') return matchLoadError.value || '可能是联赛未覆盖、历史样本不足或赛前数据尚未同步。不会展示占位概率；可先查看其他比赛。'
   if (predictionStatus.value === 'TIMEOUT') return '后台可能仍在准备数据；你可以稍后重新打开本场比赛。'
   if (predictionStatus.value === 'ERROR' || predictionStatus.value === 'FAILED') return matchLoadError.value || '请点击“重新检查”再次读取，或返回比赛列表查看其他场次。'
   return '请稍候，页面将自动加载结果。'
 })
 
+const sampleCoverage = computed(() => {
+  const meta = predictionResult.value?.featureMeta || {}
+  const home = Number(meta.homeSampleSize)
+  const away = Number(meta.awaySampleSize)
+  return {
+    home: Number.isFinite(home) ? home : null,
+    away: Number.isFinite(away) ? away : null
+  }
+})
+const prematchUnconfigured = computed(() => {
+  const snapshot = predictionResult.value?.featureMeta?.prematchSnapshot
+  const quality = snapshot?.dataQuality && typeof snapshot.dataQuality === 'object' ? snapshot.dataQuality : null
+  if (!quality) return false
+  return ['injuries', 'lineups', 'xgShots'].some(key => String(quality[key] || '').toUpperCase() === 'NOT_CONFIGURED')
+})
+const dataInsufficient = computed(() => {
+  if (!predictionResult.value) return false
+  const status = String(predictionResult.value.featureStatus || '').toUpperCase()
+  if (status === 'DEFAULTED' || predictionResult.value.featureComplete === false && status !== 'LIMITED') return true
+  const { home, away } = sampleCoverage.value
+  if (home != null && away != null && (home + away) <= 3) return true
+  if ((home != null && home === 0) || (away != null && away === 0)) return true
+  if (prematchUnconfigured.value && (home == null || home < 3 || away == null || away < 3)) return true
+  return false
+})
+const coverageBadge = computed(() => {
+  if (!predictionResult.value) return null
+  const { home, away } = sampleCoverage.value
+  if (home != null && away != null) {
+    const total = home + away
+    if (total <= 3 || home === 0 || away === 0) {
+      return { type: 'warning', text: `样本 ${home}/${away} · 数据不足` }
+    }
+    if (home < 3 || away < 3 || String(predictionResult.value.featureStatus || '').toUpperCase() === 'LIMITED') {
+      return { type: 'info', text: `样本 ${home}/${away} · 覆盖有限` }
+    }
+    return { type: 'success', text: `样本 ${home}/${away}` }
+  }
+  if (prematchUnconfigured.value) return { type: 'warning', text: '赛前特征未配置' }
+  if (predictionResult.value.featureComplete === false) return { type: 'warning', text: '特征不完整' }
+  return null
+})
+const dataFreshnessLabel = computed(() => {
+  const meta = predictionResult.value?.featureMeta || {}
+  const snapshot = meta.prematchSnapshot || {}
+  const stamp = snapshot.dataFetchedAt || snapshot.fetchedAt || meta.featureAsOf || predictionGeneratedAt.value
+  if (!stamp) return ''
+  return `数据新鲜度：${formatDate(stamp)}`
+})
+const probabilityHint = computed(() => {
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
+  if (predictionHasWarning.value) return '特征或模型质量不足，仅供参考'
+  return '来自正式预测服务'
+})
 const predictionQualityTitle = computed(() => {
   if (!predictionResult.value) return ''
   if (isFinished.value && predictionHit.value !== null) {
     return predictionHit.value ? '赛前预测已命中，下面展示本场复盘' : '赛前预测未命中，下面展示本场复盘'
+  }
+  if (dataInsufficient.value) {
+    return '数据不足，暂不建议作为依据'
   }
   if (!normalizedProbabilities.value.valid) {
     return '接口概率已自动归一化：本场结果仅供参考'
@@ -263,7 +375,8 @@ const predictionQualityTitle = computed(() => {
         ? '历史样本有限：本场使用 ELO+Poisson 保守基线'
       : '部分特征缺失：本次结果仅供参考'
   }
-  if (Number.isFinite(Number(predictionResult.value.decisionMargin)) && Number(predictionResult.value.decisionMargin) < 0.08) {
+  const margin = Number(predictionResult.value.decisionMargin ?? predictionResult.value.featureMeta?.decisionMargin)
+  if (Number.isFinite(margin) && margin < 0.08) {
     return '三类概率接近：本场不做强结论，仅作为信息参考'
   }
   const accuracy = Number(predictionResult.value.featureMeta?.model_accuracy)
@@ -417,16 +530,18 @@ const resultLabel = computed(() => {
   return '预测：双方势均力敌，可能平局'
 })
 const confidenceValue = computed(() => {
-  if (!predictionResult.value) return '待生成'
-  const margin = Number(predictionResult.value.decisionMargin)
+  if (!predictionResult.value) return 'N/A'
+  if (dataInsufficient.value) return 'N/A'
+  const margin = Number(predictionResult.value.decisionMargin ?? predictionResult.value.featureMeta?.decisionMargin)
   if (Number.isFinite(margin)) return `${Math.round(Math.max(0, margin) * 100)}%`
   const values = [predictionResult.value.homeWinProb, predictionResult.value.drawProb, predictionResult.value.awayWinProb]
     .map(normalizeProbability).filter(value => value !== null).sort((a, b) => b - a)
-  return values.length > 1 ? `${Math.round((values[0] - values[1]) * 100)}%` : '待计算'
+  return values.length > 1 ? `${Math.round((values[0] - values[1]) * 100)}%` : 'N/A'
 })
 const confidenceLabel = computed(() => {
   if (!predictionResult.value) return predictionStatus.value === 'LOADING' ? '正在读取统一快照' : '等待统一快照'
-  const label = predictionResult.value?.confidenceLabel || '概率分离程度'
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
+  const label = predictionResult.value?.confidenceLabel || predictionResult.value?.featureMeta?.confidenceLabel || '概率分离程度'
   return `${label}（未校准，不代表命中率）`
 })
 const statusActionLabel = computed(() => ({
@@ -442,6 +557,7 @@ const primaryDecisionText = computed(() => {
     if (predictionHit.value === false) return `赛前判断与最终赛果不同，下面保留原始概率用于复盘。`
     return '比赛已经结束，以下内容保留赛前预测快照。'
   }
+  if (dataInsufficient.value) return '数据不足，暂不建议作为依据；下方概率仅作低可信度参考。'
   return `模型更偏向${resultLabelShort.value}，当前概率分离度为 ${confidenceValue.value}；请结合下方风险提示阅读。`
 })
 const outcomeIcon = computed(() => {
@@ -888,6 +1004,23 @@ const loadFavoriteState = async () => {
   }
 }
 
+const BROWSER_NOTIFY_DISMISS_KEY = 'football_browser_notify_dismissed'
+const maybeAskBrowserNotifyAfterFavorite = async () => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'default') return
+  if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
+  try {
+    await ElMessageBox.confirm(
+      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可稍后在通知中心处理。',
+      '开启浏览器通知',
+      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+    )
+    await Notification.requestPermission()
+  } catch (error) {
+    if (error === 'cancel') localStorage.setItem(BROWSER_NOTIFY_DISMISS_KEY, '1')
+  }
+}
+
 const toggleFavorite = async () => {
   if (!isLoggedIn.value) {
     userStore.openAuthDialog(route.fullPath, 'login')
@@ -908,7 +1041,8 @@ const toggleFavorite = async () => {
         matchTime: fixtureData.value?.fixture?.date || queryText(route.query.matchTime, '')
       })
       isFavorite.value = true
-      ElMessage.success('比赛收藏成功')
+      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      maybeAskBrowserNotifyAfterFavorite()
     }
   } catch (error) {
     ElMessage.error(error?.message || '收藏操作失败，请稍后重试')
@@ -1021,7 +1155,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.main-content { padding: 24px; max-width: 1240px; margin: 0 auto; }
+.prediction-page { min-height: 100vh; max-width: 100%; overflow-x: clip; }
+.main-content { padding: 24px; max-width: 1240px; margin: 0 auto; width: 100%; min-width: 0; }
 .prediction-inner { display: flex; flex-direction: column; gap: 16px; }
 .report-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding:22px 24px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-lg); background:var(--ff-surface); }
 .report-heading h1 { margin:8px 0 5px; color:var(--ff-ink); font-size:clamp(24px,3vw,36px); letter-spacing:-.045em; }
@@ -1030,6 +1165,8 @@ onUnmounted(() => {
 .report-confidence { min-width:130px; padding-left:18px; border-left:1px solid var(--ff-border); display:flex; flex-direction:column; gap:3px; }
 .report-confidence span,.report-confidence small { color:var(--ff-text-muted); font-size:12px; }
 .report-confidence strong { color:var(--ff-primary); font:700 30px/1 var(--ff-mono); }
+.coverage-badge { margin-top:6px; width:fit-content; }
+.freshness-label { display:block; margin-top:2px; }
 .back-btn { box-shadow: var(--ff-shadow-sm); }
 .result-banner { border-radius: 8px; }
 .prediction-state-panel { display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px dashed var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text-muted); }
@@ -1296,4 +1433,30 @@ onUnmounted(() => {
   .action-buttons .el-button, .predict-btn { width:100%; min-width:0; }
   .match-info-card .match-detail { padding:16px 0; }
 }
+
+.inline-status-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.inline-status-row .inline-status { flex:1; min-width:220px; margin:0; }
+
+@media (max-width: 480px) {
+  .main-content { padding: 14px 12px; }
+  .big-logo, .logo-placeholder { width: 56px; height: 56px; }
+  .team-name-lg { max-width: 88px; font-size: 13px; }
+  .final-score { font-size: 28px; }
+  .match-detail { padding: 12px 0; gap: 8px; }
+  .prediction-inner :deep(.state-shell) { padding: 14px 12px; }
+}
+
+.prediction-skeleton { display:flex; flex-direction:column; gap:12px; }
+.prediction-skeleton-card { padding:16px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-lg); background:var(--ff-surface); }
+.prediction-skeleton-card .sk-line { display:block; height:14px; width:70%; margin:0 0 12px; border-radius:8px; background:linear-gradient(90deg,#e8ece9 25%,#f3f5f3 37%,#e8ece9 63%); background-size:400% 100%; animation:predSk 1.2s ease-in-out infinite; }
+.prediction-skeleton-card .sk-wide { width:86%; height:20px; }
+.prediction-skeleton-card .sk-mid { width:46%; }
+.sk-prob-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:4px 0 10px; }
+.sk-prob-grid i { display:block; height:64px; border-radius:10px; background:linear-gradient(90deg,#e8ece9 25%,#f3f5f3 37%,#e8ece9 63%); background-size:400% 100%; animation:predSk 1.2s ease-in-out infinite; }
+@keyframes predSk { from { background-position:100% 0; } to { background-position:-100% 0; } }
+@media (prefers-reduced-motion:reduce) {
+  .prediction-skeleton-card .sk-line, .sk-prob-grid i { animation:none; }
+}
+@media (max-width:680px) { .sk-prob-grid { grid-template-columns:1fr; } }
+
 </style>

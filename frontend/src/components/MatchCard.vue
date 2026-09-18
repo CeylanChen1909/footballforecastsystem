@@ -1,11 +1,11 @@
 <template>
-  <div class="match-card" :data-match-id="getMatchId(match)">
+  <div class="match-card" :class="{ 'is-focus': focused }" :data-match-id="getMatchId(match)">
     <div class="match-info">
       <div class="team-row">
         <div class="team">
-          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
-          <span v-else class="logo-placeholder" :aria-label="`查看${homeDisplayName}资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
-          <span class="team-name" role="button" tabindex="0" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
+          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
+          <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${homeDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="homeDisplayName" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
         </div>
         <div class="score">
           <span v-if="(isFinished || isLive) && goals?.home != null && goals?.away != null" class="score-text">
@@ -14,9 +14,9 @@
           <span v-else class="match-time" :class="{ 'is-unknown': !matchTimestamp }">{{ isFinished ? '比分待同步' : matchTimestamp ? formatTime(match) : '时间待同步' }}</span>
         </div>
         <div class="team">
-          <span class="team-name" role="button" tabindex="0" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
-          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
-          <span v-else class="logo-placeholder" :aria-label="`查看${awayDisplayName}资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="awayDisplayName" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
+          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
+          <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${awayDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
         </div>
       </div>
       <div class="match-meta">
@@ -29,6 +29,7 @@
           {{ match.league.round }}
         </div>
         <div class="status">
+          <span v-if="focused" class="focus-mark">焦点</span>
           <el-tag :type="statusType" size="small" effect="plain">
             <span v-if="isLive" class="live-dot"></span>{{ statusLabel }}
           </el-tag>
@@ -36,9 +37,9 @@
       </div>
     </div>
     <div class="action-area" aria-label="比赛操作">
-      <el-button class="action-primary" type="primary" size="small" plain @click.stop="$emit('predict', match)">
-        <el-icon><TrendCharts /></el-icon>
-        {{ primaryActionLabel }}
+      <el-button class="action-primary" type="primary" size="small" plain :aria-label="primaryActionLabel + '：打开本场分析'" @click.stop="$emit('predict', match)">
+        <span class="action-copy-full">{{ primaryActionLabel }}</span>
+        <span class="action-copy-short">{{ isFinished ? '复盘' : '预测' }}</span>
       </el-button>
       <el-button class="action-details" size="small" plain @click.stop="$emit('details', match)">
         赛事数据
@@ -62,6 +63,9 @@
               <el-icon><ChatLineSquare /></el-icon>
               AI 助手
             </el-dropdown-item>
+            <el-dropdown-item command="details" divided>
+              赛事数据
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -71,12 +75,12 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { ChatLineSquare, DataLine, MoreFilled, Star, StarFilled, TrendCharts } from '@element-plus/icons-vue'
+import { ChatLineSquare, DataLine, Location, MoreFilled, Star, StarFilled, TrendCharts, Trophy } from '@element-plus/icons-vue'
 import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatchId, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../utils/match'
 import { getTeamDisplayName } from '../utils/teamNames'
 import { getMediaAssetUrl } from '../utils/mediaAsset'
 
-const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
+const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, focused: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
 const emit = defineEmits(['predict', 'teamClick', 'h2h', 'agent', 'details', 'favorite-match'])
 
 const fixture = computed(() => ({
@@ -126,6 +130,8 @@ const handleMoreCommand = (command) => {
     emit('h2h', fixture.value?.id, homeTeam.value?.id, awayTeam.value?.id, homeTeam.value?.name, awayTeam.value?.name)
   } else if (command === 'agent') {
     emit('agent', props.match)
+  } else if (command === 'details') {
+    emit('details', props.match)
   }
 }
 
@@ -140,214 +146,140 @@ const formatTime = match => {
 <style scoped>
 .match-card {
   position: relative;
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 16px;
+  background: #fff;
+  border-radius: 0;
+  padding: 8px 12px;
   overflow: hidden;
-  transition: background-color var(--ff-transition), border-color var(--ff-transition);
-  border: 1px solid var(--ff-border);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.match-card:hover {
-  border-color: var(--ff-border-strong);
-  background: var(--ff-surface-soft);
-}
-.match-card.focus-target {
-  border-color: var(--ff-primary);
-  box-shadow: 0 0 0 3px var(--ff-primary-soft);
-}
-.match-card:active {
-  background: var(--ff-primary-soft);
-}
-
-.match-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.team-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.team {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ff-border);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
 }
-.team:last-child {
-  flex-direction: row-reverse;
+.match-card:hover { background: var(--ff-surface-quiet); }
+.match-card.focus-target { background: var(--ff-primary-soft); box-shadow: inset 3px 0 0 var(--ff-primary); }
+.match-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.team-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
 }
-.team-logo {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  border-radius: 4px;
-  flex-shrink: 0;
+.team { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.team:last-child { flex-direction: row-reverse; }
+.team-logo, .logo-placeholder {
+  width: 22px; height: 22px; object-fit: contain; border-radius: 2px; flex-shrink: 0;
 }
 .logo-placeholder {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
   background: var(--ff-bg-alt);
   border: 1px solid var(--ff-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--ff-text-muted);
-  flex-shrink: 0;
-  font-weight: 600;
-  font-family: var(--ff-mono);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--ff-text-muted); font-weight: 700;
 }
 .team-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ff-text);
-  max-width: 112px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.15s ease;
+  font-size: 14px; font-weight: 650; color: var(--ff-text-strong);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer; line-height: 1.25;
 }
-.team-name:hover {
+.team:last-child .team-name { text-align: right; }
+.team-name:hover { color: var(--ff-primary); }
+.team-name:focus-visible, .logo-placeholder:focus-visible {
+  outline: 2px solid var(--ff-primary); outline-offset: 2px;
+}
+.score { text-align: center; min-width: 52px; }
+.score-text {
+  font-size: 18px; font-weight: 700; font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums; color: var(--ff-text-strong); line-height: 1;
+}
+.match-time {
+  font-size: 13px; font-weight: 700; font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums; color: var(--ff-text-strong);
+}
+.match-time.is-unknown { color: var(--ff-text-muted); font-size: 11px; font-weight: 600; }
+.match-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--ff-text-muted); min-width: 0; width: 100%;
+}
+.match-meta > div { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.venue { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 42%; }
+.round { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 36%; }
+.status { margin-left: auto; flex: none; }
+.live-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ff-live); margin-right: 4px; vertical-align: middle;
+}
+.action-area { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.action-area :deep(.el-button) { min-width: 0; margin-left: 0 !important; }
+.action-primary {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--ff-primary);
+  --el-button-text-color: var(--ff-primary);
+  --el-button-hover-bg-color: var(--ff-primary);
+  --el-button-hover-text-color: #fff;
+  --el-button-hover-border-color: var(--ff-primary);
+  background: transparent;
+  border-color: var(--ff-primary);
   color: var(--ff-primary);
+  font-weight: 650;
+  font-size: 12px;
+  border-radius: 4px;
+  box-shadow: none;
+  height: 32px;
+  padding: 0 10px;
 }
-.team-name:focus-visible,
-.logo-placeholder:focus-visible {
+.action-details {
+  --el-button-bg-color: transparent;
+  border-color: var(--ff-border);
+  color: var(--ff-text);
+  background: transparent;
+  font-size: 12px;
+  height: 32px;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.action-details:hover { border-color: var(--ff-primary); color: var(--ff-primary); }
+.favorite-btn, .more-btn {
+  width: 32px; height: 32px; padding: 0;
+  border-color: var(--ff-border);
+  color: var(--ff-text-muted);
+  background: transparent;
+}
+.favorite-btn.is-favorited, .favorite-btn:hover, .more-btn:hover {
+  border-color: var(--ff-primary);
+  color: var(--ff-primary);
+  background: var(--ff-primary-soft);
+}
+.more-actions { display: inline-flex; }
+.more-actions :deep(.el-tooltip__trigger) { display: inline-flex; }
+.action-primary:focus-visible,
+.action-details:focus-visible,
+.favorite-btn:focus-visible,
+.more-btn:focus-visible {
   outline: 2px solid var(--ff-primary);
   outline-offset: 2px;
 }
-.team:last-child .team-name {
-  text-align: right;
+.focus-mark { margin-right: 6px; color: var(--ff-primary); font-size: 11px; font-weight: 700; }
+.is-focus { box-shadow: inset 2px 0 0 var(--ff-primary); }
+.action-copy-short { display: none; }
+@media (max-width: 720px) {
+  .match-card { grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: 8px 10px 6px; gap: 4px; }
+  .team-row { gap: 8px; }
+  .team-name { font-size: 14px; }
+  .action-area { width: 100%; display: flex; justify-content: flex-end; gap: 4px; }
+  .action-copy-full { display: none; }
+  .action-copy-short { display: inline; }
+  .action-primary { width: auto; min-width: 0; min-height: 32px; height: 32px; padding: 0 8px; flex: none; }
+  .action-details { display: none; }
+  .favorite-btn, .more-btn { width: 36px; height: 36px; flex: none; }
 }
-
-.score {
-  min-width: 76px;
-  text-align: center;
-}
-.score-text {
-  display: inline-block;
-  font-size: 20px;
-  font-weight: 600;
-  font-family: var(--ff-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ff-text-strong);
-  letter-spacing: 0.02em;
-  min-width: 48px;
-  line-height: 1.3;
-}
-.match-time {
-  font-size: 13px;
-  font-weight: 600;
-  font-family: var(--ff-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  color: var(--ff-primary);
-}
-.match-time.is-unknown { color:var(--ff-text-muted); font-size:11px; }
-
-.match-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 11px;
-  color: var(--ff-text-muted);
-  border-top: 1px solid var(--ff-border);
-  padding-top: 10px;
-}
-.match-meta > div {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-.venue {
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.status { margin-left: auto; }
-.live-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ff-success);
-  margin-right: 4px;
-  animation: livePulse 1.2s infinite;
-  vertical-align: middle;
-}
-@keyframes livePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-.action-area {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.15fr) 34px 34px;
-  gap: 8px;
-  align-items: center;
-  padding-top: 4px;
-}
-.action-area .el-button {
-  min-width: 0;
-  margin-left: 0 !important;
-}
-.action-primary {
-  background: var(--ff-primary);
-  border: none;
-  color: #ffffff;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-radius: 6px;
-  box-shadow: var(--ff-shadow-sm);
-  transition: border-color var(--ff-transition-fast), background-color var(--ff-transition-fast), color var(--ff-transition-fast);
-}
-.action-primary:hover {
-  background: var(--ff-primary-hover);
-  color: #ffffff;
-}
-.action-details { border-color:var(--ff-border); color:var(--ff-text-muted); background:var(--ff-surface-quiet); }
-.action-details:hover { border-color:var(--ff-primary); color:var(--ff-primary); background:var(--ff-primary-soft); }
-.favorite-btn,
-.more-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-color: var(--ff-border);
-  color: var(--ff-text-muted);
-  background: var(--ff-surface-quiet);
-}
-.favorite-btn:hover,
-.more-btn:hover,
-.favorite-btn.is-favorited {
-  border-color: var(--ff-primary);
-  color: var(--ff-primary);
-  background: var(--ff-primary-soft);
-}
-.more-actions {
-  display: inline-flex;
-  width: 34px;
-}
-.more-actions :deep(.el-tooltip__trigger) {
-  display: inline-flex;
-}
-.action-area .el-button:active { box-shadow: none; }
-
-@media (max-width: 420px) {
-  .action-area {
-    grid-template-columns: minmax(0, 1fr) 34px 34px;
-  }
-  .action-details {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
+@media (pointer: coarse) {
+  .favorite-btn, .more-btn { width: 36px; height: 36px; }
+  .action-primary { min-height: 36px; height: 36px; }
 }
 </style>

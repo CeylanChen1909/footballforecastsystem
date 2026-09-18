@@ -2,9 +2,8 @@
   <section class="focus-rail" aria-labelledby="match-focus-title">
     <div class="focus-head">
       <div>
-        <span class="focus-kicker">FOCUS</span>
+        <span class="focus-kicker">赛程</span>
         <h2 id="match-focus-title">比赛焦点</h2>
-        <p>{{ contextLabel }}</p>
       </div>
       <div class="focus-head-actions">
         <span v-if="meta?.returnedCount != null" class="focus-count">{{ meta.returnedCount }} 场</span>
@@ -34,9 +33,9 @@
             <span class="focus-status"><i v-if="tier(match) === 'LIVE'"></i>{{ statusText(match) }}</span>
           </span>
           <span class="focus-matchup">
-            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" :alt="`${homeName(match)}队徽`" @error="onLogoError" /><b v-else>{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
+            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${homeName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${homeName(match)}暂无队徽`">{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
             <span class="focus-center"><b>{{ scoreOrTime(match) }}</b><small>{{ tier(match) === 'LIVE' ? '进行中' : kickoffLabel(match) }}</small></span>
-            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" :alt="`${awayName(match)}队徽`" @error="onLogoError" /><b v-else>{{ initial(awayName(match)) }}</b></span>
+            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${awayName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${awayName(match)}暂无队徽`">{{ initial(awayName(match)) }}</b></span>
           </span>
           <span class="focus-reasons">
             <em v-for="reason in reasons(match).slice(0, 2)" :key="reason">{{ reason }}</em>
@@ -67,7 +66,6 @@ const props = defineProps({
 })
 defineEmits(['open', 'predict', 'retry', 'view-all'])
 
-const contextLabel = computed(() => '按联赛、开赛距离和球队关注度计算')
 const emptyTitle = computed(() => props.meta?.emptyReason === 'NO_MATCHES_IN_WINDOW' ? '当前日期没有比赛' : '暂无重点比赛')
 const emptyDescription = computed(() => props.meta?.emptyReason === 'NO_VISIBLE_FOCUS_MATCHES' ? '当前数据已读取，但没有符合焦点规则的赛事。' : '当前没有正在进行或临近开赛的重点赛事。')
 const team = (match, side) => match?.teams?.[side] || {}
@@ -99,19 +97,20 @@ const scoreOrTime = match => {
   return new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp(match)))
 }
 const onLogoError = event => { event.target.style.display = 'none' }
+
 </script>
 
 <style scoped>
-.focus-rail { margin: 0 0 18px; padding: 18px; border: 1px solid var(--ff-border); border-radius: var(--ff-radius-lg); background: var(--ff-surface); }
-.focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }
-.focus-kicker { color:var(--ff-primary); font:700 10px/1 var(--ff-mono); letter-spacing:.14em; }
+.focus-rail { margin: 0 0 18px; padding: 18px; border: 1px solid var(--ff-border); border-radius: var(--ff-radius-lg); background: var(--ff-surface); width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.focus-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; min-width:0; flex-wrap:wrap; }
+.focus-kicker { color:var(--ff-text-muted); font:600 12px/1.2 'PingFang SC','Microsoft YaHei',sans-serif; letter-spacing:0; }
 .focus-head h2 { margin:6px 0 3px; color:var(--ff-text-strong); font-size:18px; letter-spacing:-.02em; }
 .focus-head p { margin:0; color:var(--ff-text-muted); font-size:12px; }
 .focus-head-actions { display:flex; align-items:center; gap:10px; color:var(--ff-text-faint); font-size:12px; white-space:nowrap; }
 .focus-count { font-family:var(--ff-mono); }
 .focus-retry-link,.focus-state button,.focus-card-actions button { border:0; background:none; color:var(--ff-primary); cursor:pointer; font:inherit; }
 .focus-retry-link:hover,.focus-state button:hover,.focus-card-actions button:hover { text-decoration:underline; }
-.focus-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.focus-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; width:100%; min-width:0; }
 .focus-card { min-width:0; overflow:hidden; border:1px solid var(--ff-border); border-radius:10px; background:var(--ff-surface-quiet); transition:border-color .16s ease,background .16s ease; }
 .focus-card:hover { border-color:var(--ff-border-strong); background:var(--ff-surface-soft); }
 .focus-card.is-LIVE { border-color:color-mix(in srgb, #d04444 45%, var(--ff-border)); }
@@ -147,5 +146,50 @@ const onLogoError = event => { event.target.style.display = 'none' }
 .focus-skeleton-card b { width:70%; margin-top:26px; }.focus-skeleton-card em { width:46%; margin-top:20px; }
 @keyframes focus-skeleton { from{background-position:100% 0} to{background-position:-100% 0} }
 @media (max-width:900px) { .focus-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:620px) { .focus-rail { padding:14px; } .focus-list { grid-template-columns:1fr; } .focus-card-actions { justify-content:space-between; } }
+@media (max-width:620px) {
+  .focus-rail { padding:14px; }
+  .focus-list { grid-template-columns:1fr; }
+  .focus-head > div:first-child { min-width:0; flex:1 1 160px; }
+  .focus-head p { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+  .focus-card-actions { justify-content:space-between; }
+  /* Vertical matchup: home / score / away */
+  .focus-matchup {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .focus-team,
+  .focus-team.away {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .focus-team.away {
+    flex-direction: row-reverse;
+  }
+  .focus-team.away strong { text-align: left; }
+  .focus-team strong {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: unset;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .focus-center {
+    width: 100%;
+    align-items: center;
+  }
+  /* Reason chips wrap; larger action tap target */
+  .focus-reasons {
+    flex-wrap: wrap;
+    overflow: visible;
+    min-height: 0;
+  }
+  .focus-card-actions button {
+    min-height: 36px;
+    padding: 8px 4px;
+  }
+}
 </style>

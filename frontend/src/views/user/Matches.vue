@@ -2,7 +2,7 @@
   <div class="matches-page ff-page-shell">
     <AppTopNav
       title="ChenFootball"
-      subtitle="比赛"
+      subtitle=""
       :brand-icon="Football"
       active-path="/matches"
     >
@@ -11,6 +11,11 @@
       </template>
     </AppTopNav>
 
+    <div v-if="onboardingVisible" class="matches-onboarding" role="region" aria-label="使用引导">
+      <p class="matches-onboarding-copy">收藏一场比赛，开赛前 30 分钟在通知里提醒。</p>
+      <button type="button" class="matches-onboarding-dismiss" aria-label="关闭引导" @click="dismissOnboarding">知道了</button>
+    </div>
+
     <el-container class="matches-layout">
       <el-main id="app-main" class="main-content" tabindex="-1">
         <nav class="date-rail" :aria-label="`${matchesHeading}日期导航`">
@@ -18,7 +23,7 @@
             <el-icon><ArrowLeft /></el-icon>
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
-            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ item.count }} 场</small>
+            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ countsReady ? (item.count + " 场") : "…" }}</small>
           </button>
           <button type="button" class="date-rail-arrow" :disabled="loading" aria-label="查看后一天" title="查看后一天" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
@@ -26,25 +31,10 @@
         </nav>
 
         <div class="matches-workspace">
-          <aside class="matches-focus-sidebar" aria-label="比赛焦点侧栏">
-            <MatchFocusRail
-              :items="hotMatches"
-              :meta="hotMeta"
-              :loading="hotLoading"
-              :error="hotError"
-              :stale="hotStale"
-              :team-name-mode="teamNameMode"
-              @open="openFocusMatch"
-              @predict="goPredict"
-              @retry="loadHotMatches()"
-              @view-all="scrollToMatchList"
-            />
-          </aside>
-
-          <!-- 比赛列表 -->
-          <PageSection class="match-list-panel" title="比赛列表" subtitle="点击上方日期查看当天的比赛" variant="compact">
+          <!-- 比赛列表 owns the page. Focus is a mark on the row, not a second bay. -->
+          <PageSection class="match-list-panel" variant="compact">
             <template #actions>
-              <div class="match-list-actions">
+              <div class="match-list-actions" :class="{ 'is-open': moreFilters }">
                 <el-select v-model="selectedLeague" class="league-filter" size="small" aria-label="按联赛筛选" popper-class="league-filter-popper">
                   <el-option v-for="option in leagueOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
@@ -54,27 +44,23 @@
                 </el-button>
                 <el-checkbox v-model="onlyFavorites" size="small">只看收藏</el-checkbox>
                 <el-button class="reminder-button" size="small" plain :loading="remindersChanging" :type="remindersEnabled ? 'success' : 'default'" @click="toggleMatchReminders">
-                  <el-icon><Bell /></el-icon>{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}
+                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}</span>
                 </el-button>
-                <div class="match-count-tag">
-                  <span class="match-count-num">{{ matchCount }}</span>
-                  <span class="match-count-unit">场比赛</span>
+                <button type="button" class="filters-more" :aria-expanded="moreFilters ? 'true' : 'false'" @click="moreFilters = !moreFilters">{{ moreFilters ? '收起' : '筛选' }}</button>
+                <div class="match-count-tag" :aria-busy="loading ? 'true' : 'false'">
+                  <span class="match-count-num">{{ loading ? '…' : matchCount }}</span>
+                  <span class="match-count-unit">场</span>
                 </div>
               </div>
             </template>
 
-            <PageState v-if="loading" type="loading" title="正在加载比赛数据..." :size="40" />
+            <div v-if="loading" class="matches-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载比赛数据">
+              <MatchCardSkeleton v-for="n in 6" :key="n" />
+            </div>
             <PageState v-else-if="errorMsg" type="error" :title="errorMsg" action-text="重试" @action="loadCurrentView" />
             <template v-else>
               <div v-if="filteredMatches.length > 0" class="date-group-list">
                 <div v-for="group in groupedMatches" :key="group.date" class="date-group reveal">
-                  <div class="date-group-heading">
-                    <div>
-                      <span class="ff-kicker">{{ group.weekday }}</span>
-                      <strong>{{ group.label }}</strong>
-                    </div>
-                  </div>
-
                   <div v-for="lg in group.leagueGroups" :key="lg.name" class="league-group">
                     <div class="league-group-header">
                       <span class="league-name">{{ lg.name }}</span>
@@ -87,6 +73,7 @@
                         :match="m"
                         :team-name-mode="teamNameMode"
                         :favorited="isFavoritedMatch(getMatchId(m))"
+                        :focused="isFocusMatch(m)"
                         @predict="goPredict"
                         @teamClick="goTeamSquad"
                         @h2h="showH2H"
@@ -98,7 +85,7 @@
                   </div>
                 </div>
               </div>
-              <PageState v-else :title="dataQuality.status === 'SOURCE_LIMITED' ? '数据源额度受限' : dataQuality.status === 'SYNC_FAILED' ? '数据同步失败' : (selectedLeague === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛')" :description="dataQuality.message || (selectedLeague === 'all' ? '点击左右箭头切换日期，或点击日期选择具体日期' : '可以切换其他联赛，或点击日期轨道查看其他赛程')" />
+              <PageState v-else :title="dataQuality.status === 'SOURCE_LIMITED' ? '数据源额度受限' : dataQuality.status === 'SYNC_FAILED' ? '数据同步失败' : (selectedLeague === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛')" :description="dataQuality.message || (selectedLeague === 'all' ? '点击左右箭头切换日期，或点击日期选择具体日期' : '可以切换其他联赛，或点击日期轨道查看其他赛程')" :action-text="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? '重试' : (selectedLeague === 'all' ? '查看昨天' : '查看全部联赛')" @action="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? loadCurrentView() : (selectedLeague === 'all' ? shiftDate(-1) : (selectedLeague = 'all'))" />
             </template>
           </PageSection>
 
@@ -190,25 +177,33 @@
           </div>
       </div>
     </el-dialog>
+      <AppFooter />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { analyticsApi, crawlerApi, favoriteApi, matchApi, userApi } from '../../api'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ArrowRight, Bell, Football } from '@element-plus/icons-vue'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
+import MatchCardSkeleton from '../../components/matches/MatchCardSkeleton.vue'
 import MatchCard from '../../components/MatchCard.vue'
-import MatchFocusRail from '../../components/matches/MatchFocusRail.vue'
-import ChangelogButton from '../../components/matches/ChangelogButton.vue'
 import { getBusinessDate } from '../../utils/match'
 import { getTeamSearchTokens, normalizeTeamSearch } from '../../utils/teamNames'
 import { useMatchRecommendations } from '../../composables/useMatchRecommendations'
+
+// Defer focus rail + changelog off the matches critical path (LCP: date rail + list/skeleton).
+const MatchFocusRail = defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))
+const PredictionDiscovery = defineAsyncComponent(() => import('../../components/matches/PredictionDiscovery.vue'))
+const ChangelogButton = defineAsyncComponent(() => import('../../components/matches/ChangelogButton.vue'))
+void MatchFocusRail
+void PredictionDiscovery
 
 const router = useRouter()
 const route = useRoute()
@@ -225,6 +220,20 @@ const matchFavorites = ref([])
 const selectedLeague = ref('all')
 const teamKeyword = ref('')
 const teamNameMode = ref(localStorage.getItem('football_team_name_mode') === 'zh' ? 'zh' : 'en')
+const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
+const FOCUS_COLLAPSE_KEY = 'football_matches_focus_collapsed'
+const onboardingVisible = ref(false)
+const focusCollapsed = ref(false)
+const moreFilters = ref(false)
+const countsReady = ref(false)
+const dismissOnboarding = () => {
+  onboardingVisible.value = false
+  localStorage.setItem(ONBOARDING_KEY, '1')
+}
+const toggleFocusCollapsed = () => {
+  focusCollapsed.value = !focusCollapsed.value
+  localStorage.setItem(FOCUS_COLLAPSE_KEY, focusCollapsed.value ? '1' : '0')
+}
 const onlyFavorites = ref(false)
 const remindersEnabled = ref(localStorage.getItem('football_match_reminders_enabled') === '1')
 const remindersChanging = ref(false)
@@ -358,6 +367,21 @@ const filteredMatches = computed(() => {
   })
 })
 const matchCount = computed(() => filteredMatches.value.length)
+const focusKeys = computed(() => {
+  const ids = new Set()
+  const keys = new Set()
+  for (const item of hotMatches.value || []) {
+    const id = String(getMatchId(item) || '')
+    if (id) ids.add(id)
+    keys.add(matchIdentity(item))
+  }
+  return { ids, keys }
+})
+const isFocusMatch = (match) => {
+  const id = String(getMatchId(match) || '')
+  return Boolean((id && focusKeys.value.ids.has(id)) || focusKeys.value.keys.has(matchIdentity(match)))
+}
+
 const dateCounts = computed(() => {
   const counts = new Map(dateCountsCache.value)
   // `rawMatches` is the currently selected day's result.  That date is
@@ -511,7 +535,7 @@ const loadMatches = async () => {
       ElMessage.info('暂无今日比赛数据，可点击日期切换查看历史比赛')
     }
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请检查后端服务是否启动'
+    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -534,7 +558,7 @@ const loadMatchesByDate = async (date) => {
     dateCountsCache.value = nextCounts
     if (rawMatches.value.length === 0) ElMessage.info('该日期暂无比赛数据，可尝试其他日期')
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请检查后端服务是否启动'
+    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -549,7 +573,8 @@ const loadDateCounts = async () => {
       if (date) counts.set(date, (counts.get(date) || 0) + 1)
     })
     dateCountsCache.value = counts
-  } catch { /* 当前日期数据仍可独立展示 */ }
+    countsReady.value = true
+  } catch { /* 当前日期数据仍可独立展示 */ countsReady.value = true }
 }
 
 const showH2H = async (fixtureId, homeTeamId, awayTeamId, homeTeamName, awayTeamName) => {
@@ -590,6 +615,16 @@ const openMatchDetails = async (match) => {
   } finally {
     detailsLoading.value = false
   }
+}
+
+
+const discoverScrolled = ref(false)
+const scrollToPredictionDiscovery = async () => {
+  if (discoverScrolled.value) return
+  const first = (hotMatches.value || [])[0]
+  if (!first) return
+  discoverScrolled.value = true
+  await openFocusMatch(first)
 }
 
 const scrollToMatchList = () => {
@@ -759,7 +794,8 @@ const toggleMatchFavorite = async (match) => {
         matchTime: match?.fixture?.date || match?.matchTime || ''
       })
       saveMatchReminder({ fixtureId: String(fixtureId), title: `${homeName} vs ${awayName}`, matchTime: match?.fixture?.date || match?.matchTime || '', notified: false })
-      ElMessage.success('比赛收藏成功')
+      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      maybeAskBrowserNotifyAfterFavorite()
     }
     await loadFavorites()
   } catch (e) {
@@ -799,6 +835,27 @@ const checkMatchReminders = () => {
   })
   if (changed) writeMatchReminders(items)
 }
+const BROWSER_NOTIFY_DISMISS_KEY = 'football_browser_notify_dismissed'
+const maybeAskBrowserNotifyAfterFavorite = async () => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'default') return
+  if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
+  try {
+    await ElMessageBox.confirm(
+      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可随时忽略。',
+      '开启浏览器通知',
+      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+    )
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted' && !remindersEnabled.value) {
+      remindersEnabled.value = true
+      localStorage.setItem('football_match_reminders_enabled', '1')
+    }
+  } catch (error) {
+    if (error === 'cancel') localStorage.setItem(BROWSER_NOTIFY_DISMISS_KEY, '1')
+  }
+}
+
 const enableMatchReminders = async () => {
   if (typeof Notification === 'undefined') return ElMessage.info('当前浏览器不支持开赛提醒')
   const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
@@ -832,6 +889,13 @@ const isFavoritedMatch = (fixtureId) => {
 }
 
 onMounted(async () => {
+  onboardingVisible.value = localStorage.getItem(ONBOARDING_KEY) !== '1'
+  const preferCollapse = localStorage.getItem(FOCUS_COLLAPSE_KEY)
+  if (preferCollapse === '1' || preferCollapse === '0') {
+    focusCollapsed.value = preferCollapse === '1'
+  } else if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+    focusCollapsed.value = true
+  }
   selectedDate.value = String(route.query.returnDate || todayDate.value)
   selectedLeague.value = String(route.query.returnLeague || 'all')
   teamKeyword.value = String(route.query.team || route.query.returnKeyword || '')
@@ -859,6 +923,15 @@ onMounted(async () => {
   reminderTimer = window.setInterval(checkMatchReminders, 60 * 1000)
 })
 
+
+watch(() => route.query.discover, (value) => {
+  if (value === 'predict') scrollToPredictionDiscovery()
+}, { immediate: true })
+watch(hotMatches, () => {
+  if (route.query.discover === 'predict') scrollToPredictionDiscovery()
+})
+
+
 onBeforeUnmount(() => {
   if (reminderTimer) window.clearInterval(reminderTimer)
   if (focusTimer) window.clearInterval(focusTimer)
@@ -868,11 +941,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.matches-page { min-height: 100vh; }
-.matches-layout { min-height: calc(100vh - 64px); }
-.main-content { padding: 18px 22px; overflow: visible; }
+.matches-page { min-height: 100vh; max-width: 100%; overflow-x: clip; }
+.matches-layout { min-height: calc(100vh - 64px); width: 100%; max-width: 100%; min-width: 0; }
+.main-content { padding: 18px 22px; overflow-x: hidden; width: 100%; max-width: 100%; min-width: 0; }
 .reminder-button { flex:none; }
-.date-rail { display:flex; gap:8px; align-items:stretch; overflow-x:auto; padding:2px 0 16px; }
+.date-rail { display:flex; gap:8px; align-items:stretch; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; padding:2px 0 16px; width:100%; max-width:100%; min-width:0; }
 .date-rail-arrow { flex:0 0 38px; display:flex; align-items:center; justify-content:center; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text-muted); cursor:pointer; transition:border-color var(--ff-transition-fast), color var(--ff-transition-fast), background var(--ff-transition-fast); }
 .date-rail-arrow:hover:not(:disabled), .date-rail-arrow:focus-visible { border-color:var(--ff-primary); color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }
 .date-rail-arrow:disabled { cursor:wait; opacity:.55; }
@@ -884,12 +957,12 @@ onBeforeUnmount(() => {
 .date-rail-item strong { display:block; margin:4px 0; font:700 20px/1 var(--ff-mono); }
 
 /* ===== 比赛列表 ===== */
-.matches-workspace { display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:18px; align-items:start; }
-.match-list-panel { min-width: 0; }
-.matches-focus-sidebar { min-width:0; position:sticky; top:82px; }
+.matches-workspace { display:grid; grid-template-columns:minmax(280px,340px) minmax(0,1fr); gap:18px; align-items:start; width:100%; max-width:100%; min-width:0; }
+.match-list-panel { min-width: 0; max-width: 100%; }
+.matches-focus-sidebar { min-width:0; max-width:100%; position:sticky; top:82px; }
 .matches-focus-sidebar :deep(.focus-rail) { margin:0; }
 .matches-focus-sidebar :deep(.focus-list) { grid-template-columns:1fr; }
-.match-list-actions { display:flex; align-items:center; gap:10px; }
+.match-list-actions { display:flex; align-items:center; gap:10px; min-width:0; max-width:100%; }
 .league-filter { width: 168px; }
 .team-filter { width: 108px; }
 .team-language-button { flex:none; }
@@ -926,6 +999,8 @@ onBeforeUnmount(() => {
   border: 1px solid var(--ff-border);
   border-radius: 8px;
   padding: 18px;
+  min-width: 0;
+  max-width: 100%;
   transition: border-color var(--ff-transition), background var(--ff-transition);
 }
 .date-group:hover {
@@ -963,7 +1038,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px; width: 100%; min-width: 0; }
 
 /* ===== 历史交锋弹窗 ===== */
 .loading-state { padding: 20px 0; }
@@ -1048,17 +1123,29 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .matches-grid { grid-template-columns: 1fr; }
   .main-content { padding: 12px; }
-  .date-rail-arrow { flex-basis:34px; }
-  .date-rail-item { flex:0 0 82px; }
-  .match-list-actions { width:100%; justify-content:space-between; }
+  .date-rail {
+    scroll-snap-type: x mandatory;
+    gap: 6px;
+    padding: 2px 0 14px;
+  }
+  .date-rail-arrow { display: none; }
+  .date-rail-item {
+    flex: 0 0 88px;
+    min-width: 0;
+    padding: 11px 12px;
+    scroll-snap-align: start;
+  }
+  .match-list-panel :deep(.section-head) { flex-direction:column; align-items:stretch; gap:10px; }
+  .match-list-panel :deep(.section-actions) { width:100%; }
+  .match-list-actions { width:100%; justify-content:space-between; align-items:stretch; flex-wrap:wrap; }
   .prematch-info-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .league-filter { flex:1; min-width:0; }
   .team-filter { width: 86px; }
-  .match-list-actions { align-items:stretch; flex-wrap:wrap; }
   .match-list-actions .league-filter { flex:1 1 140px; }
   .match-list-actions .team-filter { flex:1 1 100px; width:auto; }
   .match-list-actions .el-checkbox { flex:1 1 100%; }
   .match-count-tag { margin-left:auto; }
+  .date-group { padding: 14px; }
   .event-row { grid-template-columns:42px 1fr 22px; }
   .event-row small { grid-column:2 / -1; }
   .lineup-grid { grid-template-columns:1fr; }
@@ -1067,4 +1154,171 @@ onBeforeUnmount(() => {
 }
 .date-rail-item small { white-space: nowrap; }
 .match-list-panel :deep(.section-head) { position: sticky; top: 0; z-index: 2; background: var(--ff-surface); }
+
+.matches-onboarding {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:0 clamp(12px, 2vw, 24px); padding:10px 14px;
+  border:1px solid color-mix(in srgb, var(--ff-primary) 28%, var(--ff-border));
+  border-radius:12px; background:var(--ff-primary-soft); color:var(--ff-text);
+}
+.matches-onboarding-copy { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; min-width:0; }
+.matches-onboarding-copy strong { color:var(--ff-primary); font-size:13px; }
+.matches-onboarding-copy ol { display:flex; flex-wrap:wrap; gap:8px 14px; margin:0; padding:0; list-style:none; font-size:12px; color:var(--ff-text-muted); }
+.matches-onboarding-copy li { position:relative; padding-left:14px; }
+.matches-onboarding-copy li::before { content:counter(step); counter-increment:step; position:absolute; left:0; color:var(--ff-primary); font-weight:700; }
+.matches-onboarding-copy ol { counter-reset:step; }
+.matches-onboarding-copy li::before { content: counter(step) "."; }
+.matches-onboarding-dismiss {
+  flex:none; border:0; border-radius:8px; padding:7px 12px;
+  background:var(--ff-primary); color:#fff; font-size:12px; cursor:pointer;
+}
+.focus-collapse-bar {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-bottom:8px; color:var(--ff-text-muted); font-size:12px;
+}
+.focus-collapse-btn {
+  border:1px solid var(--ff-border); border-radius:999px; padding:4px 10px;
+  background:var(--ff-surface); color:var(--ff-primary); font-size:11px; cursor:pointer;
+}
+.matches-focus-sidebar.is-collapsed .focus-collapse-bar { margin-bottom:0; }
+@media (min-width: 769px) {
+  .focus-collapse-bar { display:none; }
+  .matches-focus-sidebar.is-collapsed .focus-collapse-bar { display:flex; }
+}
+
+.matches-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 0 8px;
+}
+@media (max-width: 620px) {
+  .matches-skeleton { grid-template-columns: 1fr; }
+}
+
+
+/* r9 fixture board: list density, contained date rail */
+.matches-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--ff-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.matches-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--ff-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+}
+.date-group {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 10px;
+}
+.date-group:hover { background: transparent; border-color: transparent; }
+.date-group-heading { padding: 0 0 8px; margin-bottom: 8px; }
+.date-group-heading strong { font-size: 15px; font-weight: 700; letter-spacing: 0; }
+.league-group { margin-bottom: 12px; }
+.league-group-header {
+  margin-bottom: 0;
+  padding: 6px 10px;
+  background: #f3f6f4;
+  border: 1px solid var(--ff-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+.league-group-header::after { display: none; }
+.league-name { font-size: 12px; font-weight: 700; letter-spacing: 0; }
+.league-group .matches-grid { border-radius: 0 0 6px 6px; }
+.match-count-tag {
+  background: transparent;
+  color: var(--ff-text-muted);
+  box-shadow: none;
+  padding: 0 2px;
+  border-radius: 0;
+}
+.match-count-num { color: var(--ff-text-strong); font-size: 15px; font-weight: 700; }
+.match-count-unit { font-size: 12px; }
+.matches-onboarding {
+  margin: 8px clamp(12px, 2vw, 22px) 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ff-border);
+  background: #fff;
+}
+.matches-onboarding-copy {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ff-text);
+}
+.matches-page,
+.matches-layout,
+.main-content { overflow-x: clip; }
+.matches-page :deep(.el-container),
+.matches-page :deep(.el-main) { min-width: 0; max-width: 100%; overflow-x: clip; }
+.date-rail-item { overflow: visible; }
+.date-rail-item small { white-space: normal; line-height: 1.25; overflow: visible; text-overflow: clip; }
+@media (max-width: 768px) {
+  .date-rail-arrow { display: flex; flex: 0 0 40px; width: 40px; min-width: 40px; min-height: 44px; }
+  .date-rail-item { flex: 0 0 92px; min-width: 92px; min-height: 64px; padding: 8px 10px; }
+  .date-group { padding: 0; }
+  .main-content { padding: 10px; }
+}
+
+
+/* r10: fixture list owns the page */
+.matches-workspace { display: block; }
+.matches-focus-sidebar { display: none; }
+.match-list-panel :deep(.section-head) {
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  position: static;
+}
+.match-list-panel :deep(.section-head > div:first-child) { display: none; }
+.match-list-actions {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+  gap: 6px;
+  align-items: center;
+}
+.filters-more {
+  display: none;
+  flex: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ff-border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--ff-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+@media (max-width: 768px) {
+  .match-list-panel :deep(.section-head) { flex-direction: row; align-items: center; }
+  .match-list-actions { flex-wrap: nowrap; align-items: center; }
+  .match-list-actions .el-checkbox { flex: 0 0 auto; }
+  .match-list-actions:not(.is-open) .team-filter,
+  .match-list-actions:not(.is-open) .team-language-button,
+  .match-list-actions:not(.is-open) .reminder-button,
+  .match-list-actions:not(.is-open) :deep(.el-checkbox) { display: none; }
+  .filters-more { display: inline-flex; align-items: center; }
+  .league-filter { flex: 0 0 132px; width: 132px; }
+  .date-group-heading { display: none; }
+}
+
 </style>

@@ -3,12 +3,12 @@
     type="button"
     class="changelog-trigger"
     aria-label="打开更新日志"
+    title="更新日志"
     aria-controls="matches-changelog-drawer"
     @click="openChangelog"
   >
-    <span v-if="hasUnread" class="changelog-pulse" aria-hidden="true"></span>
     <el-icon class="changelog-icon" aria-hidden="true"><Clock /></el-icon>
-    <span>更新日志</span>
+    <span class="changelog-label">更新日志</span>
   </button>
 
   <el-drawer
@@ -48,9 +48,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, getCurrentInstance, onMounted, ref } from 'vue'
 import { Clock } from '@element-plus/icons-vue'
 import { changelogApi } from '../../api'
+import { registerElementPlusDrawer } from '../../plugins/register-element-plus-drawer'
+
+registerElementPlusDrawer(getCurrentInstance()?.appContext.app)
 
 const STORAGE_KEY = 'football_changelog_last_seen'
 const visible = ref(false)
@@ -169,5 +172,31 @@ onMounted(loadEntries)
 
 :deep(.el-drawer__header) { margin-bottom: 4px; padding: 20px 20px 12px; border-bottom: 1px solid var(--ff-border); }
 :deep(.el-drawer__body) { padding: 14px 20px 0; }
+@media (max-width: 768px) {
+  .changelog-label { display: none; }
+  .changelog-trigger {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+.changelog-label { display: none; }
+.changelog-pulse { display: none; }
+.changelog-trigger {
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  color: var(--ff-text-muted);
+  box-shadow: none;
+}
+.changelog-trigger:hover {
+  transform: none;
+  border-color: transparent;
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text);
+}
 @media (prefers-reduced-motion: reduce) { .changelog-trigger, .changelog-pulse { animation: none; transition: none; } }
 </style>

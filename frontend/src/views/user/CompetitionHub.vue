@@ -9,7 +9,7 @@
 
     <el-main id="app-main" class="main-content" tabindex="-1">
       <section class="hub-grid">
-        <PageSection class="standings-panel" title="联赛积分榜" subtitle="以当前已采集赛季为准，点击球队查看资料">
+        <PageSection class="standings-panel" title="联赛积分榜" subtitle="按已同步赛季显示，点球队看资料">
           <template #actions>
             <div class="standings-toolbar" aria-label="积分榜筛选与操作">
               <div class="toolbar-group toolbar-primary">
@@ -27,15 +27,19 @@
                 </label>
               </div>
               <div class="toolbar-group toolbar-secondary">
-                <el-tag size="small" effect="plain" type="info">{{ standings.length }} 队</el-tag>
+                <el-tag size="small" effect="plain" type="info">{{ loading ? "…" : (standings.length + " 队") }}</el-tag>
                 <el-tag v-if="quality.statusText" size="small" effect="plain" :type="qualityTagType">{{ quality.statusText }}</el-tag>
                 <el-button :icon="Refresh" circle aria-label="重新读取积分榜" title="重新读取积分榜快照" :loading="loading" @click="loadLeagueData" />
                 <el-button v-if="isAdmin" text type="primary" size="small" :loading="loading" @click="refreshStandings">管理员同步</el-button>
               </div>
             </div>
           </template>
-          <PageState v-if="loading" type="loading" title="正在加载积分榜..." :size="36" />
-          <PageState v-else-if="loadError" type="error" title="积分榜加载失败" :description="loadError" action-text="重试" @action="loadLeagueData" />
+          <div v-if="loading" class="standings-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载积分榜">
+            <div v-for="n in 8" :key="n" class="standings-skeleton-row">
+              <i></i><b></b><em></em><em></em><em></em>
+            </div>
+          </div>
+          <PageState v-else-if="loadError" type="error" title="积分榜暂时不可用" :description="loadError || '联赛积分快照读取失败，可稍后重试，或先从赛程页浏览比赛与预测。'" action-text="重试" @action="loadLeagueData" />
           <div v-else-if="standings.length && standingDataState !== 'INCOMPLETE'" class="standings-data-wrap">
             <el-alert v-if="standingDataState !== 'READY'" :title="standingDataState === 'PRESEASON' ? '赛季尚未产生积分' : '积分数据不完整'" :description="qualityMessage || '当前仅显示参赛名单或缓存快照，积分列不会被当作真实成绩。'" type="info" :closable="false" show-icon />
             <div v-if="zoneRules.zones?.length" class="zone-legend" aria-label="积分榜区域说明">
@@ -45,7 +49,9 @@
               </span>
               <span v-if="zoneRules.note" class="zone-note">{{ zoneRules.note }}</span>
             </div>
-            <el-table :data="standings" class="standings-table" size="small" row-key="rank">
+            <p class="standings-scroll-hint" aria-hidden="true">左右滑动查看完整积分榜</p>
+            <div class="standings-table-scroll" role="region" aria-label="积分榜表格，可横向滚动">
+            <el-table :data="standings" class="standings-table standings-table-desktop" size="small" row-key="rank">
             <el-table-column prop="rank" label="#" width="48" align="center">
               <template #default="scope"><span class="rank-number" :class="rankClass(scope.row)">{{ scope.row.rank }}</span></template>
             </el-table-column>
@@ -55,9 +61,9 @@
             <el-table-column label="球队" min-width="180">
               <template #default="scope">
                 <button type="button" class="team-cell" :aria-label="`查看${scope.row.team?.name || '未知球队'}资料`" @click="openTeam(scope.row.team)">
-                  <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" @error="markLogoBroken(scope.row.team)" />
-                  <span v-else class="mini-logo">{{ firstLetter(scope.row.team?.name) }}</span>
-                  <span>{{ scope.row.team?.name || '未知球队' }}</span>
+                  <img v-if="scope.row.team?.logo" :src="getMediaAssetUrl(scope.row.team.logo)" alt="" aria-hidden="true" width="28" height="28" loading="lazy" decoding="async" @error="markLogoBroken(scope.row.team)" />
+                  <span v-else class="mini-logo" title="暂无队徽" :aria-label="`${scope.row.team?.name || '球队'}暂无队徽`">{{ firstLetter(scope.row.team?.name) }}</span>
+                  <span class="team-name-text" :title="scope.row.team?.name || '未知球队'">{{ scope.row.team?.name || '未知球队' }}</span>
                 </button>
               </template>
             </el-table-column>
@@ -73,45 +79,87 @@
               <template #default="scope"><strong>{{ scope.row.points ?? '—' }}</strong></template>
             </el-table-column>
             </el-table>
+            </div>
+            <div class="standings-cards" aria-label="积分榜卡片视图">
+              <button
+                v-for="row in standings"
+                :key="'card-' + (row.rank || row.team?.id || row.team?.name)"
+                type="button"
+                class="standing-card"
+                :aria-label="`查看${row.team?.name || '未知球队'}资料`"
+                @click="openTeam(row.team)"
+              >
+                <div class="standing-card-top">
+                  <span class="rank-number" :class="rankClass(row)">{{ row.rank }}</span>
+                  <span v-if="row.zone" class="zone-label" :class="`zone-${String(row.zone).toLowerCase()}`">{{ row.zoneLabel || zoneLabel(row.zone) }}</span>
+                  <strong class="standing-card-name" :title="row.team?.name || '未知球队'">{{ row.team?.name || '未知球队' }}</strong>
+                  <span class="standing-card-pts"><b>{{ row.points ?? '—' }}</b> 积分</span>
+                </div>
+                <div class="standing-card-stats">
+                  <span>赛 {{ row.played ?? '—' }}</span>
+                  <span>胜 {{ row.win ?? '—' }}</span>
+                  <span>平 {{ row.draw ?? '—' }}</span>
+                  <span>负 {{ row.loss ?? '—' }}</span>
+                </div>
+              </button>
+            </div>
           </div>
-          <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。" />
-          <PageState v-else title="暂无积分榜" :description="qualityMessage || '该联赛当前没有已同步的榜单数据，可稍后刷新或切换联赛。'" />
+          <PageState v-else-if="standings.length" title="积分数据尚未形成" description="当前只有参赛名单，没有可验证的积分、胜平负或净胜球数据；我们不会用一整页的 0 伪装成真实榜单。可先浏览赛程中的单场分析。" action-text="去看赛程与预测" @action="goMatchesDiscover" />
+          <PageState v-else title="该联赛暂无积分榜" :description="qualityMessage || '当前没有已同步的榜单数据。可切换联赛/赛季，稍后刷新，或先从赛程浏览单场分析。'" action-text="浏览赛程与预测" @action="goMatchesDiscover" />
         </PageSection>
 
-        <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从联赛名单进入球队资料，不再依赖资讯聚合">
+        <PageSection class="clubs-panel" title="参赛俱乐部" subtitle="从积分榜名单进入球队资料">
           <template #actions>
             <el-input v-model="clubKeyword" class="club-search" clearable size="small" placeholder="搜索球队" aria-label="搜索球队" />
           </template>
-          <div v-if="filteredClubs.length" class="club-grid">
+          <PageState v-if="loading && !filteredClubs.length" type="loading" title="正在加载俱乐部..." :size="32" />
+          <div v-else-if="filteredClubs.length" class="club-grid">
             <button v-for="club in filteredClubs" :key="clubKey(club)" type="button" class="club-card" :title="club.name" :aria-label="`查看${club.name}球队资料`" @click="openTeam(club)">
-              <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" @error="markLogoBroken(club)" />
-              <span v-else class="club-logo-placeholder">{{ firstLetter(club.name) }}</span>
-              <span class="club-name">{{ club.name }}</span>
+              <img v-if="club.logo && !club.logoBroken" :src="getMediaAssetUrl(club.logo)" alt="" aria-hidden="true" width="32" height="32" loading="lazy" decoding="async" @error="markLogoBroken(club)" />
+              <span v-else class="club-logo-placeholder" title="暂无队徽" :aria-label="`${club.name}暂无队徽`">{{ firstLetter(club.name) }}</span>
+              <span class="club-name" :title="club.name">{{ club.name }}</span>
               <span class="club-meta">{{ clubRank(club) ? `第 ${clubRank(club)} 名` : '查看球队资料' }}</span>
               <span class="club-arrow" aria-hidden="true">→</span>
             </button>
           </div>
-          <PageState v-else title="暂无俱乐部" description="积分榜同步后，参赛俱乐部会自动出现在这里。" />
+          <PageState v-else-if="clubKeyword.trim()" title="没有符合条件的球队" description="换一个关键词，或清空搜索后再浏览参赛名单。" action-text="清除搜索" @action="clubKeyword = ''" />
+          <PageState v-else title="暂无俱乐部" description="积分榜同步后，参赛俱乐部会自动出现在这里。也可先从赛程页按球队名称搜索。" action-text="去赛程页搜索" @action="goMatchesDiscover" />
         </PageSection>
       </section>
 
+      <aside class="hub-predict-entry" aria-label="预测入口">
+        <div>
+          <strong>想看单场分析？</strong>
+          <p>从比赛焦点进入精选预测，覆盖与模型质量会在预测页标明。</p>
+        </div>
+        <router-link class="hub-predict-link" to="/matches?discover=predict">浏览精选预测</router-link>
+      </aside>
+
     </el-main>
+      <AppFooter />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, getCurrentInstance, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Trophy } from '@element-plus/icons-vue'
+import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import { analyticsApi, crawlerApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
+import { registerElementPlusTable } from '../../plugins/register-element-plus-table'
+
+registerElementPlusTable(getCurrentInstance()?.appContext.app)
 
 const router = useRouter()
+const goMatchesDiscover = () => {
+  router.push({ path: "/matches", query: { discover: "predict" } })
+}
 const userStore = useUserStore()
 
 // 只展示当前主爬虫源具备稳定积分榜路径的生产联赛。
@@ -126,6 +174,7 @@ const leagueOptions = [
   { value: '葡超', label: '葡超', id: 94 },
   { value: '英冠', label: '英冠', id: 40 }
 ]
+const route = useRoute()
 const selectedLeague = ref('英超')
 const selectedSeason = ref('')
 const seasonOptions = ref([])
@@ -245,7 +294,7 @@ const loadLeagueData = async () => {
     standings.value = []
     clubsFromApi.value = []
     zoneRules.value = { zones: [], note: '' }
-    loadError.value = error?.message || '请检查后端服务或数据同步状态'
+    loadError.value = error?.message || '积分榜暂时不可用，请稍后重试'
     quality.value = { status: 'SYNC_FAILED', statusText: '同步失败', message: loadError.value, source: '' }
   } finally {
     loading.value = false
@@ -277,7 +326,20 @@ const openTeam = (team) => {
   })
 }
 
-onMounted(loadLeagueData)
+const applyLeagueFromQuery = () => {
+  const requested = String(route.query.league || route.query.q || '').trim()
+  if (!requested) return
+  const hit = leagueOptions.find(item => item.value === requested || item.label === requested)
+  if (hit) selectedLeague.value = hit.value
+}
+onMounted(() => {
+  applyLeagueFromQuery()
+  loadLeagueData()
+})
+watch(() => route.query.league, () => {
+  applyLeagueFromQuery()
+  loadLeagueData()
+})
 </script>
 
 <style scoped>
@@ -331,8 +393,8 @@ onMounted(loadLeagueData)
 .form-strip { display:inline-flex; max-width:100%; overflow:hidden; color:var(--ff-text-muted); font-family:var(--ff-mono); font-size:11px; letter-spacing:1px; white-space:nowrap; }
 .team-cell { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; color:var(--ff-text); font-weight:600; text-align:left; cursor:pointer; }
 .team-cell:hover { color:var(--ff-primary); }.team-cell img,.mini-logo { width:26px; height:26px; object-fit:contain; flex:none; }.mini-logo { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:var(--ff-primary-soft); color:var(--ff-primary); font-size:11px; }
-.club-search { width:180px; }.club-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.club-card { display:flex; align-items:center; gap:9px; min-width:0; padding:10px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer; transition:border-color var(--ff-transition-fast),background var(--ff-transition-fast); }
+.club-search { width:180px; }.club-grid { display:grid; grid-template-columns:1fr; gap:0; border:1px solid var(--ff-border); border-radius:6px; overflow:hidden; }
+.club-card { display:flex; align-items:center; gap:9px; min-width:0; padding:9px 10px; border:0; border-bottom:1px solid var(--ff-border); border-radius:0; background:#fff; color:var(--ff-text); text-align:left; cursor:pointer; }
 .club-card:hover,.club-card:focus-visible { border-color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }.club-card img,.club-logo-placeholder { width:32px; height:32px; object-fit:contain; flex:none; }.club-logo-placeholder { display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:var(--ff-bg-alt); color:var(--ff-primary); font-weight:700; }.club-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:700; }.club-meta { margin-left:auto; color:var(--ff-text-faint); font-size:10px; white-space:nowrap; }.club-arrow { margin-left:auto; color:var(--ff-primary); font-size:18px; opacity:.6; transition:opacity var(--ff-transition-fast); }.club-card:hover .club-arrow,.club-card:focus-visible .club-arrow { opacity:1; }
 @media (max-width: 980px) { .hub-grid { grid-template-columns:1fr; } }
 @media (max-width: 680px) {
@@ -349,4 +411,96 @@ onMounted(loadLeagueData)
 .club-card { min-height: 54px; }
 .club-name { overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.3; }
 @media (max-width: 680px) { .toolbar-secondary .el-tag { display:none; } }
+
+.team-name-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  white-space: normal;
+}
+.standings-scroll-hint { display:none; margin:0; color:var(--ff-text-faint); font-size:11px; }
+.standings-table-scroll { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.standings-cards { display:none; flex-direction:column; gap:8px; }
+.standing-card {
+  display:flex; flex-direction:column; gap:8px; width:100%;
+  padding:12px; border:1px solid var(--ff-border); border-radius:10px;
+  background:var(--ff-surface-quiet); color:var(--ff-text); text-align:left; cursor:pointer;
+}
+.standing-card:hover, .standing-card:focus-visible { border-color:var(--ff-primary); outline:none; }
+.standing-card-top { display:flex; align-items:center; gap:8px; min-width:0; }
+.standing-card-name {
+  flex:1; min-width:0;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; line-height:1.25; font-size:13px;
+}
+.standing-card-pts { margin-left:auto; color:var(--ff-text-strong); font-size:12px; white-space:nowrap; }
+.standing-card-stats { display:flex; flex-wrap:wrap; gap:10px; color:var(--ff-text-muted); font-size:12px; font-family:var(--ff-mono); }
+@media (max-width: 768px) {
+  .standings-scroll-hint { display:block; }
+  .standings-table-desktop { display:none !important; }
+  .standings-table-scroll { display:none; }
+  .standings-cards { display:flex; }
+  .standings-scroll-hint { display:none; }
+}
+
+.standings-skeleton { display: grid; gap: 8px; padding: 4px 0 8px; }
+.standings-skeleton-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1.8fr) repeat(3, 44px);
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--ff-border);
+  border-radius: 10px;
+  background: var(--ff-surface);
+}
+.standings-skeleton-row i, .standings-skeleton-row b, .standings-skeleton-row em {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--ff-surface-soft) 0%, #eef3f0 45%, var(--ff-surface-soft) 100%);
+  background-size: 200% 100%;
+  animation: standings-skeleton 1.2s ease-in-out infinite;
+}
+.standings-skeleton-row i { width: 22px; height: 22px; border-radius: 999px; }
+.standings-skeleton-row b { width: 70%; height: 14px; }
+.standings-skeleton-row em { width: 100%; }
+@keyframes standings-skeleton { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .standings-skeleton-row i, .standings-skeleton-row b, .standings-skeleton-row em { animation: none; }
+}
+
+.hub-predict-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 8px;
+  padding: 14px 16px;
+  border: 0;
+  border-top: 1px solid var(--ff-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 2px;
+}
+.hub-predict-entry strong { color: var(--ff-text-strong); font-size: 13px; }
+.hub-predict-entry p { margin: 4px 0 0; color: var(--ff-text-muted); font-size: 12px; line-height: 1.5; }
+.hub-predict-link {
+  flex: none;
+  color: var(--ff-primary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hub-predict-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 680px) {
+  .hub-predict-entry { flex-direction: column; align-items: flex-start; }
+  .standings-skeleton-row {
+    grid-template-columns: 28px minmax(0, 1fr) 40px 40px;
+    overflow: hidden;
+  }
+  .standings-skeleton-row em:nth-child(n+5) { display: none; }
+}
 </style>

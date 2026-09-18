@@ -99,8 +99,14 @@ html, body, #app {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body, #app {
+  max-width: 100%;
+  min-width: 0;
+}
 body {
   overflow-x: hidden;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 * {
@@ -160,12 +166,28 @@ button, input, textarea, select {
 
 .ff-page-shell {
   min-height: 100vh;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
   background: var(--ff-bg-alt);
 }
 
 /* 同意条固定在视口底部时，为页面尾部留出安全区，避免盖住最后一个操作。 */
 body:has(.consent-banner) .ff-page-shell { padding-bottom: 128px; }
 @media (max-width: 680px) { body:has(.consent-banner) .ff-page-shell { padding-bottom: 224px; } }
+
+/* r3: keep mobile footer clear of fixed Agent launcher */
+body:has(.agent-launcher) .ff-page-shell {
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 720px) {
+  body:has(.agent-launcher) .ff-page-shell {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+  body:has(.consent-banner):has(.agent-launcher) .ff-page-shell {
+    padding-bottom: calc(240px + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 /* Fluent 亚克力（选择性使用，不铺满） */
 .ff-surface {
@@ -201,11 +223,11 @@ body:has(.consent-banner) .ff-page-shell { padding-bottom: 128px; }
 }
 
 .ff-kicker {
-  color: var(--ff-primary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  color: var(--ff-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .ff-data-value {
@@ -515,4 +537,51 @@ button:disabled,
   .el-dialog__footer { padding: 10px 16px 14px; }
   .el-drawer { width: min(92vw, 460px) !important; }
   .el-table { font-size: 12px; }
+}
+
+
+/* commercial polish: page shell footer layout */
+.ff-page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.ff-page-shell > .el-container,
+.ff-page-shell > .el-main,
+.ff-page-shell > main,
+.ff-page-shell > .matches-layout {
+  flex: 1 1 auto;
+}
+
+
+/* r4 a11y */
+:root {
+  --ff-text-muted: #5f6c64;
+  --ff-text-faint: #6f7c74;
+}
+a:focus-visible,
+button:focus-visible,
+.el-button:focus-visible,
+.router-link-active:focus-visible {
+  outline: 2px solid var(--ff-primary);
+  outline-offset: 2px;
+}
+.ff-touch-target,
+.date-rail-arrow,
+.global-search-btn,
+.mobile-menu-toggle {
+  min-width: 40px;
+  min-height: 40px;
+}
+@media (pointer: coarse) {
+  .el-button {
+    min-height: 40px;
+  }
+  .footer-links a,
+  .legal-toc a {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }

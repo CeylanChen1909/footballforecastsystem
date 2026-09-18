@@ -41,9 +41,19 @@ services:
     volumes:
       - nacos_data:/home/nacos/data
     networks:
-      - football-network
+      football-network:
+        aliases:
+          - nacos
+          - football-nacos
     depends_on:
       - mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
 
 volumes:
   mysql_data:
@@ -52,4 +62,5 @@ volumes:
 
 networks:
   football-network:
+    name: footballforecastsystem_football-network
     driver: bridge
