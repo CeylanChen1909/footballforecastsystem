@@ -45,44 +45,20 @@
         </div>
       </dl>
 
-      <nav class="legal-toc" aria-label="关于目录">
-        <a href="#about-product">产品定位</a>
-        <a href="#about-data">数据与模型</a>
-        <a href="#about-trust">信任与透明</a>
-        <a href="#about-disclaimer">免责声明</a>
-        <a href="#about-contact">联系与反馈</a>
-      </nav>
+      <section class="about-disclaimer" aria-label="免责声明">
+        <h2>免责声明</h2>
+        <p>所有预测、概率与助手解读仅供信息参考，不构成投注、投资或其他决策建议。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
+      </section>
 
-      <h2 id="about-product">产品定位</h2>
-      <p>我们聚焦公开赛程、赛事资料与统一预测快照。重点比赛推荐、收藏提醒和助手问答用于提升浏览效率，而不是替代你自己的判断。</p>
-
-      <h2 id="about-data">数据与模型</h2>
-      <p>赛程与积分来自主爬虫同步；预测结果来自赛前特征与模型服务。页面会展示样本覆盖、概率分离度、模型质量门槛等信息；当数据不足或模型未过门槛时，会明确提示“仅供参考”。</p>
-
-      <h2 id="about-trust">信任与透明</h2>
-      <ul class="trust-list">
-        <li>站点标识：<a href="https://chenfootball.asia" rel="noopener noreferrer">chenfootball.asia</a></li>
-        <li>法律文档：<router-link to="/terms">使用条款</router-link>、<router-link to="/privacy">隐私说明</router-link></li>
-        <li>预测入口：在比赛页赛程卡点击「查看预测」查看单场分析与质量标注</li>
-        <li>不提供博彩建议；禁止将本站数据用于违法用途</li>
-      </ul>
-
-      <h2 id="about-disclaimer">免责声明</h2>
-      <p>所有预测、概率与助手解读仅供信息参考，不构成投注、投资或其他决策建议。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
-
-      <h2 id="about-contact">联系与反馈</h2>
-      <p>当前未公开独立客服邮箱或微信客服号（与隐私说明一致，不设虚假联系方式）。你可以通过以下渠道联系或自助处理：</p>
-      <ul class="trust-list">
-        <li>账号与隐私请求：登录后前往 <router-link to="/profile">个人中心</router-link>，或查阅 <router-link to="/privacy">隐私说明</router-link></li>
-        <li>产品体验反馈：使用站内 <router-link to="/agent">助手</router-link> 描述问题（不发送敏感凭据）</li>
-        <li>站点运营标识：ChenFootball · <span class="mono">https://chenfootball.asia</span></li>
-      </ul>
+      <section class="about-contact" aria-label="联系与反馈">
+        <h2>联系与反馈</h2>
+        <p>当前未公开独立客服渠道（与隐私说明一致）。账号与隐私请求可在 <router-link to="/profile">个人中心</router-link> 处理；产品反馈可使用站内 <router-link to="/agent">助手</router-link>。法律文档见 <router-link to="/terms">使用条款</router-link> 与 <router-link to="/privacy">隐私说明</router-link>。</p>
+      </section>
 
       <div class="legal-actions">
         <router-link class="action-primary" to="/matches">去看赛程</router-link>
         <router-link class="action-ghost" to="/privacy">隐私说明</router-link>
         <router-link class="action-ghost" to="/terms">使用条款</router-link>
-        <router-link class="action-ghost" to="/agent">去助手反馈</router-link>
       </div>
     </main>
     <AppFooter />
@@ -173,6 +149,14 @@ import { Football } from '@element-plus/icons-vue'
   scroll-margin-top: 84px;
 }
 .legal-main p { color: var(--ff-text-muted); margin: 0; }
+.about-disclaimer p,
+.about-contact p { font-size: 13px; line-height: 1.65; }
+.about-contact a {
+  color: var(--ff-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 .trust-facts { margin: 18px 0 4px; border-top: 1px solid var(--ff-border); }
 .trust-facts > div {
@@ -184,38 +168,6 @@ import { Football } from '@element-plus/icons-vue'
 }
 .trust-facts dt { margin: 0; color: var(--ff-text-strong); font-size: 13px; font-weight: 700; }
 .trust-facts dd { margin: 0; color: var(--ff-text-muted); font-size: 13px; line-height: 1.55; }
-
-.trust-list { margin: 8px 0 0; padding-left: 1.15em; color: var(--ff-text-muted); }
-.trust-list li { margin: 6px 0; }
-.trust-list a {
-  color: var(--ff-primary);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.trust-list a:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; border-radius: 4px; }
-.mono { font-family: var(--ff-mono); font-size: 12px; color: var(--ff-text); }
-
-.legal-toc {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  margin: 22px 0 8px;
-  padding: 10px 0;
-  border-top: 1px solid var(--ff-border);
-  border-bottom: 1px solid var(--ff-border);
-}
-.legal-toc a {
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  color: var(--ff-text-muted);
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-}
-.legal-toc a:hover { color: var(--ff-primary); }
-.legal-toc a:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; border-radius: 4px; }
 
 .legal-actions {
   display: flex;

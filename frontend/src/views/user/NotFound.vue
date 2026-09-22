@@ -11,7 +11,7 @@
       />
       <div class="not-found-links">
         <el-button plain @click="$router.push('/competitions')">赛事资料</el-button>
-        <el-button plain @click="$router.push('/agent')">Agent</el-button>
+        <el-button plain @click="$router.push('/agent')">助手</el-button>
         <el-button plain @click="$router.push('/privacy')">隐私说明</el-button>
       </div>
     </main>

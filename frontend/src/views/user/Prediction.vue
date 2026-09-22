@@ -96,7 +96,7 @@
                 <template #dropdown>
                   <el-dropdown-menu>
                     <el-dropdown-item command="share"><el-icon><Share /></el-icon>分享报告</el-dropdown-item>
-                    <el-dropdown-item command="agent"><el-icon><ChatLineSquare /></el-icon>让 Agent 解读</el-dropdown-item>
+                    <el-dropdown-item command="agent"><el-icon><ChatLineSquare /></el-icon>让助手解读</el-dropdown-item>
                     <el-dropdown-item v-if="!isFinished" command="reminder"><el-icon><Bell /></el-icon>{{ reminderSet ? '关闭开赛提醒' : '设置开赛提醒' }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>

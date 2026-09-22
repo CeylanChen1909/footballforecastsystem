@@ -2,7 +2,7 @@
   <aside v-if="visible" class="consent-banner" role="region" aria-live="polite" aria-label="隐私提示">
     <div>
       <strong>让产品变得更好</strong>
-      <p>我们只记录匿名的页面与功能使用情况，用来改进比赛、预测和 Agent 体验。不会收集密码或聊天正文。</p>
+      <p>我们只记录匿名的页面与功能使用情况，用来改进比赛、预测和助手体验。不会收集密码或聊天正文。</p>
     </div>
     <div class="consent-actions">
       <router-link to="/privacy" class="consent-link" @click="visible = false">隐私说明</router-link>

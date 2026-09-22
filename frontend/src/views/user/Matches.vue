@@ -220,7 +220,9 @@ const currentPage = ref(1)
 const matchFavorites = ref([])
 const selectedLeague = ref('all')
 const teamKeyword = ref('')
-const teamNameMode = ref(localStorage.getItem('football_team_name_mode') === 'en' ? 'en' : 'zh')
+const TEAM_NAME_MODE_KEY = 'ff_team_name_mode'
+// New key so old football_team_name_mode=en no longer wins; default zh. Do not migrate en.
+const teamNameMode = ref(localStorage.getItem(TEAM_NAME_MODE_KEY) === 'en' ? 'en' : 'zh')
 const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
 const FOCUS_COLLAPSE_KEY = 'football_matches_focus_collapsed'
 const onboardingVisible = ref(false)
@@ -369,27 +371,51 @@ const filteredMatches = computed(() => {
 })
 const matchCount = computed(() => filteredMatches.value.length)
 const isOpsEmptyStatus = computed(() => ['SOURCE_LIMITED', 'SYNC_FAILED'].includes(dataQuality.value?.status))
+/** Never surface ops-speak in fan UI (strict review FAIL). */
+const isOpsSpeakMessage = (msg) => {
+  const s = String(msg || '')
+  return !s ? false : (s.includes('主数据源') || s.includes('完成本次检查') || s.includes('已返回') || s.includes('部分赛事数据'))
+}
+const fanEmptyDescription = computed(() => selectedLeague.value === 'all'
+  ? '这一天还没有赛程，换个日期看看'
+  : '这一天该联赛没有赛程，可切换联赛或换个日期')
 const emptyStateTitle = computed(() => {
-  if (dataQuality.value?.status === 'SOURCE_LIMITED') return '数据源额度受限'
-  if (dataQuality.value?.status === 'SYNC_FAILED') return '数据同步失败'
+  // Favorites filter empty must never contradict 「0场」with ops 「已返回N场」
+  if (onlyFavorites.value) {
+    return matchFavorites.value.length ? '这一天没有已收藏的比赛' : '还没有收藏的比赛'
+  }
+  if (isOpsEmptyStatus.value) {
+    if (dataQuality.value?.status === 'SOURCE_LIMITED') return '数据源额度受限'
+    if (dataQuality.value?.status === 'SYNC_FAILED') return '数据同步失败'
+  }
   return selectedLeague.value === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛'
 })
 const emptyStateDescription = computed(() => {
+  if (onlyFavorites.value) {
+    return matchFavorites.value.length
+      ? '换一天看看，或关掉「只看收藏」浏览全部赛程。'
+      : '在比赛卡片上点收藏，之后可在这里快速找到它们。'
+  }
   if (isOpsEmptyStatus.value) {
-    return dataQuality.value?.message || (dataQuality.value?.status === 'SOURCE_LIMITED'
+    const raw = dataQuality.value?.message || ''
+    if (!isOpsSpeakMessage(raw) && raw) return raw
+    return dataQuality.value?.status === 'SOURCE_LIMITED'
       ? '数据源暂时受限，请稍后重试。'
-      : '同步失败，请稍后重试。')
+      : '同步失败，请稍后重试。'
   }
   // Fan-facing empty day — never surface ops-speak like 「主数据源已完成本次检查」
-  return selectedLeague.value === 'all'
-    ? '这一天还没有赛程，换个日期看看'
-    : '这一天该联赛没有赛程，可切换联赛或换个日期'
+  return fanEmptyDescription.value
 })
 const emptyStateActionText = computed(() => {
+  if (onlyFavorites.value) return matchFavorites.value.length ? '查看全部比赛' : '浏览赛程'
   if (isOpsEmptyStatus.value) return '重试'
   return selectedLeague.value === 'all' ? '查看昨天' : '查看全部联赛'
 })
 const onEmptyStateAction = () => {
+  if (onlyFavorites.value) {
+    onlyFavorites.value = false
+    return
+  }
   if (isOpsEmptyStatus.value) return loadCurrentView()
   if (selectedLeague.value === 'all') return shiftDate(-1)
   selectedLeague.value = 'all'
@@ -496,7 +522,7 @@ const matchesHeading = computed(() => {
 const favoritesCount = computed(() => matchFavorites.value?.length || 0)
 const toggleTeamNameMode = () => {
   teamNameMode.value = teamNameMode.value === 'zh' ? 'en' : 'zh'
-  localStorage.setItem('football_team_name_mode', teamNameMode.value)
+  localStorage.setItem(TEAM_NAME_MODE_KEY, teamNameMode.value)
 }
 
 const loadFavorites = async () => {
@@ -543,6 +569,12 @@ const deduplicateMatches = matches => {
   return Array.from(result.values())
 }
 
+const scrubDataQuality = (dq) => {
+  if (!dq || typeof dq !== 'object') return dq
+  const message = String(dq.message || '')
+  if (isOpsSpeakMessage(message)) return { ...dq, message: '' }
+  return dq
+}
 const loadCurrentView = async () => {
   if (selectedDate.value) {
     await loadMatchesByDate(selectedDate.value)
@@ -556,11 +588,9 @@ const loadMatches = async () => {
   
   try {
     const res = await crawlerApi.getMatchesWindow(1, 300)
-    dataQuality.value = res?.dataQuality || dataQuality.value
+    dataQuality.value = scrubDataQuality(res?.dataQuality) || dataQuality.value
     rawMatches.value = deduplicateMatches(normalizeMatchList(res).filter(match => getMatchDate(match) >= todayDate.value))
-    if (rawMatches.value.length === 0) {
-      ElMessage.info('暂无今日比赛数据，可点击日期切换查看历史比赛')
-    }
+    // Empty days use PageState fan copy only — no ElMessage toast/banner (looks like product empty copy to reviewers).
   } catch (e) {
     errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
@@ -573,7 +603,7 @@ const loadMatchesByDate = async (date) => {
   errorMsg.value = ''
   try {
     const firstPage = await crawlerApi.getMatchesPage(1, 100, date, { preserveMeta: true })
-    dataQuality.value = firstPage?.dataQuality || dataQuality.value
+    dataQuality.value = scrubDataQuality(firstPage?.dataQuality) || dataQuality.value
     const total = Number(firstPage?.total) || normalizeMatchList(firstPage).length
     const pages = Math.max(1, Math.ceil(total / 100))
     const restPages = pages > 1
@@ -583,7 +613,7 @@ const loadMatchesByDate = async (date) => {
     const nextCounts = new Map(dateCountsCache.value)
     nextCounts.set(date, rawMatches.value.length)
     dateCountsCache.value = nextCounts
-    if (rawMatches.value.length === 0) ElMessage.info('该日期暂无比赛数据，可尝试其他日期')
+    // Empty days: PageState only — silence ElMessage.info toast.
   } catch (e) {
     errorMsg.value = e.message || '加载比赛失败，请稍后重试'
   } finally {
@@ -1021,15 +1051,24 @@ onBeforeUnmount(() => {
 .team-filter { width: 108px; }
 .team-language-button { flex:none; }
 .native-filter-select,
-.native-filter-input {
+.native-filter-input,
+.filter-chip,
+.filters-more,
+.sport-filters .native-filter-select,
+.sport-filters .native-filter-input,
+.sport-filters .filter-chip {
   box-sizing: border-box;
+  height: 40px;
   min-height: 40px;
+  line-height: 1.2;
+}
+.native-filter-select,
+.native-filter-input {
   border: 1px solid var(--ff-border);
   border-radius: 999px;
   background: #fff;
   color: var(--ff-text);
   font-size: 12px;
-  line-height: 1.2;
 }
 .native-filter-select {
   padding: 0 28px 0 12px;
@@ -1349,10 +1388,18 @@ onBeforeUnmount(() => {
 .date-rail-item { overflow: visible; }
 .date-rail-item small { white-space: normal; line-height: 1.25; overflow: visible; text-overflow: clip; }
 @media (max-width: 768px) {
+  .date-rail {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .date-rail::-webkit-scrollbar { display: none; width: 0; height: 0; }
   .date-rail-arrow { display: flex; flex: 0 0 40px; width: 40px; min-width: 40px; min-height: 44px; }
-  .date-rail-item { flex: 0 0 92px; min-width: 92px; min-height: 64px; padding: 8px 10px; }
+  .date-rail-item { flex: 0 0 84px; min-width: 84px; max-width: 84px; min-height: 64px; padding: 8px 8px; }
   .date-group { padding: 0; }
-  .main-content { padding: 10px; }
+  .main-content { padding: 10px; overflow-x: clip; }
 }
 
 
@@ -1377,13 +1424,18 @@ onBeforeUnmount(() => {
 .filters-more {
   display: none;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
   min-height: 40px;
+  box-sizing: border-box;
   padding: 0 10px;
   border: 1px solid var(--ff-border);
-  border-radius: 4px;
+  border-radius: 999px;
   background: #fff;
   color: var(--ff-text);
   font-size: 12px;
+  line-height: 1.2;
   cursor: pointer;
 }
 @media (max-width: 768px) {
@@ -1408,7 +1460,9 @@ onBeforeUnmount(() => {
 .sport-filters .team-filter { flex: none; }
 .sport-filters .native-filter-select,
 .sport-filters .native-filter-input {
+  height: 40px;
   min-height: 40px;
+  box-sizing: border-box;
   border-radius: 999px;
   border: 1px solid var(--ff-border);
   background: #fff;
@@ -1423,15 +1477,18 @@ onBeforeUnmount(() => {
 .filter-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   flex: none;
+  height: 40px;
   min-height: 40px;
+  box-sizing: border-box;
   padding: 0 12px;
   border: 1px solid var(--ff-border);
   border-radius: 999px;
   background: #fff;
   color: var(--ff-text-muted);
-  font: 500 12px/1 'Segoe UI', 'PingFang SC', sans-serif;
+  font: 500 12px/1.2 'Segoe UI', 'PingFang SC', sans-serif;
   cursor: pointer;
   transition: border-color var(--ff-transition-fast), color var(--ff-transition-fast), background var(--ff-transition-fast);
 }

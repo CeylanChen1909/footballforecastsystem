@@ -27,7 +27,14 @@ const userStore = useUserStore()
 // resolved synchronously from the versioned local consent record below.
 const legalGateVisible = ref(true)
 let legalConsentSyncSequence = 0
-const showAgentLauncher = computed(() => Boolean(userStore.token) && route.path !== '/agent' && route.path !== '/login' && !route.path.startsWith('/admin'))
+const showAgentLauncher = computed(() => {
+  if (!userStore.token) return false
+  const path = route.path
+  // Hide floating launcher on matches/about — kills 「悬浮球 Agent」 complaint; top nav already says 助手.
+  if (path === '/agent' || path === '/login' || path.startsWith('/admin')) return false
+  if (path === '/matches' || path.startsWith('/matches/') || path === '/about') return false
+  return true
+})
 const handleAuthRequired = event => {
   if (userStore.token) userStore.logout()
   userStore.openAuthDialog(event?.detail?.redirect || '')

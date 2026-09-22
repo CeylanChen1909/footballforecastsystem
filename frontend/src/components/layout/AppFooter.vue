@@ -9,7 +9,7 @@
         <router-link to="/matches">比赛</router-link>
         <router-link to="/matches?discover=predict">精选预测</router-link>
         <router-link to="/competitions">赛事资料</router-link>
-        <router-link to="/agent">Agent</router-link>
+        <router-link to="/agent">助手</router-link>
         <router-link to="/about">关于</router-link>
         <router-link to="/terms">使用条款</router-link>
         <router-link to="/privacy">隐私说明</router-link>
@@ -75,14 +75,14 @@ const year = new Date().getFullYear()
 }
 @media (max-width: 680px) {
   .app-footer-inner {
-    padding: 16px 14px calc(72px + env(safe-area-inset-bottom, 0px));
+    padding: 16px 14px calc(88px + env(safe-area-inset-bottom, 0px));
     gap: 8px;
   }
   .footer-brand { flex-direction: column; align-items: flex-start; gap: 4px; }
   .footer-brand span,
   .footer-note { overflow-wrap: anywhere; word-break: break-word; }
   .footer-links { gap: 10px 12px; }
-  .footer-links a { min-height: 28px; display: inline-flex; align-items: center; font-size: 12px; }
+  .footer-links a { min-height: 40px; display: inline-flex; align-items: center; font-size: 12px; }
   .footer-note { margin-top: 2px; }
 }
 /* r4 a11y footer */

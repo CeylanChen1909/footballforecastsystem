@@ -14,7 +14,7 @@
       <div class="auth-mark"><el-icon :size="24"><Football /></el-icon></div>
       <div>
         <h2>{{ activeTab === 'login' ? '欢迎回来' : '加入 ChenFootball' }}</h2>
-        <p>{{ activeTab === 'login' ? '登录后同步收藏、预测记录与 Agent 会话' : '注册一个账号，保存你的足球分析轨迹' }}</p>
+        <p>{{ activeTab === 'login' ? '登录后同步收藏、预测记录与助手会话' : '注册一个账号，保存你的足球分析轨迹' }}</p>
       </div>
       <button type="button" class="auth-close" aria-label="关闭登录窗口" title="关闭" @click="userStore.closeAuthDialog">×</button>
     </div>
@@ -41,7 +41,7 @@
           <li>开赛提醒与站内通知</li>
           <li>收藏同步跨设备</li>
           <li>预测历史可回看</li>
-          <li>解锁 Agent 问答</li>
+          <li>解锁助手问答</li>
         </ul>
         <p class="register-why">图形验证与邮箱验证码用于保护账号安全，不是额外门槛。</p>
         <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top" @submit.prevent="handleRegister">
