@@ -116,6 +116,12 @@
       </div>
     </el-dialog>
   </el-header>
+  <div
+    v-if="mobileMenuOpen"
+    class="nav-menu-backdrop"
+    aria-hidden="true"
+    @click="mobileMenuOpen = false"
+  />
 </template>
 
 <script setup>
@@ -454,7 +460,7 @@ onBeforeUnmount(() => {
   gap: 24px;
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   padding: 0 28px;
   min-height: 64px;
   width: 100%;
@@ -653,6 +659,10 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+/* r13: mobile menu is an overlay panel under sticky header; backdrop catches outside taps */
+.nav-menu-backdrop {
+  display: none;
+}
 @media (max-width: 768px) {
   .app-top-nav {
     display: grid;
@@ -668,44 +678,58 @@ onBeforeUnmount(() => {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    z-index: 50;
   }
   .nav-brand { grid-area: brand; min-width: min-content; max-width: 100%; overflow: visible; }
   .nav-brand .brand-icon.football-brand { width: 28px; height: 28px; }
   .nav-brand .brand-title { font-size: 16px; }
+  .nav-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(15, 23, 20, 0.42);
+    border: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
   .nav-menu-wrap {
     grid-area: menu;
-    display:none;
-    position:absolute;
-    z-index:30;
-    top:calc(100% + 6px);
-    left:12px;
-    right:12px;
-    width:auto;
-    min-width:0;
-    padding:6px;
-    border:1px solid var(--ff-border);
-    border-radius:12px;
-    background:var(--ff-surface);
-    box-shadow:var(--ff-shadow-md);
+    display: none;
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 0px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px 12px 14px;
+    border: 0;
+    border-bottom: 1px solid var(--ff-border);
+    border-radius: 0 0 12px 12px;
+    background: var(--ff-surface);
+    box-shadow: 0 12px 28px rgba(15, 23, 20, 0.18);
   }
-  .nav-menu-wrap.is-open { display:flex; }
-  .mobile-menu-toggle { display:inline-flex; }
+  .nav-menu-wrap.is-open { display: flex; }
+  .mobile-menu-toggle { display: inline-flex; }
   .nav-menu-wrap .sport-menu {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    width:100%;
-    min-width:0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
   }
   .nav-menu-wrap .sport-menu-item {
-    justify-content:flex-start;
-    margin:2px;
-    padding:0 12px;
+    justify-content: flex-start;
+    margin: 2px;
+    padding: 0 12px;
   }
-  .nav-menu-wrap .sport-menu-item.is-active { border-bottom-color:transparent !important; }
+  .nav-menu-wrap .sport-menu-item.is-active { border-bottom-color: transparent !important; }
   .nav-menu-wrap::-webkit-scrollbar { display: none; }
   .nav-menu-wrap .sport-menu-item {
-    height:34px;
-    line-height:34px;
+    height: 34px;
+    line-height: 34px;
   }
   .nav-actions { grid-area: actions; gap: 2px; min-width: 0; }
   .nav-actions :deep(.changelog-trigger) { padding: 0 8px; }

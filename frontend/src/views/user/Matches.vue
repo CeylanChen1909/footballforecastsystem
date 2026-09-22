@@ -1522,4 +1522,128 @@ onBeforeUnmount(() => {
 .sport-filters .match-count-unit { font-size: 12px; }
 
 
+
+
+/* r13: mobile hard bugs — date-rail / filter overflow + onboarding under menu overlay */
+.matches-page,
+.main-content,
+.matches-workspace,
+.match-list-panel {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+.match-list-actions {
+  max-width: 100%;
+  min-width: 0;
+  /* internal horizontal scroll ok when collapsed; never grow page */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.match-list-actions::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.date-rail {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+  /* padding-bottom must not expand page width */
+  padding-left: 0;
+  padding-right: 0;
+}
+.date-rail::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.matches-onboarding {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 768px) {
+  .matches-page,
+  .matches-layout,
+  .main-content,
+  .matches-workspace,
+  .match-list-panel {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+  }
+  .date-rail {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .date-rail::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .date-rail-item {
+    flex: 0 0 84px;
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
+    box-sizing: border-box;
+  }
+  /* collapsed filter row: scroll inside row only, hide bar */
+  .match-list-actions,
+  .sport-filters {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .match-list-actions::-webkit-scrollbar,
+  .sport-filters::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  /* expanded filters: stack vertically — no sideways overflow */
+  .match-list-actions.is-open,
+  .sport-filters.is-open {
+    flex-wrap: wrap !important;
+    overflow-x: clip;
+    overflow-y: visible;
+    align-items: stretch;
+  }
+  .match-list-actions.is-open > *,
+  .sport-filters.is-open > * {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .match-list-actions.is-open .league-filter,
+  .match-list-actions.is-open .team-filter,
+  .match-list-actions.is-open .native-filter-select,
+  .match-list-actions.is-open .native-filter-input,
+  .sport-filters.is-open .league-filter,
+  .sport-filters.is-open .team-filter,
+  .sport-filters.is-open .native-filter-select,
+  .sport-filters.is-open .native-filter-input {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .match-list-actions.is-open .filter-chip,
+  .match-list-actions.is-open .filters-more,
+  .match-list-actions.is-open .favorites-chip,
+  .match-list-actions.is-open .team-language-button,
+  .match-list-actions.is-open .reminder-button,
+  .sport-filters.is-open .filter-chip,
+  .sport-filters.is-open .filters-more {
+    flex: 1 1 auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .match-list-actions.is-open .match-count-tag,
+  .sport-filters.is-open .match-count-tag {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+}
+
 </style>
