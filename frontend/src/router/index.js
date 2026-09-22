@@ -80,11 +80,11 @@ router.beforeEach(async (to, from, next) => {
 const DEFAULT_TITLE = 'ChenFootball - 足球赛程与预测'
 const TITLES = {
   '/login': '登录 - ChenFootball',
-  '/matches': '比赛赛程 - ChenFootball',
+  '/matches': '按日查看已同步赛程，点开看预测概率、数据覆盖与质量门槛。',
   '/competitions': '赛事资料 - ChenFootball',
   '/news': '赛事资料 - ChenFootball',
   '/videos': '赛事资料 - ChenFootball',
-  '/agent': 'Agent - ChenFootball',
+  '/agent': '助手 - ChenFootball',
   '/prediction': '比赛预测 - ChenFootball',
   '/profile': '个人中心 - ChenFootball',
   '/team': '球队阵容 - ChenFootball',
