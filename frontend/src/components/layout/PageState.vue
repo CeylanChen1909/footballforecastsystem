@@ -5,7 +5,13 @@
       <div class="state-copy">
         <p class="state-title">{{ title }}</p>
         <p v-if="description" class="state-desc">{{ description }}</p>
-        <el-button v-if="actionText && type !== 'loading'" :type="type === 'error' ? 'primary' : 'primary'" :plain="type !== 'error'" @click="$emit('action')">{{ actionText }}</el-button>
+        <el-button
+          v-if="actionText && type !== 'loading'"
+          class="state-action"
+          type="primary"
+          :plain="type === 'empty'"
+          @click="$emit('action')"
+        >{{ actionText }}</el-button>
       </div>
     </div>
   </div>
@@ -68,5 +74,27 @@ defineEmits(['action'])
 .state-copy :deep(.el-button) { margin-top: 10px; min-height: 36px; }
 @media (prefers-reduced-motion: reduce) {
   .is-loading .state-mark { animation: none; border-top-color: var(--ff-text-faint); }
+}
+
+/* empty CTA: brand green outline/text (avoid EP default blue look if tokens drift) */
+.is-empty .state-action.el-button--primary.is-plain {
+  --el-button-text-color: var(--ff-primary);
+  --el-button-bg-color: var(--ff-primary-soft);
+  --el-button-border-color: var(--ff-primary);
+  --el-button-hover-text-color: #fff;
+  --el-button-hover-bg-color: var(--ff-primary);
+  --el-button-hover-border-color: var(--ff-primary);
+  --el-button-active-text-color: #fff;
+  --el-button-active-bg-color: var(--ff-primary-hover);
+  --el-button-active-border-color: var(--ff-primary-hover);
+  color: var(--ff-primary);
+  border-color: var(--ff-primary);
+  background: var(--ff-primary-soft);
+}
+.is-empty .state-action.el-button--primary.is-plain:hover,
+.is-empty .state-action.el-button--primary.is-plain:focus {
+  color: #fff;
+  border-color: var(--ff-primary);
+  background: var(--ff-primary);
 }
 </style>

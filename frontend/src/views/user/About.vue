@@ -1,8 +1,34 @@
 <template>
   <div class="legal-page ff-page-shell">
-    <AppTopNav title="ChenFootball" subtitle="关于我们" :brand-icon="Football" active-path="/about" />
+    <AppTopNav title="ChenFootball" subtitle="" :brand-icon="Football" active-path="/about" />
     <main id="app-main" class="legal-main" tabindex="-1">
-      <p class="legal-lead">ChenFootball（https://chenfootball.asia）是面向球迷的中文足球赛程与预测站点。主产品是赛程页：按日浏览已同步比赛，点开可看统一预测快照、概率分布，以及数据覆盖与质量门槛；样本不足或未过门槛时会明确提示。不提供投注建议。</p>
+      <header class="about-hero">
+        <p class="eyebrow">关于 ChenFootball</p>
+        <p class="one-liner">按日看足球赛程，点进去看预测概率、数据覆盖与质量门槛——只做参考，不做投注建议。</p>
+        <router-link class="hero-cta" to="/matches">去看赛程</router-link>
+      </header>
+
+      <section class="product-brief" aria-label="产品简介">
+        <div class="brief-cols">
+          <div class="brief-col">
+            <h3>做什么</h3>
+            <ul>
+              <li>按日列出已同步赛程（主入口：<router-link to="/matches">比赛赛程</router-link>）</li>
+              <li>点开比赛查看预测概率、数据覆盖与质量门槛</li>
+              <li>赛后可对照赛前预测快照</li>
+              <li>登录后可收藏比赛、设置开赛提醒</li>
+            </ul>
+          </div>
+          <div class="brief-col is-boundary">
+            <h3>不做什么</h3>
+            <ul>
+              <li><strong>不提供投注建议</strong></li>
+              <li>不保证预测命中</li>
+              <li>不鼓励、不支持任何违法博彩用途</li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <dl class="trust-facts trust-grid" aria-label="信任要点">
         <div>
@@ -28,7 +54,7 @@
       </nav>
 
       <h2 id="about-product">产品定位</h2>
-      <p>我们聚焦公开赛程、赛事资料与统一预测快照。已上线能力包括：按日赛程（日期轨、联赛/球队筛选、中文队名）、统一预测快照与概率分布（样本覆盖、概率分离度、质量门槛）、赛后复盘、登录后收藏与开赛前提醒，以及赛事资料与站内反馈入口。这些能力用于提升浏览效率，而不是替代你自己的判断。</p>
+      <p>我们聚焦公开赛程、赛事资料与统一预测快照。重点比赛推荐、收藏提醒和助手问答用于提升浏览效率，而不是替代你自己的判断。</p>
 
       <h2 id="about-data">数据与模型</h2>
       <p>赛程与积分来自主爬虫同步；预测结果来自赛前特征与模型服务。页面会展示样本覆盖、概率分离度、模型质量门槛等信息；当数据不足或模型未过门槛时，会明确提示“仅供参考”。</p>
@@ -42,21 +68,21 @@
       </ul>
 
       <h2 id="about-disclaimer">免责声明</h2>
-      <p>预测、概率与站内解读仅供信息参考，不构成投注、投资或其他决策建议。禁止用于违法博彩。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
+      <p>所有预测、概率与助手解读仅供信息参考，不构成投注、投资或其他决策建议。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
 
       <h2 id="about-contact">联系与反馈</h2>
       <p>当前未公开独立客服邮箱或微信客服号（与隐私说明一致，不设虚假联系方式）。你可以通过以下渠道联系或自助处理：</p>
       <ul class="trust-list">
         <li>账号与隐私请求：登录后前往 <router-link to="/profile">个人中心</router-link>，或查阅 <router-link to="/privacy">隐私说明</router-link></li>
-        <li>产品体验反馈：使用站内 <router-link to="/agent">Agent</router-link> 描述问题（不发送敏感凭据）</li>
+        <li>产品体验反馈：使用站内 <router-link to="/agent">助手</router-link> 描述问题（不发送敏感凭据）</li>
         <li>站点运营标识：ChenFootball · <span class="mono">https://chenfootball.asia</span></li>
       </ul>
 
       <div class="legal-actions">
-        <el-button type="primary" plain @click="$router.push('/matches')">返回比赛</el-button>
-        <el-button plain @click="$router.push('/privacy')">隐私说明</el-button>
-        <el-button plain @click="$router.push('/terms')">使用条款</el-button>
-        <el-button plain @click="$router.push('/agent')">去 Agent 反馈</el-button>
+        <router-link class="action-primary" to="/matches">去看赛程</router-link>
+        <router-link class="action-ghost" to="/privacy">隐私说明</router-link>
+        <router-link class="action-ghost" to="/terms">使用条款</router-link>
+        <router-link class="action-ghost" to="/agent">去助手反馈</router-link>
       </div>
     </main>
     <AppFooter />
@@ -70,27 +96,158 @@ import { Football } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
-.legal-main { max-width: 820px; margin: 0 auto; padding: 48px 24px; color: var(--ff-text); line-height: 1.85; }
-.legal-lead { color: var(--ff-text-muted); margin-bottom: 8px; }
-.legal-main h2 { margin: 26px 0 8px; color: var(--ff-primary); font-size: 18px; scroll-margin-top: 84px; }
-.legal-main p { color: var(--ff-text-muted); }
-.trust-facts { margin: 16px 0 4px; border-top: 1px solid var(--ff-border); }
-.trust-facts > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ff-border); }
+.legal-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 36px 24px 56px;
+  color: var(--ff-text);
+  line-height: 1.75;
+}
+.about-hero { margin: 0 0 22px; }
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ff-primary);
+}
+.one-liner {
+  margin: 0 0 16px;
+  color: var(--ff-text-strong);
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.45;
+  max-width: 36em;
+}
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 6px;
+  background: var(--ff-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.hero-cta:hover { background: var(--ff-primary-hover); }
+.hero-cta:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; }
+
+.product-brief {
+  margin: 0 0 8px;
+  padding: 18px 0 4px;
+  border-top: 1px solid var(--ff-border);
+}
+.brief-cols {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 28px;
+}
+.brief-col h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ff-text-strong);
+}
+.brief-col.is-boundary h3 { color: var(--ff-text); }
+.brief-cols ul {
+  margin: 0;
+  padding-left: 1.05em;
+  color: var(--ff-text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.brief-cols li { margin: 5px 0; }
+.brief-cols a {
+  color: var(--ff-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-main h2 {
+  margin: 28px 0 8px;
+  color: var(--ff-text-strong);
+  font-size: 16px;
+  scroll-margin-top: 84px;
+}
+.legal-main p { color: var(--ff-text-muted); margin: 0; }
+
+.trust-facts { margin: 18px 0 4px; border-top: 1px solid var(--ff-border); }
+.trust-facts > div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--ff-border);
+}
 .trust-facts dt { margin: 0; color: var(--ff-text-strong); font-size: 13px; font-weight: 700; }
 .trust-facts dd { margin: 0; color: var(--ff-text-muted); font-size: 13px; line-height: 1.55; }
+
 .trust-list { margin: 8px 0 0; padding-left: 1.15em; color: var(--ff-text-muted); }
 .trust-list li { margin: 6px 0; }
-.trust-list a { color: var(--ff-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.trust-list a {
+  color: var(--ff-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .trust-list a:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; border-radius: 4px; }
 .mono { font-family: var(--ff-mono); font-size: 12px; color: var(--ff-text); }
-.legal-toc { display:flex; flex-wrap:wrap; gap:6px; margin:22px 0 28px; padding:10px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-soft); }
-.legal-toc a { padding:8px 10px; min-height: 36px; display:inline-flex; align-items:center; border-radius:999px; color:var(--ff-primary); background:var(--ff-primary-soft); font-size:12px; font-weight: 600; }
-.legal-toc a:hover { text-decoration: underline; text-underline-offset: 2px; }
-.legal-toc a:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; }
-.legal-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:28px; }
-.legal-actions :deep(.el-button) { min-height: 40px; }
+
+.legal-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 22px 0 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ff-border);
+  border-bottom: 1px solid var(--ff-border);
+}
+.legal-toc a {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ff-text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.legal-toc a:hover { color: var(--ff-primary); }
+.legal-toc a:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; border-radius: 4px; }
+
+.legal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+}
+.action-primary,
+.action-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.action-primary { background: var(--ff-primary); color: #fff; }
+.action-primary:hover { background: var(--ff-primary-hover); }
+.action-ghost {
+  border: 1px solid var(--ff-border);
+  color: var(--ff-text);
+  background: #fff;
+}
+.action-ghost:hover { border-color: var(--ff-primary); color: var(--ff-primary); }
+
 @media (max-width: 680px) {
-  .legal-main { padding:28px 16px 40px; }
+  .legal-main { padding: 24px 16px 40px; }
+  .one-liner { font-size: 18px; }
+  .brief-cols { grid-template-columns: 1fr; gap: 18px; }
   .trust-facts > div { grid-template-columns: 1fr; gap: 2px; }
 }
 </style>

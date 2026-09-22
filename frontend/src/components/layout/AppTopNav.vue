@@ -676,6 +676,7 @@ onBeforeUnmount(() => {
     grid-area: menu;
     display:none;
     position:absolute;
+    z-index:30;
     top:calc(100% + 6px);
     left:12px;
     right:12px;

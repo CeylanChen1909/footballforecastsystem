@@ -90,7 +90,7 @@ const findTeamEntry = name => {
   return TEAM_DIRECTORY.find(item => [item.en, item.zh, ...item.aliases].some(value => normalizeTeamName(value) === key)) || null
 }
 
-export const getTeamDisplayName = (name, mode = 'en') => {
+export const getTeamDisplayName = (name, mode = 'zh') => {
   const source = String(name || '')
   if (mode !== 'zh') return source
   return findTeamEntry(source)?.zh || source

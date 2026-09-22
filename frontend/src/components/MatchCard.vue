@@ -270,7 +270,15 @@ const formatTime = match => {
 @media (max-width: 720px) {
   .match-card { grid-template-columns: minmax(0, 1fr); align-items: stretch; padding: 8px 10px 6px; gap: 4px; }
   .team-row { gap: 8px; }
-  .team-name { font-size: 14px; }
+  .team-name {
+    font-size: 14px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
   .action-area { width: 100%; display: flex; justify-content: flex-end; gap: 4px; }
   .action-copy-full { display: none; }
   .action-copy-short { display: inline; }

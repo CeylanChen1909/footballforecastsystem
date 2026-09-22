@@ -11,7 +11,7 @@
       </template>
     </AppTopNav>
 
-    <div v-if="onboardingVisible" class="matches-onboarding" role="region" aria-label="使用引导">
+    <div v-if="onboardingVisible && (loading || matchCount > 0)" class="matches-onboarding" role="region" aria-label="使用引导">
       <p class="matches-onboarding-copy">收藏一场比赛，开赛前 30 分钟在通知里提醒。</p>
       <button type="button" class="matches-onboarding-dismiss" aria-label="关闭引导" @click="dismissOnboarding">知道了</button>
     </div>
@@ -35,10 +35,10 @@
           <PageSection class="match-list-panel" variant="compact">
             <template #actions>
               <div class="match-list-actions sport-filters" :class="{ 'is-open': moreFilters }">
-                <el-select v-model="selectedLeague" class="league-filter" size="small" aria-label="按联赛筛选" popper-class="league-filter-popper">
-                  <el-option v-for="option in leagueOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-                <el-input v-model="teamKeyword" class="team-filter" size="small" clearable placeholder="搜球队" aria-label="按球队筛选" />
+                <select v-model="selectedLeague" class="league-filter native-filter-select" aria-label="按联赛筛选">
+                  <option v-for="option in leagueOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                </select>
+                <input v-model="teamKeyword" class="team-filter native-filter-input" type="search" enterkeyhint="search" placeholder="搜球队" aria-label="按球队筛选" />
                 <button type="button" class="filter-chip team-language-button" :aria-pressed="teamNameMode === 'en' ? 'true' : 'false'" :aria-label="teamNameMode === 'zh' ? '切换为英文球队名' : '切换为中文球队名'" @click="toggleTeamNameMode">
                   {{ teamNameMode === 'zh' ? 'English' : '中文名' }}
                 </button>
@@ -85,7 +85,7 @@
                   </div>
                 </div>
               </div>
-              <PageState v-else :title="dataQuality.status === 'SOURCE_LIMITED' ? '数据源额度受限' : dataQuality.status === 'SYNC_FAILED' ? '数据同步失败' : (selectedLeague === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛')" :description="dataQuality.message || (selectedLeague === 'all' ? '点击左右箭头切换日期，或点击日期选择具体日期' : '可以切换其他联赛，或点击日期轨道查看其他赛程')" :action-text="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? '重试' : (selectedLeague === 'all' ? '查看昨天' : '查看全部联赛')" @action="['SOURCE_LIMITED','SYNC_FAILED'].includes(dataQuality.status) ? loadCurrentView() : (selectedLeague === 'all' ? shiftDate(-1) : (selectedLeague = 'all'))" />
+              <PageState v-else type="empty" :title="emptyStateTitle" :description="emptyStateDescription" :action-text="emptyStateActionText" @action="onEmptyStateAction" />
             </template>
           </PageSection>
 
@@ -183,6 +183,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
+import gsap from 'gsap'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { analyticsApi, crawlerApi, favoriteApi, matchApi, userApi } from '../../api'
@@ -367,6 +368,32 @@ const filteredMatches = computed(() => {
   })
 })
 const matchCount = computed(() => filteredMatches.value.length)
+const isOpsEmptyStatus = computed(() => ['SOURCE_LIMITED', 'SYNC_FAILED'].includes(dataQuality.value?.status))
+const emptyStateTitle = computed(() => {
+  if (dataQuality.value?.status === 'SOURCE_LIMITED') return '数据源额度受限'
+  if (dataQuality.value?.status === 'SYNC_FAILED') return '数据同步失败'
+  return selectedLeague.value === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛'
+})
+const emptyStateDescription = computed(() => {
+  if (isOpsEmptyStatus.value) {
+    return dataQuality.value?.message || (dataQuality.value?.status === 'SOURCE_LIMITED'
+      ? '数据源暂时受限，请稍后重试。'
+      : '同步失败，请稍后重试。')
+  }
+  // Fan-facing empty day — never surface ops-speak like 「主数据源已完成本次检查」
+  return selectedLeague.value === 'all'
+    ? '这一天还没有赛程，换个日期看看'
+    : '这一天该联赛没有赛程，可切换联赛或换个日期'
+})
+const emptyStateActionText = computed(() => {
+  if (isOpsEmptyStatus.value) return '重试'
+  return selectedLeague.value === 'all' ? '查看昨天' : '查看全部联赛'
+})
+const onEmptyStateAction = () => {
+  if (isOpsEmptyStatus.value) return loadCurrentView()
+  if (selectedLeague.value === 'all') return shiftDate(-1)
+  selectedLeague.value = 'all'
+}
 const focusKeys = computed(() => {
   const ids = new Set()
   const keys = new Set()
@@ -888,6 +915,19 @@ const isFavoritedMatch = (fixtureId) => {
   return matchFavorites.value.some(item => String(item.fixtureId || item.id || item.matchId || '') === id)
 }
 
+
+const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const revealLeagueGroups = async () => {
+  await nextTick()
+  if (prefersReducedMotion()) return
+  const nodes = document.querySelectorAll('.date-group-list .league-group')
+  if (!nodes.length) return
+  gsap.fromTo(nodes, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.32, stagger: 0.045, ease: 'power2.out', clearProps: 'transform,opacity' })
+}
+watch([filteredMatches, loading], ([list, isLoading]) => {
+  if (!isLoading && Array.isArray(list) && list.length) revealLeagueGroups()
+})
+
 onMounted(async () => {
   onboardingVisible.value = localStorage.getItem(ONBOARDING_KEY) !== '1'
   const preferCollapse = localStorage.getItem(FOCUS_COLLAPSE_KEY)
@@ -966,8 +1006,32 @@ onBeforeUnmount(() => {
 .league-filter { width: 168px; }
 .team-filter { width: 108px; }
 .team-language-button { flex:none; }
-.league-filter :deep(.el-input__wrapper) { box-shadow: inset 0 0 0 1px var(--ff-border); background: var(--ff-surface-quiet); }
-.league-filter :deep(.el-input__wrapper.is-focus) { box-shadow: inset 0 0 0 1px var(--ff-primary); }
+.native-filter-select,
+.native-filter-input {
+  box-sizing: border-box;
+  min-height: 40px;
+  border: 1px solid var(--ff-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ff-text);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.native-filter-select {
+  padding: 0 28px 0 12px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ff-text-muted) 50%), linear-gradient(135deg, var(--ff-text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 55%, calc(100% - 10px) 55%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.native-filter-input { padding: 0 12px; min-width: 0; }
+.native-filter-input::-webkit-search-cancel-button { cursor: pointer; }
+.native-filter-select:hover,
+.native-filter-input:hover { border-color: var(--ff-primary); color: var(--ff-text-strong); }
+.native-filter-select:focus,
+.native-filter-input:focus { outline: none; border-color: var(--ff-primary); box-shadow: 0 0 0 2px var(--ff-primary-soft); }
 
 /* 场数标签：荧光渐变胶囊 */
 .match-count-tag {
@@ -1250,7 +1314,7 @@ onBeforeUnmount(() => {
 .match-count-num { color: var(--ff-text-strong); font-size: 15px; font-weight: 700; }
 .match-count-unit { font-size: 12px; }
 .matches-onboarding {
-  margin: 8px clamp(12px, 2vw, 22px) 0;
+  margin: 10px clamp(12px, 2vw, 22px) 8px;
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--ff-border);
@@ -1299,7 +1363,7 @@ onBeforeUnmount(() => {
 .filters-more {
   display: none;
   flex: none;
-  min-height: 32px;
+  min-height: 40px;
   padding: 0 10px;
   border: 1px solid var(--ff-border);
   border-radius: 4px;
@@ -1328,36 +1392,26 @@ onBeforeUnmount(() => {
 }
 .sport-filters .league-filter,
 .sport-filters .team-filter { flex: none; }
-.sport-filters .league-filter :deep(.el-input__wrapper),
-.sport-filters .team-filter :deep(.el-input__wrapper) {
-  box-shadow: none !important;
-  border: 1px solid var(--ff-border);
+.sport-filters .native-filter-select,
+.sport-filters .native-filter-input {
+  min-height: 40px;
   border-radius: 999px;
+  border: 1px solid var(--ff-border);
   background: #fff;
-  padding: 0 10px;
-  min-height: 32px;
-}
-.sport-filters .league-filter :deep(.el-input__wrapper.is-focus),
-.sport-filters .team-filter :deep(.el-input__wrapper.is-focus) {
-  border-color: var(--ff-primary);
-  box-shadow: none !important;
-}
-.sport-filters .league-filter :deep(.el-input__inner),
-.sport-filters .team-filter :deep(.el-input__inner) {
   font-size: 12px;
   color: var(--ff-text);
-  height: 30px;
 }
-.sport-filters .league-filter :deep(.el-select__caret),
-.sport-filters .team-filter :deep(.el-input__suffix) {
-  color: var(--ff-text-muted);
+.sport-filters .native-filter-select:focus,
+.sport-filters .native-filter-input:focus {
+  border-color: var(--ff-primary);
+  box-shadow: 0 0 0 2px var(--ff-primary-soft);
 }
 .filter-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex: none;
-  min-height: 32px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--ff-border);
   border-radius: 999px;
