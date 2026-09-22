@@ -531,7 +531,7 @@ public class MatchPredictionPrecomputeService {
                 .orElse(null);
         return new PublicSnapshotResult(result, Map.of(
                 "status", "AVAILABLE", "statusText", "预测快照可用",
-                "message", result.isEmpty() ? "当前窗口暂无已生成预测" : "已返回 " + result.size() + " 条预测快照",
+                "message", result.isEmpty() ? "当前窗口暂无已生成预测" : "已找到 " + result.size() + " 条预测快照",
                 "lastSuccess", lastUpdated == null ? "" : lastUpdated.toString(),
                 "resultCount", result.size()));
     }
