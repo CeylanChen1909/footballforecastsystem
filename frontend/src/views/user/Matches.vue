@@ -985,7 +985,21 @@ onBeforeUnmount(() => {
 .matches-layout { min-height: calc(100vh - 64px); width: 100%; max-width: 100%; min-width: 0; }
 .main-content { padding: 18px 22px; overflow-x: hidden; width: 100%; max-width: 100%; min-width: 0; }
 .reminder-button { flex:none; }
-.date-rail { display:flex; gap:8px; align-items:stretch; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; padding:2px 0 16px; width:100%; max-width:100%; min-width:0; }
+.date-rail {
+  display:flex;
+  gap:8px;
+  align-items:stretch;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  padding:2px 0 16px;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  scrollbar-width: none; /* Firefox — hide thick bar on mobile rail */
+  -ms-overflow-style: none;
+}
+.date-rail::-webkit-scrollbar { display: none; height: 0; }
 .date-rail-arrow { flex:0 0 38px; display:flex; align-items:center; justify-content:center; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); color:var(--ff-text-muted); cursor:pointer; transition:border-color var(--ff-transition-fast), color var(--ff-transition-fast), background var(--ff-transition-fast); }
 .date-rail-arrow:hover:not(:disabled), .date-rail-arrow:focus-visible { border-color:var(--ff-primary); color:var(--ff-primary); background:var(--ff-primary-soft); outline:none; }
 .date-rail-arrow:disabled { cursor:wait; opacity:.55; }
