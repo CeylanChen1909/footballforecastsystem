@@ -62,7 +62,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
   stale: { type: Boolean, default: false },
-  teamNameMode: { type: String, default: 'en' }
+  teamNameMode: { type: String, default: 'zh' }
 })
 defineEmits(['open', 'predict', 'retry', 'view-all'])
 

@@ -19,7 +19,10 @@
           type="button"
           role="menuitem"
           class="menu-item sport-menu-item"
-          :class="{ 'is-active': activePath === item.path || activePath.startsWith(item.path + '/') }"
+          :class="{
+            'is-active': activePath === item.path || activePath.startsWith(item.path + '/'),
+            'is-soft': item.soft
+          }"
           :aria-current="activePath === item.path || activePath.startsWith(item.path + '/') ? 'page' : undefined"
           @click="handleSelect(item.path)"
         >
@@ -156,7 +159,7 @@ const navItems = computed(() => {
   const items = [
     { path: '/matches', label: '比赛', icon: Football },
     { path: '/competitions', label: '赛事资料', icon: Notebook },
-    { path: '/agent', label: 'Agent', icon: ChatLineSquare },
+    { path: '/agent', label: '助手', icon: ChatLineSquare, soft: true },
   ]
   if (isAdmin.value) items.push({ path: '/admin', label: '管理', icon: Setting })
   return items
@@ -633,6 +636,16 @@ onBeforeUnmount(() => {
   border-bottom-color: var(--ff-primary) !important;
   box-shadow: none;
 }
+.sport-menu-item.is-soft {
+  font-weight: 500;
+  color: var(--ff-text-faint, var(--ff-text-muted));
+}
+.sport-menu-item.is-soft .el-icon { opacity: 0.72; }
+.sport-menu-item.is-soft.is-active {
+  font-weight: 600;
+  color: var(--ff-primary) !important;
+}
+.sport-menu-item.is-soft.is-active .el-icon { opacity: 1; }
 .menu-item {
   display: flex;
   align-items: center;

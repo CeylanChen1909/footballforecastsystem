@@ -1,13 +1,13 @@
 <template>
   <div class="agent-page ff-page-shell">
-    <AppTopNav title="ChenFootball" subtitle="Agent" :brand-icon="ChatLineSquare" active-path="/agent" />
+    <AppTopNav title="ChenFootball" subtitle="" :brand-icon="ChatLineSquare" active-path="/agent" />
 
     <main id="app-main" class="agent-main" tabindex="-1">
-      <section v-if="!userStore.token" class="agent-teaser ff-panel" aria-label="Agent 登录引导">
+      <section v-if="!userStore.token" class="agent-teaser ff-panel" aria-label="助手登录引导">
         <div class="agent-teaser-intro">
           <span class="launcher-mark"><el-icon :size="22"><ChatLineSquare /></el-icon></span>
           <div>
-            <h1>登录后使用 Football Agent</h1>
+            <h1>登录后使用赛程助手</h1>
             <p>用自然语言查询赛程、球队状态与预测依据。先给结论，再说明数据与不确定性。</p>
           </div>
         </div>
@@ -18,7 +18,7 @@
           </button>
         </div>
         <el-button type="primary" size="large" @click="promptLogin">登录后开始提问</el-button>
-        <p class="agent-teaser-note">浏览公开赛程与预测无需登录；Agent 会话需要账号以便保存历史。</p>
+        <p class="agent-teaser-note">浏览公开赛程与预测无需登录；助手会话需要账号以便保存历史。</p>
       </section>
 
       <section v-else class="agent-shell">
@@ -82,7 +82,7 @@
 
             <div ref="messageList" class="message-list" aria-live="polite" @scroll="handleMessageScroll">
               <div v-if="!messages.length" class="task-launcher">
-                <div class="task-launcher-intro"><span class="launcher-mark"><el-icon :size="20"><ChatLineSquare /></el-icon></span><div><h1>问一场比赛，或让 Agent 帮你查清一件事</h1><p>先给结论，再说明数据依据与不确定性。</p></div></div>
+                <div class="task-launcher-intro"><span class="launcher-mark"><el-icon :size="20"><ChatLineSquare /></el-icon></span><div><h1>问一场比赛，或让助手帮你查清一件事</h1><p>先给结论，再说明数据依据与不确定性。</p></div></div>
                 <div class="task-launcher-list">
                   <button v-for="task in taskPrompts" :key="task.label" type="button" :disabled="sending" @click="sendMessage(task.prompt)"><span><strong>{{ task.label }}</strong><small>{{ task.description || '读取相关比赛数据并给出可执行结论' }}</small></span><el-icon><ArrowDown /></el-icon></button>
                 </div>
@@ -91,7 +91,7 @@
               <article v-for="(message, index) in messages" :key="message.id || `${message.role}-${index}`" class="message-row" :class="`is-${message.role}`">
                 <div class="message-avatar" aria-hidden="true"><el-icon v-if="message.role === 'assistant'"><ChatLineSquare /></el-icon><span v-else>{{ userInitial }}</span></div>
                 <div class="message-bubble">
-                  <div class="message-meta"><strong>{{ message.role === 'assistant' ? 'Football Agent' : '你' }}</strong><span v-if="message.pending">{{ runPhase || '正在分析' }}</span><span v-else-if="message.role === 'assistant' && message.intentLabel" class="message-intent">{{ message.intentLabel }}</span></div>
+                  <div class="message-meta"><strong>{{ message.role === 'assistant' ? '助手' : '你' }}</strong><span v-if="message.pending">{{ runPhase || '正在分析' }}</span><span v-else-if="message.role === 'assistant' && message.intentLabel" class="message-intent">{{ message.intentLabel }}</span></div>
                   <div v-if="message.content && message.role === 'assistant'" class="message-content markdown-body" v-html="renderMessageMarkdown(message.content)"></div>
                   <p v-else-if="message.content" class="message-content">{{ message.content }}</p>
                   <div v-if="message.pending" class="typing-indicator"><i></i><i></i><i></i></div>
@@ -136,7 +136,7 @@
               <section v-if="selectedEvidenceMessage.toolEvents?.length" class="evidence-section"><h3>读取过程</h3><div v-for="(trace, traceIndex) in selectedEvidenceMessage.toolEvents" :key="`${selectedEvidenceMessage.id}-${trace.eventId || traceIndex}`" class="tool-trace-row"><span class="trace-dot" :class="`is-${trace.status || 'running'}`"></span><span>{{ trace.type === 'tool_start' ? `读取 ${toolLabel(trace.tool)}` : `${toolLabel(trace.tool)}${trace.status === 'error' ? '失败' : '完成'}` }}</span><small v-if="trace.latencyMs">{{ trace.latencyMs }}ms</small></div></section>
             </div>
             <div v-else class="drawer-empty"><el-icon><Connection /></el-icon><p>完成一次分析后，这里会显示数据来源、更新时间和缺失项。</p></div>
-            <div class="evidence-note"><el-icon><InfoFilled /></el-icon><p>Agent 会区分已读取的数据与模型推断；没有读取到的数据会明确标注。模型通道由管理员统一配置，用户不能在此切换。</p></div>
+            <div class="evidence-note"><el-icon><InfoFilled /></el-icon><p>助手会区分已读取的数据与模型推断；没有读取到的数据会明确标注。模型通道由站点统一配置，用户不能在此切换。</p></div>
           </aside>
         </div>
       </section>
@@ -208,7 +208,7 @@ const sessionFilters = [
   { value: 'unfinished', label: '待处理' }
 ]
 const toolLabels = {
-  agent_summary: 'Agent 状态',
+  agent_summary: '助手状态',
   crawler_summary: '赛程数据',
   match_context: '比赛上下文',
   news_context: '新闻资讯',
@@ -245,7 +245,7 @@ const visibleSessions = computed(() => {
   })
 })
 const currentSessionTitle = computed(() => currentSession.value?.title || '新会话')
-const healthLabel = computed(() => ({ checking: '连接检测中', ready: 'Agent 在线', degraded: 'Agent 部分降级', error: '暂时离线' }[healthState.value] || '状态未知'))
+const healthLabel = computed(() => ({ checking: '连接检测中', ready: '助手在线', degraded: '助手部分降级', error: '暂时离线' }[healthState.value] || '状态未知'))
 const toolCount = computed(() => tools.value.length)
 const latestAssistant = computed(() => [...messages.value].reverse().find(item => item.role === 'assistant' && !item.pending) || null)
 const providerHealthSummary = ref('')
@@ -539,23 +539,23 @@ const sendMessage = async (rawText = composerText.value) => {
           runPhase.value = event.status && event.status !== 'ok' ? '模型通道异常' : '分析完成'
           analyticsApi.track('agent_message_completed', { page: '/agent', entityType: 'agent_session', entityId: sessionId.value, properties: { latencyMs: event.latencyMs, provider: event.provider, model: event.model, status: event.status || 'ok', streamMode: event.streamMode, usage: event.usage || {}, toolCount: Array.isArray(event.toolSteps) ? event.toolSteps.length : 0, dataQuality: event.dataQuality || {}, grounded: event.answerValidation?.grounded !== false } }).catch(() => {})
         }
-        if (event.type === 'error') { runPhase.value = '处理失败'; streamError = new Error(event.message || 'Agent 处理失败') }
+        if (event.type === 'error') { runPhase.value = '处理失败'; streamError = new Error(event.message || '助手处理失败') }
         void scrollToBottom()
       }
     })
     if (streamError) throw streamError
     if (!streamCompleted && !abortController.signal.aborted) {
-      throw new Error('Agent 流式响应未完整结束')
+      throw new Error('助手响应未完整结束')
     }
     assistantMessage.content = normalizeAssistantText(assistantMessage.content)
-    if (!assistantMessage.content) assistantMessage.content = 'Agent 没有返回可展示的内容，请换个问法再试。'
+    if (!assistantMessage.content) assistantMessage.content = '助手没有返回可展示的内容，请换个问法再试。'
   } catch (error) {
     if (error?.name === 'AbortError') {
       assistantMessage.content = assistantMessage.content || '本轮分析已停止。'
       runPhase.value = '已停止'
     } else {
-      assistantMessage.content = assistantMessage.content || `Agent 暂时无法响应：${error?.message || '网络错误'}`
-      ElMessage.warning('Agent 响应失败，请检查服务状态')
+      assistantMessage.content = assistantMessage.content || `助手暂时无法响应：${error?.message || '网络错误'}`
+      ElMessage.warning('助手响应失败，请稍后重试')
       analyticsApi.track('agent_message_failed', { page: '/agent', entityType: 'agent_session', entityId: sessionId.value, properties: { error: error?.message || 'network_error', partial: Boolean(assistantMessage.content) } }).catch(() => {})
     }
     streamError = error
@@ -627,7 +627,7 @@ const runAgentAction = (action) => {
 }
 const exportConversation = () => {
   if (!messages.value.length) return
-  const text = messages.value.map(item => `${item.role === 'assistant' ? 'Football Agent' : '我'}：\n${item.content || ''}`).join('\n\n')
+  const text = messages.value.map(item => `${item.role === 'assistant' ? '助手' : '我'}：\n${item.content || ''}`).join('\n\n')
   const blob = new Blob([`# ${currentSessionTitle.value}\n\n${text}`], { type: 'text/markdown;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

@@ -34,18 +34,18 @@
           <!-- 比赛列表 owns the page. Focus is a mark on the row, not a second bay. -->
           <PageSection class="match-list-panel" variant="compact">
             <template #actions>
-              <div class="match-list-actions" :class="{ 'is-open': moreFilters }">
+              <div class="match-list-actions sport-filters" :class="{ 'is-open': moreFilters }">
                 <el-select v-model="selectedLeague" class="league-filter" size="small" aria-label="按联赛筛选" popper-class="league-filter-popper">
                   <el-option v-for="option in leagueOptions" :key="option.value" :label="option.label" :value="option.value" />
                 </el-select>
-                <el-input v-model="teamKeyword" class="team-filter" size="small" clearable placeholder="球队" aria-label="按球队筛选" />
-                <el-button class="team-language-button" size="small" plain :aria-label="teamNameMode === 'zh' ? '切换为英文球队名' : '切换为中文球队名'" @click="toggleTeamNameMode">
+                <el-input v-model="teamKeyword" class="team-filter" size="small" clearable placeholder="搜球队" aria-label="按球队筛选" />
+                <button type="button" class="filter-chip team-language-button" :aria-pressed="teamNameMode === 'en' ? 'true' : 'false'" :aria-label="teamNameMode === 'zh' ? '切换为英文球队名' : '切换为中文球队名'" @click="toggleTeamNameMode">
                   {{ teamNameMode === 'zh' ? 'English' : '中文名' }}
-                </el-button>
-                <el-checkbox v-model="onlyFavorites" size="small">只看收藏</el-checkbox>
-                <el-button class="reminder-button" size="small" plain :loading="remindersChanging" :type="remindersEnabled ? 'success' : 'default'" @click="toggleMatchReminders">
-                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? '已开启提醒' : '开启提醒' }}</span>
-                </el-button>
+                </button>
+                <button type="button" class="filter-chip favorites-chip" :class="{ active: onlyFavorites }" :aria-pressed="onlyFavorites ? 'true' : 'false'" @click="onlyFavorites = !onlyFavorites">只看收藏</button>
+                <button type="button" class="filter-chip reminder-button" :class="{ active: remindersEnabled }" :aria-pressed="remindersEnabled ? 'true' : 'false'" :disabled="remindersChanging" @click="toggleMatchReminders">
+                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? '提醒开' : '提醒' }}</span>
+                </button>
                 <button type="button" class="filters-more" :aria-expanded="moreFilters ? 'true' : 'false'" @click="moreFilters = !moreFilters">{{ moreFilters ? '收起' : '筛选' }}</button>
                 <div class="match-count-tag" :aria-busy="loading ? 'true' : 'false'">
                   <span class="match-count-num">{{ loading ? '…' : matchCount }}</span>
@@ -219,7 +219,7 @@ const currentPage = ref(1)
 const matchFavorites = ref([])
 const selectedLeague = ref('all')
 const teamKeyword = ref('')
-const teamNameMode = ref(localStorage.getItem('football_team_name_mode') === 'zh' ? 'zh' : 'en')
+const teamNameMode = ref(localStorage.getItem('football_team_name_mode') === 'en' ? 'en' : 'zh')
 const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
 const FOCUS_COLLAPSE_KEY = 'football_matches_focus_collapsed'
 const onboardingVisible = ref(false)
@@ -1143,7 +1143,7 @@ onBeforeUnmount(() => {
   .team-filter { width: 86px; }
   .match-list-actions .league-filter { flex:1 1 140px; }
   .match-list-actions .team-filter { flex:1 1 100px; width:auto; }
-  .match-list-actions .el-checkbox { flex:1 1 100%; }
+  .match-list-actions .favorites-chip { flex:1 1 100%; }
   .match-count-tag { margin-left:auto; }
   .date-group { padding: 14px; }
   .event-row { grid-template-columns:42px 1fr 22px; }
@@ -1311,14 +1311,90 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .match-list-panel :deep(.section-head) { flex-direction: row; align-items: center; }
   .match-list-actions { flex-wrap: nowrap; align-items: center; }
-  .match-list-actions .el-checkbox { flex: 0 0 auto; }
+  .match-list-actions .favorites-chip { flex: 0 0 auto; }
   .match-list-actions:not(.is-open) .team-filter,
   .match-list-actions:not(.is-open) .team-language-button,
   .match-list-actions:not(.is-open) .reminder-button,
-  .match-list-actions:not(.is-open) :deep(.el-checkbox) { display: none; }
+  .match-list-actions:not(.is-open) .favorites-chip { display: none; }
   .filters-more { display: inline-flex; align-items: center; }
   .league-filter { flex: 0 0 132px; width: 132px; }
   .date-group-heading { display: none; }
 }
+
+/* r11: sports product filter — quieter than Element admin form */
+.sport-filters {
+  gap: 6px;
+  padding: 2px 0;
+}
+.sport-filters .league-filter,
+.sport-filters .team-filter { flex: none; }
+.sport-filters .league-filter :deep(.el-input__wrapper),
+.sport-filters .team-filter :deep(.el-input__wrapper) {
+  box-shadow: none !important;
+  border: 1px solid var(--ff-border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 10px;
+  min-height: 32px;
+}
+.sport-filters .league-filter :deep(.el-input__wrapper.is-focus),
+.sport-filters .team-filter :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--ff-primary);
+  box-shadow: none !important;
+}
+.sport-filters .league-filter :deep(.el-input__inner),
+.sport-filters .team-filter :deep(.el-input__inner) {
+  font-size: 12px;
+  color: var(--ff-text);
+  height: 30px;
+}
+.sport-filters .league-filter :deep(.el-select__caret),
+.sport-filters .team-filter :deep(.el-input__suffix) {
+  color: var(--ff-text-muted);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ff-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ff-text-muted);
+  font: 500 12px/1 'Segoe UI', 'PingFang SC', sans-serif;
+  cursor: pointer;
+  transition: border-color var(--ff-transition-fast), color var(--ff-transition-fast), background var(--ff-transition-fast);
+}
+.filter-chip:hover,
+.filter-chip:focus-visible {
+  border-color: var(--ff-primary);
+  color: var(--ff-primary);
+  outline: none;
+}
+.filter-chip.active,
+.filter-chip[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--ff-primary) 45%, var(--ff-border));
+  background: var(--ff-primary-soft, rgba(15, 107, 77, 0.08));
+  color: var(--ff-primary);
+}
+.filter-chip:disabled { opacity: 0.55; cursor: wait; }
+.sport-filters .reminder-button .el-icon { font-size: 14px; }
+.sport-filters .filters-more {
+  border-radius: 999px;
+  border-color: var(--ff-border);
+  background: #fff;
+  color: var(--ff-text-muted);
+  font-weight: 500;
+}
+.sport-filters .match-count-tag {
+  margin-left: 2px;
+  padding: 0 4px;
+  color: var(--ff-text-muted);
+}
+.sport-filters .match-count-num { font-size: 14px; font-weight: 700; color: var(--ff-text-strong); }
+.sport-filters .match-count-unit { font-size: 12px; }
+
 
 </style>

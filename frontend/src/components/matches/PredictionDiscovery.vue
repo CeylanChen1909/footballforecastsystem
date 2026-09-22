@@ -38,7 +38,7 @@ import { getTeamDisplayName } from '../../utils/teamNames'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
-  teamNameMode: { type: String, default: 'en' },
+  teamNameMode: { type: String, default: 'zh' },
   limit: { type: Number, default: 4 }
 })
 defineEmits(['predict'])

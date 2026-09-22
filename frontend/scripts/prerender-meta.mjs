@@ -27,7 +27,7 @@ const indexPath = join(distDir, "index.html");
 const SITE_ORIGIN = "https://chenfootball.asia";
 const DEFAULT_TITLE = "ChenFootball - 足球赛程与预测";
 const DEFAULT_DESCRIPTION =
-  "ChenFootball 按日列出已同步赛程，点开看预测概率、数据覆盖与质量门槛。不提供投注建议。";
+  "ChenFootball：每日足球赛程、赛前预测与联赛资料。标明数据覆盖，不提供投注建议。";
 
 const ROUTES = [
   {
@@ -38,7 +38,7 @@ const ROUTES = [
   {
     path: "/matches",
     title: "比赛赛程 - ChenFootball",
-    description: "按日查看已同步赛程，点开看预测概率、数据覆盖与质量门槛。",
+    description: "按日浏览足球赛程与赛前预测，查看联赛资料与数据覆盖说明。",
   },
   {
     path: "/competitions",
@@ -62,7 +62,7 @@ const ROUTES = [
   },
   {
     path: "/agent",
-    title: "Agent - ChenFootball",
+    title: "助手 - ChenFootball",
     description: "用自然语言查询赛程、球队状态与预测依据。",
   },
 ];

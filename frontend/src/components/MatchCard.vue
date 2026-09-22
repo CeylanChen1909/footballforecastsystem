@@ -80,7 +80,7 @@ import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatc
 import { getTeamDisplayName } from '../utils/teamNames'
 import { getMediaAssetUrl } from '../utils/mediaAsset'
 
-const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, focused: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'en' } })
+const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, focused: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'zh' } })
 const emit = defineEmits(['predict', 'teamClick', 'h2h', 'agent', 'details', 'favorite-match'])
 
 const fixture = computed(() => ({

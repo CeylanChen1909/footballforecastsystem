@@ -1,7 +1,7 @@
 <template>
-  <button class="agent-launcher" type="button" aria-label="打开 Agent 工作台" @click="router.push('/agent')">
-    <el-icon :size="21"><ChatLineSquare /></el-icon>
-    <span>Agent</span>
+  <button class="agent-launcher" type="button" aria-label="打开赛程助手" @click="router.push('/agent')">
+    <el-icon :size="18"><ChatLineSquare /></el-icon>
+    <span>助手</span>
   </button>
 </template>
 
@@ -15,24 +15,28 @@ const router = useRouter()
 <style scoped>
 .agent-launcher {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
+  right: 18px;
+  bottom: 18px;
   z-index: 30;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid rgba(15, 107, 77, .25);
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--ff-border);
   border-radius: 999px;
-  color: #fff;
-  background: var(--ff-primary);
-  box-shadow: var(--ff-shadow-lg);
+  color: var(--ff-text);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--ff-shadow-md);
   cursor: pointer;
-  font: 600 13px/1 'Segoe UI', 'PingFang SC', sans-serif;
-  transition: transform var(--ff-transition-fast), background var(--ff-transition-fast), box-shadow var(--ff-transition-fast);
+  font: 500 12px/1 'Segoe UI', 'PingFang SC', sans-serif;
+  transition: transform var(--ff-transition-fast), background var(--ff-transition-fast), box-shadow var(--ff-transition-fast), border-color var(--ff-transition-fast), color var(--ff-transition-fast);
 }
-.agent-launcher:hover { background: var(--ff-primary-hover); }
+.agent-launcher:hover {
+  background: #fff;
+  border-color: var(--ff-primary);
+  color: var(--ff-primary);
+}
 .agent-launcher:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 3px; }
 @media (max-width: 720px) {
   .agent-launcher { right: 14px; bottom: 14px; width: 42px; min-height: 42px; justify-content: center; padding: 0; }
