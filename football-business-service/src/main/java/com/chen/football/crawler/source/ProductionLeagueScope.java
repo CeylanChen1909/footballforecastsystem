@@ -11,15 +11,25 @@ import java.util.Set;
 /** Shared read-time visibility policy for the production eight-league set. */
 public final class ProductionLeagueScope {
     private static final Set<String> IDS = Set.of(
-            "39", "140", "135", "78", "61", "88", "94", "40",
+            "39", "140", "135", "78", "61", "88", "94", "40", "2",
             "pl", "pd", "sa", "bl1", "fl1", "ded", "ppl", "elc",
-            "bbc-premier-league", "bbc-spanish-la-liga", "bbc-italian-serie-a",
-            "bbc-german-bundesliga", "bbc-french-ligue-one", "bbc-dutch-eredivisie",
-            "bbc-portuguese-primeira-liga", "bbc-championship");
+            // Hyphenated provider ids (exact) and de-hyphenated forms because
+            // normalize() strips hyphens before IDS.contains().
+            "bbc-premier-league", "bbcpremierleague",
+            "bbc-spanish-la-liga", "bbcspanishlaliga",
+            "bbc-italian-serie-a", "bbcitalianseriea",
+            "bbc-german-bundesliga", "bbcgermanbundesliga",
+            "bbc-french-ligue-one", "bbcfrenchligueone",
+            "bbc-dutch-eredivisie", "bbcdutcheredivisie",
+            "bbc-portuguese-primeira-liga", "bbcportugueseprimeiraliga",
+            "bbc-championship", "bbcchampionship",
+            "bbc-champions-league", "bbcchampionsleague",
+            "bbc-nations-league", "bbcnationsleague");
     private static final Set<String> NAMES = Set.of(
-            "英超", "西甲", "意甲", "德甲", "法甲", "荷甲", "葡超", "英冠",
+            "英超", "西甲", "意甲", "德甲", "法甲", "荷甲", "葡超", "英冠", "欧冠", "欧国联",
             "premierleague", "laliga", "primeradivision", "seriea", "bundesliga",
-            "ligue1", "eredivisie", "primeiraliga", "portugueseprimeiraliga", "championship");
+            "ligue1", "eredivisie", "primeiraliga", "portugueseprimeiraliga", "championship",
+            "uefachampionsleague", "championsleague", "uefanationsleague", "nationsleague");
 
     private ProductionLeagueScope() {}
 

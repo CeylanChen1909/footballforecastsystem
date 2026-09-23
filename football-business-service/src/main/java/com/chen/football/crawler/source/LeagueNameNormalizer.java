@@ -71,6 +71,8 @@ public class LeagueNameNormalizer {
             Map.entry("bbc-dutch-eredivisie", "荷甲"),
             Map.entry("bbc-portuguese-primeira-liga", "葡超"),
             Map.entry("bbc-championship", "英冠"),
+            Map.entry("bbc-champions-league", "欧冠"),
+            Map.entry("bbc-nations-league", "欧国联"),
             // ===== seed 代码 =====
             Map.entry("WC", "世界杯"),
             Map.entry("FRIENDLY", "国际友谊赛")

@@ -52,11 +52,14 @@ public class CrawlerController {
     /** All public match-date calculations use the product business timezone. */
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
     private static final Set<String> PRODUCTION_LEAGUE_IDS = Set.of(
-            "39", "140", "135", "78", "61", "88", "94", "40", "PL", "PD", "SA", "BL1", "FL1", "DED", "PPL", "ELC",
+            "39", "140", "135", "78", "61", "88", "94", "40", "2", "PL", "PD", "SA", "BL1", "FL1", "DED", "PPL", "ELC",
             "bbc-premier-league", "bbc-spanish-la-liga", "bbc-italian-serie-a", "bbc-german-bundesliga",
-            "bbc-french-ligue-one", "bbc-dutch-eredivisie", "bbc-portuguese-primeira-liga", "bbc-championship");
+            "bbc-french-ligue-one", "bbc-dutch-eredivisie", "bbc-portuguese-primeira-liga", "bbc-championship",
+            "bbc-champions-league", "bbc-nations-league");
     private static final Set<String> PRODUCTION_LEAGUE_NAMES = Set.of(
-            "英超", "西甲", "意甲", "德甲", "法甲", "荷甲", "葡超", "英冠", "Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1", "Eredivisie", "Primeira Liga", "Championship");
+            "英超", "西甲", "意甲", "德甲", "法甲", "荷甲", "葡超", "英冠", "欧冠", "欧国联",
+            "Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1", "Eredivisie", "Primeira Liga", "Championship",
+            "UEFA Champions League", "Champions League", "UEFA Nations League", "Nations League");
 
     private final MatchCrawlerService matchCrawlerService;
     private final MatchRecommendationService matchRecommendationService;
@@ -762,7 +765,7 @@ public class CrawlerController {
         long ageMinutes = updatedAt == null ? -1 : Math.max(0, ChronoUnit.MINUTES.between(updatedAt, LocalDateTime.now(BUSINESS_ZONE)));
         quality.put("status", ageMinutes > 72 * 60 ? "STALE" : "AVAILABLE");
         quality.put("statusText", ageMinutes > 72 * 60 ? "球队资料较旧" : "球队资料可用");
-        quality.put("message", "已同步 " + results + " 支球队");
+        quality.put("message", "已返回 " + results + " 支球队");
         quality.put("source", teams == null ? "" : teams.stream().map(CrawlerTeam::getSource).filter(Objects::nonNull).filter(v -> !v.isBlank()).findFirst().orElse("unknown"));
         quality.put("lastSyncedAt", updatedAt == null ? "" : updatedAt.toString());
         quality.put("ageMinutes", ageMinutes);
@@ -1703,8 +1706,8 @@ public class CrawlerController {
         quality.put("statusText", "STALE".equals(status) ? "数据较旧" : "PRESEASON".equals(status) ? "赛季尚未产生积分" : "数据可用");
         quality.put("message", "STALE".equals(status)
                 ? "积分榜超过 72 小时未更新，请谨慎参考"
-                : "PRESEASON".equals(status) ? "已同步 " + standings.size() + " 支球队；本赛季积分尚未产生"
-                : "已同步 " + standings.size() + " 支球队");
+                : "PRESEASON".equals(status) ? "已返回 " + standings.size() + " 支球队，当前赛季尚未产生可验证积分"
+                : "已返回 " + standings.size() + " 支球队");
         quality.put("source", standings.stream().map(CrawlerStanding::getSource).filter(Objects::nonNull).filter(v -> !v.isBlank()).findFirst().orElse("unknown"));
         quality.put("lastSyncedAt", updatedAt == null ? "" : updatedAt.toString());
         quality.put("ageMinutes", ageMinutes);
@@ -1788,12 +1791,12 @@ public class CrawlerController {
             quality.put("status", status);
             quality.put("freshness", stale ? "STALE" : "FRESH");
             quality.put("statusText", limited ? "已有数据，但数据源额度受限" : failed ? "已有数据，但最近同步失败" : stale ? "已有数据，但同步较旧" : "数据可用");
-            quality.put("message", limited ? "已找到 " + results + " 场比赛；数据源暂时受限，部分赛事可能未更新" : failed ? "已找到 " + results + " 场比赛；最近一次同步未成功，请稍后重试" : stale ? "已找到 " + results + " 场比赛；" + (age == null ? "同步时间未知，数据可能不是最新" : "超过 6 小时未同步，数据可能不是最新") : "已找到 " + results + " 场比赛");
+            quality.put("message", limited ? "已返回 " + results + " 场比赛；主数据源当前受额度或套餐限制" : failed ? "已返回 " + results + " 场比赛；主数据源最近一次同步失败" : stale ? "已返回 " + results + " 场比赛；" + (age == null ? "最后同步时间未知" : "最后同步已超过 6 小时") : "已返回 " + results + " 场比赛");
             return quality;
         }
         quality.put("status", limited ? "SOURCE_LIMITED" : failed ? "SYNC_FAILED" : notCovered ? "NOT_COVERED" : "NO_MATCHES");
         quality.put("statusText", limited ? "数据源额度受限" : failed ? "数据同步失败" : notCovered ? "数据源尚未覆盖" : "暂无已采集比赛");
-        quality.put("message", limited ? "数据源暂时受限，请稍后重试" : failed ? "赛程同步未成功，请稍后重试" : notCovered ? "该日期赛程尚未确认，不代表当天没有比赛" : "这一天暂时没有已同步的赛程");
+        quality.put("message", limited ? "外部数据源当前受额度或套餐限制，请稍后重试" : failed ? "主数据源请求失败，请稍后重试" : notCovered ? "主数据源尚未确认该日期的赛程，不能等同于没有比赛" : "当前日期暂无已采集比赛，主数据源已完成本次检查");
         return quality;
     }
 

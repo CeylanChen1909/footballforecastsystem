@@ -389,12 +389,22 @@ public class BbcScoresParser {
     private String normalizeLeague(String raw) {
         String lower = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
         if (lower.contains("premier league")) return "英超";
+        // UEFA Nations League before generic championship / other cups.
+        // Exclude Concacaf Nations League and similar regional competitions.
+        if ((lower.contains("uefa nations league")
+                || (lower.contains("nations league") && !lower.contains("concacaf")))
+                && !lower.contains("concacaf")) {
+            return "欧国联";
+        }
         if (lower.contains("championship")) return "英冠";
         if (lower.contains("la liga")) return "西甲";
         if (lower.contains("serie a")) return "意甲";
         if (lower.contains("bundesliga")) return "德甲";
         if (lower.contains("ligue 1")) return "法甲";
-        if (lower.contains("champions league")) return "欧冠";
+        // Men's UEFA Champions League only — Women's CL stays unmapped/other.
+        if (lower.contains("champions league")
+                && !lower.contains("women")
+                && !lower.contains("uwcl")) return "欧冠";
         if (lower.contains("europa league")) return "欧联";
         if (lower.contains("eredivisie")) return "荷甲";
         if (lower.contains("scottish premiership")) return "苏超";
@@ -403,6 +413,16 @@ public class BbcScoresParser {
     }
 
     private String leagueId(String raw, String href) {
+        // Prefer stable BBC ids for production-scoped European competitions.
+        String lowerRaw = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
+        if (lowerRaw.contains("nations league") && !lowerRaw.contains("concacaf")) {
+            return "bbc-nations-league";
+        }
+        if (lowerRaw.contains("champions league")
+                && !lowerRaw.contains("women")
+                && !lowerRaw.contains("uwcl")) {
+            return "bbc-champions-league";
+        }
         String candidate = href == null ? "" : href.replaceAll("/$", "");
         int slash = candidate.lastIndexOf('/');
         if (slash >= 0 && slash + 1 < candidate.length()) {

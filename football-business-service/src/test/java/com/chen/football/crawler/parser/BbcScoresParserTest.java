@@ -209,4 +209,57 @@ class BbcScoresParserTest {
         assertEquals("Arsenal", standings.get(0).getTeamName());
         assertEquals(0, standings.get(0).getPlayed());
     }
+
+    @Test
+    void mapsUefaChampionsAndNationsLeagueAndExcludesWomenAndConcacaf() {
+        String html = """
+                <div>
+                  <h2><a href="/sport/football/champions-league/table">UEFA Champions League</a></h2>
+                  <div data-event-id="ucl-1">
+                    <div data-participant-id="h" class="TeamHome"><div class="TeamNameWrapper"><span class="DesktopValue">Real Madrid</span></div></div>
+                    <div data-participant-id="a" class="TeamAway"><div class="TeamNameWrapper"><span class="DesktopValue">Bayern Munich</span></div></div>
+                    <span class="visually-hidden">kick off 20:00</span>
+                  </div>
+                  <h2><a href="/sport/football/nations-league/table">UEFA Nations League</a></h2>
+                  <div data-event-id="unl-1">
+                    <div data-participant-id="h" class="TeamHome"><div class="TeamNameWrapper"><span class="DesktopValue">Spain</span></div></div>
+                    <div data-participant-id="a" class="TeamAway"><div class="TeamNameWrapper"><span class="DesktopValue">Portugal</span></div></div>
+                    <span class="visually-hidden">kick off 19:45</span>
+                  </div>
+                  <h2><a href="/sport/football/womens-champions-league/table">Women's Champions League</a></h2>
+                  <div data-event-id="wcl-1">
+                    <div data-participant-id="h" class="TeamHome"><div class="TeamNameWrapper"><span class="DesktopValue">Barcelona Women</span></div></div>
+                    <div data-participant-id="a" class="TeamAway"><div class="TeamNameWrapper"><span class="DesktopValue">Lyon Women</span></div></div>
+                    <span class="visually-hidden">kick off 18:00</span>
+                  </div>
+                  <h2><a href="/sport/football/concacaf-nations-league/table">Concacaf Nations League</a></h2>
+                  <div data-event-id="cnl-1">
+                    <div data-participant-id="h" class="TeamHome"><div class="TeamNameWrapper"><span class="DesktopValue">USA</span></div></div>
+                    <div data-participant-id="a" class="TeamAway"><div class="TeamNameWrapper"><span class="DesktopValue">Mexico</span></div></div>
+                    <span class="visually-hidden">kick off 21:00</span>
+                  </div>
+                </div>
+                """;
+
+        List<CrawlerMatch> matches = parser.parseMatchList(html, LocalDate.of(2026, 9, 24));
+
+        assertEquals(4, matches.size());
+        CrawlerMatch ucl = matches.stream().filter(m -> "ucl-1".equals(m.getExternalMatchId())).findFirst().orElseThrow();
+        assertEquals("欧冠", ucl.getLeagueName());
+        assertEquals("bbc-champions-league", ucl.getLeagueId());
+
+        CrawlerMatch unl = matches.stream().filter(m -> "unl-1".equals(m.getExternalMatchId())).findFirst().orElseThrow();
+        assertEquals("欧国联", unl.getLeagueName());
+        assertEquals("bbc-nations-league", unl.getLeagueId());
+
+        CrawlerMatch wcl = matches.stream().filter(m -> "wcl-1".equals(m.getExternalMatchId())).findFirst().orElseThrow();
+        assertFalse("欧冠".equals(wcl.getLeagueName()));
+        assertNotEquals("bbc-champions-league", wcl.getLeagueId());
+
+        CrawlerMatch cnl = matches.stream().filter(m -> "cnl-1".equals(m.getExternalMatchId())).findFirst().orElseThrow();
+        assertFalse("欧国联".equals(cnl.getLeagueName()));
+        assertNotEquals("bbc-nations-league", cnl.getLeagueId());
+        assertTrue(cnl.getLeagueId().contains("concacaf") || cnl.getLeagueName().toLowerCase().contains("concacaf"));
+    }
+
 }

@@ -64,15 +64,18 @@ public class MatchCrawlerService {
     private static final long PRIMARY_SNAPSHOT_REUSE_MS = Duration.ofMinutes(4).toMillis();
     /** Production match scope.  Provider IDs are authoritative; names are a fallback for legacy rows. */
     private static final Set<String> PRODUCTION_LEAGUE_IDS = Set.of(
-            "39", "140", "135", "78", "61", "88", "94", "40",
+            "39", "140", "135", "78", "61", "88", "94", "40", "2",
             "PL", "PD", "SA", "BL1", "FL1", "DED", "PPL", "ELC",
             "bbc-premier-league", "bbc-spanish-la-liga", "bbc-italian-serie-a",
             "bbc-german-bundesliga", "bbc-french-ligue-one", "bbc-dutch-eredivisie",
-            "bbc-portuguese-primeira-liga", "bbc-championship"
+            "bbc-portuguese-primeira-liga", "bbc-championship",
+            "bbc-champions-league", "bbc-nations-league"
     );
     private static final Set<String> PRODUCTION_LEAGUE_NAMES = Set.of(
             "premierleague", "laliga", "primeradivision", "seriea", "bundesliga",
-            "ligue1", "eredivisie", "primeiraliga", "championship", "英超", "西甲", "德甲", "法甲", "意甲", "荷甲", "葡超", "英冠"
+            "ligue1", "eredivisie", "primeiraliga", "championship",
+            "uefachampionsleague", "championsleague", "uefanationsleague", "nationsleague",
+            "英超", "西甲", "德甲", "法甲", "意甲", "荷甲", "葡超", "英冠", "欧冠", "欧国联"
     );
 
     public MatchCrawlerService(CrawlerMatchMapper matchMapper,
