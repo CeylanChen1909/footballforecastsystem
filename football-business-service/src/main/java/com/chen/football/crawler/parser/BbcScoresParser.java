@@ -113,11 +113,32 @@ public class BbcScoresParser {
             if (tables.isEmpty()) tables = document.select("table[data-testid*=football]");
             // 欧国联等多组赛制：按表解析并挂上前置小组标题；单表赛事（如欧冠联赛阶段）group 为空。
             if (!tables.isEmpty()) {
-                for (Element table : tables) {
-                    String groupLabel = resolveGroupLabel(table);
-                    for (Element row : table.select("tbody tr")) {
-                        CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
-                        if (standing != null) standings.add(standing);
+                // 按文档顺序扫描标题+表格，保证欧国联多组页能挂上 “League A Group 1” 等标签。
+                String currentGroup = "";
+                Elements sequence = document.select("h1, h2, h3, h4, [class*=Heading], [data-testid*=heading], table[data-testid=football-table], table[data-testid*=football]");
+                boolean sawTableSelector = false;
+                for (Element node : sequence) {
+                    if (node.normalName().equals("table") || (node.hasAttr("data-testid") && node.attr("data-testid").contains("football"))) {
+                        if (!"table".equalsIgnoreCase(node.tagName())) continue;
+                        sawTableSelector = true;
+                        String groupLabel = currentGroup;
+                        if (groupLabel.isBlank()) groupLabel = resolveGroupLabel(node);
+                        for (Element row : node.select("tbody tr")) {
+                            CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
+                            if (standing != null) standings.add(standing);
+                        }
+                    } else {
+                        String label = clean(node.text());
+                        if (looksLikeGroupHeading(label)) currentGroup = shortenGroupLabel(label);
+                    }
+                }
+                if (!sawTableSelector) {
+                    for (Element table : tables) {
+                        String groupLabel = resolveGroupLabel(table);
+                        for (Element row : table.select("tbody tr")) {
+                            CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
+                            if (standing != null) standings.add(standing);
+                        }
                     }
                 }
             } else {
