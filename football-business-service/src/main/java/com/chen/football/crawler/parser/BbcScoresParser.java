@@ -167,20 +167,20 @@ public class BbcScoresParser {
         if (label == null || label.isBlank()) return false;
         String value = label.toLowerCase(java.util.Locale.ROOT);
         if (value.contains("concacaf") || value.contains("women") || value.contains("uwcl")) return false;
-        return value.matches(".*league\s+[a-d]\s+group\s+\d+.*")
-                || value.matches("group\s+[a-z0-9]+")
-                || value.matches(".*\bgroup\s+[a-z]\b.*");
+        return value.matches(".*league\\s+[a-d]\\s+group\\s+\\d+.*")
+                || value.matches("group\\s+[a-z0-9]+")
+                || value.matches(".*\\bgroup\\s+[a-z]\\b.*");
     }
 
     private String shortenGroupLabel(String label) {
         java.util.regex.Matcher leagueGroup = java.util.regex.Pattern
-                .compile("(League\s+[A-D]\s+Group\s+\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .compile("(League\\s+[A-D]\\s+Group\\s+\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                 .matcher(label);
-        if (leagueGroup.find()) return leagueGroup.group(1).replaceAll("\s+", " ").trim();
+        if (leagueGroup.find()) return leagueGroup.group(1).replaceAll("\\s+", " ").trim();
         java.util.regex.Matcher group = java.util.regex.Pattern
-                .compile("(Group\s+[A-Z0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .compile("(Group\\s+[A-Z0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                 .matcher(label);
-        if (group.find()) return group.group(1).replaceAll("\s+", " ").trim();
+        if (group.find()) return group.group(1).replaceAll("\\s+", " ").trim();
         return label.trim();
     }
 
