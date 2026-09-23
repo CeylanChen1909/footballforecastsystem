@@ -633,7 +633,7 @@ public class CrawlerController {
         try {
             String targetSeason = season == null || season.isBlank() ? getCurrentSeason() : season;
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsByLeagueName(leagueId, targetSeason);
-            return buildStandingsResponse(standings);
+            return buildStandingsResponse(standings, leagueId);
         } catch (Exception e) {
             return buildFailureResponse(e);
         }
@@ -648,7 +648,7 @@ public class CrawlerController {
         try {
             String targetSeason = season.isBlank() ? getCurrentSeason() : season;
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsFromDb(leagueId, targetSeason);
-            return buildStandingsResponse(standings);
+            return buildStandingsResponse(standings, leagueId);
         } catch (Exception e) {
             return buildFailureResponse(e);
         }
@@ -1288,7 +1288,7 @@ public class CrawlerController {
                                                         @RequestParam(name = "season", required = false) String season) {
         try {
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsByLeagueName(leagueName, season);
-            return buildStandingsResponse(standings);
+            return buildStandingsResponse(standings, leagueName);
         } catch (Exception e) {
             return buildFailureResponse(e);
         }
@@ -1322,7 +1322,7 @@ public class CrawlerController {
         AdminGuard.requirePermission("CRAWLER");
         try {
             List<CrawlerStanding> standings = standingCrawlerService.crawlStandingsByLeague(leagueName);
-            return buildStandingsResponse(standings);
+            return buildStandingsResponse(standings, leagueName);
         } catch (Exception e) {
             return buildFailureResponse(e);
         }
@@ -1609,7 +1609,6 @@ public class CrawlerController {
 
     private List<Map<String, Object>> formatStandings(List<CrawlerStanding> standings) {
         List<Map<String, Object>> result = new ArrayList<>();
-        int total = standings == null ? 0 : standings.size();
         String leagueName = standings == null ? "" : standings.stream()
                 .map(CrawlerStanding::getLeagueName)
                 .filter(Objects::nonNull)
@@ -1622,12 +1621,20 @@ public class CrawlerController {
                 .filter(value -> !value.isBlank())
                 .findFirst()
                 .orElse("");
+        Map<String, Long> groupTotals = new LinkedHashMap<>();
+        for (CrawlerStanding standing : standings == null ? List.<CrawlerStanding>of() : standings) {
+            String group = standing.getGroupLabel() == null || standing.getGroupLabel().isBlank() ? "" : standing.getGroupLabel();
+            groupTotals.merge(group, 1L, Long::sum);
+        }
 
         for (CrawlerStanding standing : standings == null ? List.<CrawlerStanding>of() : standings) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("rank", standing.getRank());
             String teamId = standing.getTeamId() != null ? standing.getTeamId() : "";
             String teamName = standing.getTeamName() != null ? standing.getTeamName() : "";
+            String groupLabel = standing.getGroupLabel() == null ? "" : standing.getGroupLabel();
+            item.put("group", groupLabel);
+            item.put("groupLabel", groupLabel);
             item.put("team", Map.of(
                     "id", teamId,
                     "canonicalKey", identityMappingService.teamKey(teamId, teamName),
@@ -1635,7 +1642,8 @@ public class CrawlerController {
                     "logo", standing.getTeamLogo() != null ? standing.getTeamLogo() : ""
             ));
             item.put("canonicalKey", identityMappingService.teamKey(teamId, teamName));
-            StandingZoneRules.Zone zone = StandingZoneRules.resolve(leagueName, season, standing.getRank(), total);
+            int zoneTotal = groupTotals.getOrDefault(groupLabel, (long) (standings == null ? 0 : standings.size())).intValue();
+            StandingZoneRules.Zone zone = StandingZoneRules.resolve(leagueName, season, standing.getRank(), zoneTotal);
             item.put("zone", zone.code());
             item.put("zoneLabel", zone.label());
             item.put("played", standing.getPlayed());
@@ -1662,6 +1670,10 @@ public class CrawlerController {
     }
 
     private Map<String, Object> buildStandingsResponse(List<CrawlerStanding> standings) {
+        return buildStandingsResponse(standings, "");
+    }
+
+    private Map<String, Object> buildStandingsResponse(List<CrawlerStanding> standings, String requestedLeague) {
         List<CrawlerStanding> safeStandings = standings == null ? List.of() : standings;
         List<Map<String, Object>> rows = formatStandings(safeStandings);
         String leagueName = safeStandings.stream()
@@ -1669,27 +1681,46 @@ public class CrawlerController {
                 .filter(Objects::nonNull)
                 .filter(value -> !value.isBlank())
                 .findFirst()
-                .orElse("");
+                .orElseGet(() -> leagueNameNormalizer.normalize(requestedLeague, requestedLeague, "bbc-scores"));
+        if (leagueName == null || leagueName.isBlank()) {
+            leagueName = requestedLeague == null ? "" : requestedLeague.trim();
+        }
         String season = safeStandings.stream()
                 .map(CrawlerStanding::getSeason)
                 .filter(Objects::nonNull)
                 .filter(value -> !value.isBlank())
                 .findFirst()
                 .orElse("");
+        List<String> groups = rows.stream()
+                .map(row -> String.valueOf(row.getOrDefault("group", "")))
+                .filter(v -> v != null && !v.isBlank() && !"null".equals(v))
+                .distinct()
+                .toList();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("response", rows);
         data.put("results", rows.size());
-        data.put("dataQuality", standingQuality(safeStandings));
+        data.put("leagueName", leagueName);
+        data.put("groups", groups);
+        data.put("groupCount", groups.size());
+        data.put("dataQuality", standingQuality(safeStandings, leagueName, groups.size()));
         data.put("zoneRules", StandingZoneRules.describe(leagueName, season, rows.size()));
         return Map.of("success", true, "message", "获取成功", "data", data);
     }
 
     private Map<String, Object> standingQuality(List<CrawlerStanding> standings) {
+        return standingQuality(standings, "", 0);
+    }
+
+    private Map<String, Object> standingQuality(List<CrawlerStanding> standings, String leagueName, int groupCount) {
         Map<String, Object> quality = new LinkedHashMap<>();
+        boolean uefaCup = "欧冠".equals(leagueName) || "欧国联".equals(leagueName)
+                || (leagueName != null && (leagueName.contains("Champions League") || leagueName.contains("Nations League")));
         if (standings == null || standings.isEmpty()) {
-            quality.put("status", "NO_DATA");
-            quality.put("statusText", "暂无积分榜");
-            quality.put("message", "该联赛当前没有已同步的积分榜数据");
+            quality.put("status", uefaCup ? "NOT_CONFIGURED" : "NO_DATA");
+            quality.put("statusText", uefaCup ? "暂无多组积分榜" : "暂无积分榜");
+            quality.put("message", uefaCup
+                    ? "该赛事积分榜尚未同步；欧国联为多组赛制，请稍后重试管理员刷新，不会回落国内联赛表"
+                    : "该联赛当前没有已同步的积分榜数据");
             quality.put("source", "");
             return quality;
         }
@@ -1704,10 +1735,14 @@ public class CrawlerController {
                 : hasPlayedData ? "AVAILABLE" : "PRESEASON";
         quality.put("status", status);
         quality.put("statusText", "STALE".equals(status) ? "数据较旧" : "PRESEASON".equals(status) ? "赛季尚未产生积分" : "数据可用");
+        String availableMessage = groupCount > 1
+                ? ("已按 " + groupCount + " 个小组返回 " + standings.size() + " 支球队")
+                : ("已返回 " + standings.size() + " 支球队");
         quality.put("message", "STALE".equals(status)
                 ? "积分榜超过 72 小时未更新，请谨慎参考"
                 : "PRESEASON".equals(status) ? "已返回 " + standings.size() + " 支球队，当前赛季尚未产生可验证积分"
-                : "已返回 " + standings.size() + " 支球队");
+                : availableMessage);
+        quality.put("groupCount", groupCount);
         quality.put("source", standings.stream().map(CrawlerStanding::getSource).filter(Objects::nonNull).filter(v -> !v.isBlank()).findFirst().orElse("unknown"));
         quality.put("lastSyncedAt", updatedAt == null ? "" : updatedAt.toString());
         quality.put("ageMinutes", ageMinutes);

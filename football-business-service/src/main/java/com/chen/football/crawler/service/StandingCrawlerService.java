@@ -12,7 +12,9 @@ import com.chen.football.crawler.parser.BbcScoresParser;
 import com.chen.football.crawler.parser.WorldFootballParser;
 import com.chen.football.crawler.parser.Zq123Parser;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,33 +41,38 @@ public class StandingCrawlerService {
     private final CrawlerTeamMapper crawlerTeamMapper;
     private final JuheFootballClient juheFootballClient;
     private final CrawlerProperties crawlerProperties;
+    private final JdbcTemplate jdbcTemplate;
 
     // 当前赛季
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
     private static final String CURRENT_SEASON = LocalDate.now(BUSINESS_ZONE).getYear() + "/" + (LocalDate.now(BUSINESS_ZONE).getYear() + 1);
 
-    // 联赛配置
-    private static final Map<String, String> LEAGUE_CONFIGS = Map.of(
-            "英超", "PL",
-            "西甲", "LALIGA",
-            "意甲", "SA",
-            "德甲", "BL1",
-            "法甲", "Ligue1",
-            "荷甲", "DED",
-            "葡超", "PPL",
-            "英冠", "ELC"
+    // 联赛配置（生产十项：八国内联赛 + 欧冠 + 欧国联）
+    private static final Map<String, String> LEAGUE_CONFIGS = Map.ofEntries(
+            Map.entry("英超", "PL"),
+            Map.entry("西甲", "LALIGA"),
+            Map.entry("意甲", "SA"),
+            Map.entry("德甲", "BL1"),
+            Map.entry("法甲", "Ligue1"),
+            Map.entry("荷甲", "DED"),
+            Map.entry("葡超", "PPL"),
+            Map.entry("英冠", "ELC"),
+            Map.entry("欧冠", "bbc-champions-league"),
+            Map.entry("欧国联", "bbc-nations-league")
     );
 
-    /** BBC 公开积分榜页面，和 BBC 赛程源共享球队 badge 与名称。 */
-    private static final Map<String, String> BBC_STANDING_PATHS = Map.of(
-            "英超", "premier-league",
-            "西甲", "spanish-la-liga",
-            "意甲", "italian-serie-a",
-            "德甲", "german-bundesliga",
-            "法甲", "french-ligue-one",
-            "荷甲", "dutch-eredivisie",
-            "葡超", "portuguese-primeira-liga",
-            "英冠", "championship"
+    /** BBC 公开积分榜页面，和 BBC 赛程源共享球队 badge 与名称。已核实男足路径。 */
+    private static final Map<String, String> BBC_STANDING_PATHS = Map.ofEntries(
+            Map.entry("英超", "premier-league"),
+            Map.entry("西甲", "spanish-la-liga"),
+            Map.entry("意甲", "italian-serie-a"),
+            Map.entry("德甲", "german-bundesliga"),
+            Map.entry("法甲", "french-ligue-one"),
+            Map.entry("荷甲", "dutch-eredivisie"),
+            Map.entry("葡超", "portuguese-primeira-liga"),
+            Map.entry("英冠", "championship"),
+            Map.entry("欧冠", "champions-league"),
+            Map.entry("欧国联", "nations-league")
     );
 
     // 聚合数据联赛 ID
@@ -89,13 +96,18 @@ public class StandingCrawlerService {
             Map.entry("法甲", "法甲"), Map.entry("ligue1", "法甲"), Map.entry("fl1", "法甲"), Map.entry("bbcfrenchligueone", "法甲"),
             Map.entry("荷甲", "荷甲"), Map.entry("eredivisie", "荷甲"), Map.entry("ded", "荷甲"), Map.entry("bbcdutcheredivisie", "荷甲"),
             Map.entry("葡超", "葡超"), Map.entry("primeiraliga", "葡超"), Map.entry("ppl", "葡超"), Map.entry("bbcportugueseprimeiraliga", "葡超"),
-            Map.entry("英冠", "英冠"), Map.entry("championship", "英冠"), Map.entry("elc", "英冠"), Map.entry("bbcchampionship", "英冠")
+            Map.entry("英冠", "英冠"), Map.entry("championship", "英冠"), Map.entry("elc", "英冠"), Map.entry("bbcchampionship", "英冠"),
+            Map.entry("欧冠", "欧冠"), Map.entry("championsleague", "欧冠"), Map.entry("uefachampionsleague", "欧冠"),
+            Map.entry("bbcchampionsleague", "欧冠"), Map.entry("cl", "欧冠"), Map.entry("2", "欧冠"),
+            Map.entry("欧国联", "欧国联"), Map.entry("nationsleague", "欧国联"), Map.entry("uefanationsleague", "欧国联"),
+            Map.entry("bbcnationsleague", "欧国联")
     );
 
     public StandingCrawlerService(CrawlerHttpClient httpClient, WorldFootballParser worldFootballParser, BbcScoresParser bbcScoresParser, Zq123Parser parser,
                                    CrawlerStandingMapper standingMapper, CrawlerTeamMapper crawlerTeamMapper,
                                    JuheFootballClient juheFootballClient,
-                                   CrawlerProperties crawlerProperties) {
+                                   CrawlerProperties crawlerProperties,
+                                   JdbcTemplate jdbcTemplate) {
         this.httpClient = httpClient;
         this.worldFootballParser = worldFootballParser;
         this.bbcScoresParser = bbcScoresParser;
@@ -104,6 +116,17 @@ public class StandingCrawlerService {
         this.crawlerTeamMapper = crawlerTeamMapper;
         this.juheFootballClient = juheFootballClient;
         this.crawlerProperties = crawlerProperties;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    void ensureGroupLabelColumn() {
+        if (!com.chen.football.common.service.RuntimeSchemaPolicy.runtimeDdlEnabled()) return;
+        try {
+            jdbcTemplate.execute("ALTER TABLE crawler_standings ADD COLUMN group_label VARCHAR(64) NULL");
+        } catch (Exception ignored) {
+            // column already exists
+        }
     }
 
     /**
@@ -132,6 +155,11 @@ public class StandingCrawlerService {
                 && !"web-crawler".equalsIgnoreCase(crawlerProperties.getPrimarySource())) {
             log.info("积分榜采集已停用：当前仅允许主源 {}", crawlerProperties.getPrimarySource());
             return new ArrayList<>();
+        }
+        // 欧冠/欧国联只信任已核实的 BBC 男足 table 页；禁止回落到国内联赛默认表。
+        if ("欧冠".equals(leagueName) || "欧国联".equals(leagueName)) {
+            log.warn("BBC 以外源不采集 {} 积分榜，避免套错国内联赛表", leagueName);
+            return getStandingsByLeagueName(leagueName, "");
         }
         String url = buildStandingsUrl(leagueId);
 
@@ -309,7 +337,7 @@ public class StandingCrawlerService {
             case "BL1" -> "https://www.worldfootball.net/competition/co25/germany-bundesliga/results-and-standings/";
             case "Ligue1" -> "https://www.worldfootball.net/competition/co34/france-ligue-1/results-and-standings/";
             case "CSL" -> "https://www.worldfootball.net/competition/co314/china-super-league/results-and-standings/";
-            case "CL" -> "https://www.worldfootball.net/competition/co19/uefa-champions-league/results-and-standings/";
+            case "CL", "bbc-champions-league" -> "https://www.worldfootball.net/competition/co19/uefa-champions-league/results-and-standings/";
             case "DED" -> "https://www.worldfootball.net/competition/co3/netherlands-eredivisie/results-and-standings/";
             case "PPL" -> "https://www.worldfootball.net/competition/co32/portugal-primeira-liga/results-and-standings/";
             case "ELC" -> "https://www.worldfootball.net/competition/co14/england-championship/results-and-standings/";
@@ -499,6 +527,8 @@ public class StandingCrawlerService {
             case "荷甲" -> List.of("荷甲", "Eredivisie", "DED", "bbc-dutch-eredivisie");
             case "葡超" -> List.of("葡超", "Primeira Liga", "PPL", "bbc-portuguese-primeira-liga");
             case "英冠" -> List.of("英冠", "Championship", "ELC", "bbc-championship");
+            case "欧冠" -> List.of("欧冠", "UEFA Champions League", "Champions League", "CL", "bbc-champions-league");
+            case "欧国联" -> List.of("欧国联", "UEFA Nations League", "Nations League", "bbc-nations-league");
             default -> List.of(canonicalName);
         };
     }

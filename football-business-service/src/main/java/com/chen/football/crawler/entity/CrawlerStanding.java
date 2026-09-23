@@ -36,6 +36,9 @@ public class CrawlerStanding {
     /** 球队Logo */
     private String teamLogo;
 
+    /** 小组/分区标签（如欧国联 League A Group 1）；单表赛事可为空 */
+    private String groupLabel;
+
     /** 排名 */
     @com.baomidou.mybatisplus.annotation.TableField("`rank`")
     private Integer rank;

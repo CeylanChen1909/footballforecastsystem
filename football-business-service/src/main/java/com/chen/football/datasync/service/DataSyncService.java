@@ -44,7 +44,7 @@ public class DataSyncService {
     @Value("${sync.season:0}")
     private int configuredSeason;
 
-    @Value("${sync.leagues:39,140,135,78,61,88,94,40}")
+    @Value("${sync.leagues:39,140,135,78,61,88,94,40,2,5}")
     private String leaguesConfig;
 
 
@@ -282,7 +282,7 @@ public class DataSyncService {
         for (String value : configured.split(",")) {
             try { ids.add(Integer.parseInt(value.trim())); } catch (NumberFormatException ignored) { }
         }
-        return ids.isEmpty() ? Set.of(39, 140, 135, 78, 61, 88, 94, 40) : ids;
+        return ids.isEmpty() ? Set.of(39, 140, 135, 78, 61, 88, 94, 40, 2, 5) : ids;
     }
 
     public void syncFixtures(int leagueId) {

@@ -276,6 +276,8 @@ public class MatchRecommendationService {
         if (key.contains("bbc-dutcheredivisie") || key.contains("eredivisie") || key.contains("荷甲")) return 11;
         if (key.contains("bbc-portugueseprimeiraliga") || key.contains("primeiraliga") || key.contains("葡超")) return 11;
         if (key.contains("bbc-championship") || key.contains("championship") || key.contains("英冠")) return 10;
+        if (key.contains("bbc-championsleague") || key.contains("championsleague") || key.contains("欧冠")) return 16;
+        if (key.contains("bbc-nationsleague") || key.contains("nationsleague") || key.contains("欧国联")) return 14;
         return 5;
     }
 

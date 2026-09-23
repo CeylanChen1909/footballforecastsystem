@@ -30,7 +30,12 @@ public final class StandingZoneRules {
             Map.entry("比甲", "比甲"), Map.entry("jupilerproleague", "比甲"), Map.entry("belgium", "比甲"),
             Map.entry("捷克甲", "捷克甲"), Map.entry("czechfirstleague", "捷克甲"), Map.entry("czechia", "捷克甲"),
             Map.entry("土超", "土超"), Map.entry("superlig", "土超"), Map.entry("turkiye", "土超"),
-            Map.entry("乌超", "乌超"), Map.entry("premierleagueukraine", "乌超"), Map.entry("ukraine", "乌超")
+            Map.entry("乌超", "乌超"), Map.entry("premierleagueukraine", "乌超"), Map.entry("ukraine", "乌超"),
+            // 赛事自身表格（不是国内联赛“欧冠区”）
+            Map.entry("欧冠", "欧冠"), Map.entry("championsleague", "欧冠"), Map.entry("uefachampionsleague", "欧冠"),
+            Map.entry("bbcchampionsleague", "欧冠"),
+            Map.entry("欧国联", "欧国联"), Map.entry("nationsleague", "欧国联"), Map.entry("uefanationsleague", "欧国联"),
+            Map.entry("bbcnationsleague", "欧国联")
     );
 
     private StandingZoneRules() { }
@@ -136,6 +141,10 @@ public final class StandingZoneRules {
             case "德甲" -> rule(league, season, "按联赛基础名次：前四欧冠正赛，第 5 名欧联正赛，第 6 名欧协联资格赛。",
                     bands(band("CHAMPIONS_LEAGUE", "欧冠正赛", 1, 4), band("EUROPA_LEAGUE", "欧联正赛", 5, 5), band("CONFERENCE_LEAGUE_QUALIFYING", "欧协联资格赛", 6, 6)), 2, 2);
             case "比甲", "捷克甲", "土超", "乌超" -> singleChampionsLeagueRule(league, season);
+            case "欧冠" -> rule(league, season, "欧冠联赛阶段积分榜：不按国内联赛欧战名次区着色；排名仅反映联赛阶段成绩。",
+                    List.of(), 0, 0);
+            case "欧国联" -> rule(league, season, "欧国联为多组赛制：按组展示组内排名，不套用国内联赛欧冠区规则。",
+                    List.of(), 0, 0);
             default -> rule(league, season, "该联赛尚未配置欧战名次规则；不会用默认前四规则伪造欧冠区域。",
                     List.of(), 0, 0);
         };
@@ -160,7 +169,7 @@ public final class StandingZoneRules {
     }
 
     private static String canonicalLeague(String value) {
-        String key = value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace(" ", "");
+        String key = value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_\\-]+", "");
         return LEAGUE_ALIASES.getOrDefault(key, value == null || value.isBlank() ? "未知联赛" : value.trim());
     }
 }

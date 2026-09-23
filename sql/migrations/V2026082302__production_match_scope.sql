@@ -1,21 +1,29 @@
--- Keep the production match table aligned with the eight supported leagues.
--- This is intentionally explicit and reviewable: run scripts/apply-migrations.ps1
+-- Keep the production match table aligned with the production competition scope
+-- (eight domestic leagues + UEFA Champions League + UEFA Nations League).
+-- DO NOT re-run this DELETE on a live database that already contains UCL/UNL rows
+-- unless you have a fresh backup and have reviewed the allowlist below.
+-- This script is intentionally explicit and reviewable: run scripts/apply-migrations.ps1
 -- only after a database backup.  Provider rows are not deleted merely because
 -- their source is disabled; source visibility is controlled by CRAWLER_PRIMARY_ONLY.
+--
+-- SAFETY: the allowlist MUST include bbc-champions-league / bbc-nations-league and
+-- their Chinese names (欧冠 / 欧国联). Never copy an older eight-league-only variant.
 START TRANSACTION;
 
 DELETE FROM crawler_matches
 WHERE NOT (
   (TRIM(COALESCE(league_id, '')) <> '' AND LOWER(TRIM(league_id)) IN (
-    '39','140','135','78','61','88','94','40','pl','pd','sa','bl1','fl1','ded','ppl','elc',
+    '39','140','135','78','61','88','94','40','2','5','pl','pd','sa','bl1','fl1','ded','ppl','elc',
     'bbc-premier-league','bbc-spanish-la-liga','bbc-italian-serie-a','bbc-german-bundesliga',
-    'bbc-french-ligue-one','bbc-dutch-eredivisie','bbc-portuguese-primeira-liga','bbc-championship'
+    'bbc-french-ligue-one','bbc-dutch-eredivisie','bbc-portuguese-primeira-liga','bbc-championship',
+    'bbc-champions-league','bbc-nations-league'
   ))
   OR
   (TRIM(COALESCE(league_id, '')) = '' AND (
-    TRIM(league_name) IN ('英超','西甲','意甲','德甲','法甲','荷甲','葡超','英冠')
+    TRIM(league_name) IN ('英超','西甲','意甲','德甲','法甲','荷甲','葡超','英冠','欧冠','欧国联')
     OR LOWER(REPLACE(REPLACE(REPLACE(TRIM(league_name), ' ', ''), '-', ''), '_', '')) IN (
-      'premierleague','laliga','primeradivision','seriea','bundesliga','ligue1','eredivisie','primeiraliga','championship'
+      'premierleague','laliga','primeradivision','seriea','bundesliga','ligue1','eredivisie','primeiraliga','championship',
+      'uefachampionsleague','championsleague','uefanationsleague','nationsleague'
     )
   ))
 );

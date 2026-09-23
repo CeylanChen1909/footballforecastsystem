@@ -21,7 +21,7 @@ public class DataSyncAdminController {
     @Value("${sync.season:0}")
     private int configuredSeason;
 
-    @Value("${sync.leagues:39,140,135,78,61,2}")
+    @Value("${sync.leagues:39,140,135,78,61,88,94,40,2,5}")
     private String leagues;
 
     @Value("${sync.cron:0 30 */6 * * ?}")

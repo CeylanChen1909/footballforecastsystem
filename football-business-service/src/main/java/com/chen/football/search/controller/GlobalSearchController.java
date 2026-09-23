@@ -109,7 +109,26 @@ public class GlobalSearchController {
                 Map.entry("法甲", List.of("Ligue 1")),
                 Map.entry("荷甲", List.of("Eredivisie")),
                 Map.entry("葡超", List.of("Primeira Liga")),
-                Map.entry("英冠", List.of("Championship"))
+                Map.entry("英冠", List.of("Championship")),
+                Map.entry("欧冠", List.of("UEFA Champions League", "Champions League", "bbc-champions-league")),
+                Map.entry("欧国联", List.of("UEFA Nations League", "Nations League", "bbc-nations-league")),
+                Map.entry("西班牙", List.of("Spain")),
+                Map.entry("法国", List.of("France")),
+                Map.entry("德国", List.of("Germany")),
+                Map.entry("意大利", List.of("Italy")),
+                Map.entry("葡萄牙", List.of("Portugal")),
+                Map.entry("荷兰", List.of("Netherlands")),
+                Map.entry("英格兰", List.of("England")),
+                Map.entry("苏格兰", List.of("Scotland")),
+                Map.entry("比利时", List.of("Belgium")),
+                Map.entry("克罗地亚", List.of("Croatia")),
+                Map.entry("丹麦", List.of("Denmark")),
+                Map.entry("挪威", List.of("Norway")),
+                Map.entry("瑞典", List.of("Sweden")),
+                Map.entry("波兰", List.of("Poland")),
+                Map.entry("土耳其", List.of("Turkey")),
+                Map.entry("瑞士", List.of("Switzerland")),
+                Map.entry("威尔士", List.of("Wales"))
         );
         for (Map.Entry<String, List<String>> entry : aliases.entrySet()) {
             String aliasKey = entry.getKey().toLowerCase(Locale.ROOT);

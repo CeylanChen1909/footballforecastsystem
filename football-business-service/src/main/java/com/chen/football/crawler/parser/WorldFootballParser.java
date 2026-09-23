@@ -271,7 +271,8 @@ public class WorldFootballParser {
         if (text.contains("serie a")) return "意甲";
         if (text.contains("bundesliga")) return "德甲";
         if (text.contains("ligue 1")) return "法甲";
-        if (text.contains("champions league")) return "欧冠";
+        if (text.contains("champions league") && !text.contains("women") && !text.contains("uwcl")) return "欧冠";
+        if (text.contains("nations league") && !text.contains("concacaf")) return "欧国联";
         return fallback == null || fallback.isBlank() ? "worldfootball" : fallback;
     }
 

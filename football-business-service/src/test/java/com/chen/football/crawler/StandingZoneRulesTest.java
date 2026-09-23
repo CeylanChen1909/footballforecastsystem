@@ -47,4 +47,15 @@ class StandingZoneRulesTest {
         List<?> zones = (List<?>) description.get("zones");
         assertTrue(zones.stream().anyMatch(zone -> ((Map<?, ?>) zone).get("code").equals("CHAMPIONS_LEAGUE_QUALIFYING")));
     }
+
+    @Test
+    void uclAndUnlDoNotReuseDomesticChampionsZones() {
+        assertEquals("", StandingZoneRules.resolve("欧冠", "2026", 1, 36).code());
+        assertEquals("", StandingZoneRules.resolve("欧国联", "2026", 1, 4).code());
+        assertEquals("", StandingZoneRules.resolve("bbc-champions-league", "2026", 4, 36).code());
+        Map<String, Object> ucl = StandingZoneRules.describe("欧冠", "2026", 36);
+        assertTrue(String.valueOf(ucl.get("note")).contains("联赛阶段"));
+        Map<String, Object> unl = StandingZoneRules.describe("欧国联", "2026", 4);
+        assertTrue(String.valueOf(unl.get("note")).contains("多组"));
+    }
 }

@@ -8,7 +8,7 @@ import com.chen.football.crawler.entity.CrawlerTeam;
 import java.util.Locale;
 import java.util.Set;
 
-/** Shared read-time visibility policy for the production eight-league set. */
+/** Shared read-time visibility policy for the production competition scope (eight domestic leagues + UCL + UNL). */
 public final class ProductionLeagueScope {
     private static final Set<String> IDS = Set.of(
             "39", "140", "135", "78", "61", "88", "94", "40", "2",

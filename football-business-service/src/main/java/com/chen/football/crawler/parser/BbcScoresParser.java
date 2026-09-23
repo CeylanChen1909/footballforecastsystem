@@ -109,23 +109,86 @@ public class BbcScoresParser {
         if (html == null || html.isBlank()) return standings;
         try {
             var document = Jsoup.parse(html);
-            Elements rows = document.select("table[data-testid=football-table] tbody tr");
-            if (rows.isEmpty()) rows = document.select("table[data-testid*=football] tbody tr");
-            // BBC 偶尔会在地区页移除 data-testid，但表格语义仍然存在；
-            // parseStandingRow 会继续校验排名、球队链接和 9 个统计列，避免把其他表格误当积分榜。
-            if (rows.isEmpty()) rows = document.select("table tbody tr");
-            for (Element row : rows) {
-                CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season);
-                if (standing != null) standings.add(standing);
+            Elements tables = document.select("table[data-testid=football-table]");
+            if (tables.isEmpty()) tables = document.select("table[data-testid*=football]");
+            // 欧国联等多组赛制：按表解析并挂上前置小组标题；单表赛事（如欧冠联赛阶段）group 为空。
+            if (!tables.isEmpty()) {
+                for (Element table : tables) {
+                    String groupLabel = resolveGroupLabel(table);
+                    for (Element row : table.select("tbody tr")) {
+                        CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
+                        if (standing != null) standings.add(standing);
+                    }
+                }
+            } else {
+                // BBC 偶尔会在地区页移除 data-testid，但表格语义仍然存在；
+                // parseStandingRow 会继续校验排名、球队链接和 9 个统计列，避免把其他表格误当积分榜。
+                Elements rows = document.select("table tbody tr");
+                for (Element row : rows) {
+                    CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, "");
+                    if (standing != null) standings.add(standing);
+                }
             }
-            log.info("[BBC] 解析到 {} 条积分榜，league={}", standings.size(), leagueName);
+            log.info("[BBC] 解析到 {} 条积分榜，league={}, groups={}", standings.size(), leagueName,
+                    standings.stream().map(CrawlerStanding::getGroupLabel).filter(v -> v != null && !v.isBlank()).distinct().count());
         } catch (Exception e) {
             log.warn("[BBC] 积分榜解析失败，league={}, error={}", leagueName, e.getMessage());
         }
         return standings;
     }
 
+    /** 取表格前方最近的 “League A Group 1” / “Group A” 一类标题。 */
+    private String resolveGroupLabel(Element table) {
+        if (table == null) return "";
+        Element cursor = table.previousElementSibling();
+        for (int i = 0; i < 8 && cursor != null; i++) {
+            String label = clean(cursor.text());
+            if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
+            cursor = cursor.previousElementSibling();
+        }
+        Element parent = table.parent();
+        if (parent != null) {
+            Element heading = parent.selectFirst("h1, h2, h3, h4, [class*=Heading], [data-testid*=heading]");
+            if (heading != null) {
+                String label = clean(heading.text());
+                if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
+            }
+            Element prev = parent.previousElementSibling();
+            for (int i = 0; i < 6 && prev != null; i++) {
+                String label = clean(prev.text());
+                if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
+                prev = prev.previousElementSibling();
+            }
+        }
+        return "";
+    }
+
+    private boolean looksLikeGroupHeading(String label) {
+        if (label == null || label.isBlank()) return false;
+        String value = label.toLowerCase(java.util.Locale.ROOT);
+        if (value.contains("concacaf") || value.contains("women") || value.contains("uwcl")) return false;
+        return value.matches(".*league\s+[a-d]\s+group\s+\d+.*")
+                || value.matches("group\s+[a-z0-9]+")
+                || value.matches(".*\bgroup\s+[a-z]\b.*");
+    }
+
+    private String shortenGroupLabel(String label) {
+        java.util.regex.Matcher leagueGroup = java.util.regex.Pattern
+                .compile("(League\s+[A-D]\s+Group\s+\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(label);
+        if (leagueGroup.find()) return leagueGroup.group(1).replaceAll("\s+", " ").trim();
+        java.util.regex.Matcher group = java.util.regex.Pattern
+                .compile("(Group\s+[A-Z0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(label);
+        if (group.find()) return group.group(1).replaceAll("\s+", " ").trim();
+        return label.trim();
+    }
+
     private CrawlerStanding parseStandingRow(Element row, String leagueName, String leagueId, String season) {
+        return parseStandingRow(row, leagueName, leagueId, season, "");
+    }
+
+    private CrawlerStanding parseStandingRow(Element row, String leagueName, String leagueId, String season, String groupLabel) {
         Elements cells = row.select("td");
         if (cells.size() < 9) return null;
         Element teamCell = cells.get(0);
@@ -150,6 +213,7 @@ public class BbcScoresParser {
         standing.setTeamId(teamLink == null ? "" : teamSlug(teamLink.attr("href")));
         Element badge = teamCell.selectFirst("img[data-testid^=badge-img]");
         standing.setTeamLogo(badge == null ? "" : clean(badge.attr("src")));
+        standing.setGroupLabel(groupLabel == null ? "" : groupLabel.trim());
         standing.setPlayed(valueFor(cells, "Played", 1));
         standing.setWins(valueFor(cells, "Won", 2));
         standing.setDraws(valueFor(cells, "Drawn", 3));
@@ -402,9 +466,7 @@ public class BbcScoresParser {
         if (lower.contains("bundesliga")) return "德甲";
         if (lower.contains("ligue 1")) return "法甲";
         // Men's UEFA Champions League only — Women's CL stays unmapped/other.
-        if (lower.contains("champions league")
-                && !lower.contains("women")
-                && !lower.contains("uwcl")) return "欧冠";
+        if (lower.contains("champions league") && !lower.contains("women")) return "欧冠";
         if (lower.contains("europa league")) return "欧联";
         if (lower.contains("eredivisie")) return "荷甲";
         if (lower.contains("scottish premiership")) return "苏超";
@@ -413,16 +475,6 @@ public class BbcScoresParser {
     }
 
     private String leagueId(String raw, String href) {
-        // Prefer stable BBC ids for production-scoped European competitions.
-        String lowerRaw = raw == null ? "" : raw.toLowerCase(Locale.ROOT);
-        if (lowerRaw.contains("nations league") && !lowerRaw.contains("concacaf")) {
-            return "bbc-nations-league";
-        }
-        if (lowerRaw.contains("champions league")
-                && !lowerRaw.contains("women")
-                && !lowerRaw.contains("uwcl")) {
-            return "bbc-champions-league";
-        }
         String candidate = href == null ? "" : href.replaceAll("/$", "");
         int slash = candidate.lastIndexOf('/');
         if (slash >= 0 && slash + 1 < candidate.length()) {
