@@ -111,34 +111,14 @@ public class BbcScoresParser {
             var document = Jsoup.parse(html);
             Elements tables = document.select("table[data-testid=football-table]");
             if (tables.isEmpty()) tables = document.select("table[data-testid*=football]");
-            // 欧国联等多组赛制：按表解析并挂上前置小组标题；单表赛事（如欧冠联赛阶段）group 为空。
+            // 欧国联等多组赛制：每张表独立解析；BBC 的小组标题在 OuterTableWrapper 外侧的 h2，
+            // 需沿祖先链找前一个 StageHeading，不能只看 table.previousElementSibling。
             if (!tables.isEmpty()) {
-                // 按文档顺序扫描标题+表格，保证欧国联多组页能挂上 “League A Group 1” 等标签。
-                String currentGroup = "";
-                Elements sequence = document.select("h1, h2, h3, h4, [class*=Heading], [data-testid*=heading], table[data-testid=football-table], table[data-testid*=football]");
-                boolean sawTableSelector = false;
-                for (Element node : sequence) {
-                    if (node.normalName().equals("table") || (node.hasAttr("data-testid") && node.attr("data-testid").contains("football"))) {
-                        if (!"table".equalsIgnoreCase(node.tagName())) continue;
-                        sawTableSelector = true;
-                        String groupLabel = currentGroup;
-                        if (groupLabel.isBlank()) groupLabel = resolveGroupLabel(node);
-                        for (Element row : node.select("tbody tr")) {
-                            CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
-                            if (standing != null) standings.add(standing);
-                        }
-                    } else {
-                        String label = clean(node.text());
-                        if (looksLikeGroupHeading(label)) currentGroup = shortenGroupLabel(label);
-                    }
-                }
-                if (!sawTableSelector) {
-                    for (Element table : tables) {
-                        String groupLabel = resolveGroupLabel(table);
-                        for (Element row : table.select("tbody tr")) {
-                            CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
-                            if (standing != null) standings.add(standing);
-                        }
+                for (Element table : tables) {
+                    String groupLabel = resolveGroupLabel(table);
+                    for (Element row : table.select("tbody tr")) {
+                        CrawlerStanding standing = parseStandingRow(row, leagueName, leagueId, season, groupLabel);
+                        if (standing != null) standings.add(standing);
                     }
                 }
             } else {
@@ -158,29 +138,44 @@ public class BbcScoresParser {
         return standings;
     }
 
-    /** 取表格前方最近的 “League A Group 1” / “Group A” 一类标题。 */
+    /**
+     * 取表格前方最近的 “League A Group 1” / “Group A” 一类标题。
+     * BBC Nations League DOM: h2.StageHeading 与 OuterTableWrapper 是兄弟，table 嵌在 wrapper 内。
+     */
     private String resolveGroupLabel(Element table) {
         if (table == null) return "";
-        Element cursor = table.previousElementSibling();
-        for (int i = 0; i < 8 && cursor != null; i++) {
-            String label = clean(cursor.text());
-            if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
-            cursor = cursor.previousElementSibling();
-        }
-        Element parent = table.parent();
-        if (parent != null) {
-            Element heading = parent.selectFirst("h1, h2, h3, h4, [class*=Heading], [data-testid*=heading]");
-            if (heading != null) {
-                String label = clean(heading.text());
-                if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
+        Element node = table;
+        for (int depth = 0; depth < 8 && node != null; depth++) {
+            Element cursor = node.previousElementSibling();
+            for (int i = 0; i < 10 && cursor != null; i++) {
+                String fromCursor = extractGroupLabel(cursor);
+                if (!fromCursor.isBlank()) return fromCursor;
+                cursor = cursor.previousElementSibling();
             }
-            Element prev = parent.previousElementSibling();
-            for (int i = 0; i < 6 && prev != null; i++) {
-                String label = clean(prev.text());
-                if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
-                prev = prev.previousElementSibling();
+            Element heading = node.selectFirst("h1, h2, h3, h4, [class*=StageHeading], [class*=Heading]");
+            if (heading != null && heading != table && !heading.parents().contains(table)) {
+                String fromHeading = extractGroupLabel(heading);
+                if (!fromHeading.isBlank()) return fromHeading;
             }
+            node = node.parent();
         }
+        return "";
+    }
+
+    private String extractGroupLabel(Element element) {
+        if (element == null) return "";
+        // Prefer compact heading text; avoid scanning huge wrappers that concatenate many groups.
+        String own = clean(element.ownText());
+        if (looksLikeGroupHeading(own)) return shortenGroupLabel(own);
+        String label = clean(element.text());
+        if (label.length() > 80) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("(League\\s+[A-D]\\s+Group\\s+\\d+|Group\\s+[A-Z0-9]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(label);
+            if (matcher.find()) return shortenGroupLabel(matcher.group(1));
+            return "";
+        }
+        if (looksLikeGroupHeading(label)) return shortenGroupLabel(label);
         return "";
     }
 
