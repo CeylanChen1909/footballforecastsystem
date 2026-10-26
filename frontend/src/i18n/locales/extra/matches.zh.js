@@ -16,6 +16,8 @@ export default {
   'matches.headingTomorrow': '明日比赛',
   'matches.headingDate': '{date}比赛',
   'matches.matchCount': '{count} 场',
+  'matches.matchCountOne': '1 场',
+  'matches.matchCountUnitOne': '场',
   'matches.matchCountUnit': '场',
 
   'matches.allLeagues': '全部联赛',

@@ -16,6 +16,8 @@ export default {
   'matches.headingTomorrow': "Tomorrow's matches",
   'matches.headingDate': 'Matches on {date}',
   'matches.matchCount': '{count} matches',
+  'matches.matchCountOne': '1 match',
+  'matches.matchCountUnitOne': 'match',
   'matches.matchCountUnit': 'matches',
 
   'matches.allLeagues': 'All leagues',

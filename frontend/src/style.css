@@ -658,12 +658,8 @@ body {
 
 .el-button {
   --el-button-border-radius: 8px;
-  --el-font-size-base: 13px;
-  font-weight: 600;
   letter-spacing: -0.005em;
 }
-.el-button--small { height: 30px; padding: 0 12px; }
-.el-button--default { height: 34px; padding: 0 14px; }
 .el-button--primary { font-weight: 650; box-shadow: 0 1px 2px rgba(8, 74, 54, 0.18); }
 .el-button.is-text:not(.is-disabled):hover { background: var(--ff-surface-quiet); }
 

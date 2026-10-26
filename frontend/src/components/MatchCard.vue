@@ -3,11 +3,12 @@
     class="match-card"
     :class="{ 'is-focus': focused, 'is-live': isLive }"
     :data-match-id="getMatchId(match)"
+    :data-state="state"
   >
     <span v-if="focused" class="focus-bar" aria-hidden="true"></span>
 
     <div class="match-when">
-      <span class="when-primary" :class="{ 'is-live': isLive }">
+      <span class="when-primary" :class="{ 'is-live': isLive, 'is-status': whenIsStatus }">
         <span v-if="isLive" class="live-dot" aria-hidden="true"></span>{{ whenPrimary }}
       </span>
       <span v-if="whenSecondary" class="when-secondary">{{ whenSecondary }}</span>
@@ -125,15 +126,20 @@ const isLive = computed(() => isLiveMatch(props.match))
 const isFinished = computed(() => isFinishedMatch(props.match))
 const matchTimestamp = computed(() => getMatchTimestamp(props.match))
 const statusLabel = computed(() => getStatusText(props.match))
-const statusType = computed(() => isLive.value ? 'danger' : isFinished.value ? 'success' : getDisplayStatusKey(props.match) === 'STALE' ? 'warning' : 'info')
-void statusType
+/* Kept for row state styling (stale / postponed fixtures read differently). */
+const state = computed(() => isLive.value
+  ? 'live'
+  : isFinished.value
+    ? 'finished'
+    : getDisplayStatusKey(props.match) === 'STALE' ? 'stale' : 'scheduled')
 const primaryActionLabel = computed(() => isFinished.value ? t('matches.viewReview') : t('matches.viewPrediction'))
 
 /* Left rail carries the kickoff time (or FT / live state), so the score keeps
    the centre column and every row shares the same left edge. */
+const whenIsStatus = computed(() => isLive.value || isFinished.value)
 const whenPrimary = computed(() => {
-  if (isLive.value) return statusLabel.value
-  if (isFinished.value) return 'FT'
+  // Localised state, never a hardcoded "FT": the zh UI must read 已结束.
+  if (whenIsStatus.value) return statusLabel.value
   return matchTimestamp.value ? formatTime(props.match) : t('matches.timePending')
 })
 const whenSecondary = computed(() => {
@@ -167,7 +173,7 @@ const formatTime = match => {
 .match-card {
   position: relative;
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 74px minmax(0, 1fr) auto;
+  grid-template-columns: 72px minmax(0, 1fr) 74px minmax(0, 1fr) auto;
   grid-template-areas:
     'when home center away actions'
     'when meta meta meta meta';
@@ -212,6 +218,7 @@ const formatTime = match => {
   white-space: nowrap;
 }
 .when-primary.is-live { color: var(--ff-live); font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.when-primary.is-status { font-size: 11.5px; font-weight: 650; letter-spacing: 0.005em; }
 .when-secondary {
   font-size: 10px;
   font-weight: 600;
@@ -220,7 +227,7 @@ const formatTime = match => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 62px;
+  max-width: 72px;
 }
 
 .match-side {
@@ -380,7 +387,7 @@ const formatTime = match => {
 
 @media (max-width: 860px) {
   .match-card {
-    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
     grid-template-areas:
       'when home center'
       'when away center'
@@ -392,7 +399,8 @@ const formatTime = match => {
     min-height: 0;
   }
   .match-when { align-items: flex-start; text-align: left; }
-  .when-secondary { max-width: 48px; }
+  .when-secondary { max-width: 58px; }
+  .when-primary.is-status { font-size: 10.5px; }
   .match-side--home,
   .match-side--away { justify-content: flex-start; }
   .match-side--home { flex-direction: row-reverse; justify-content: flex-end; }

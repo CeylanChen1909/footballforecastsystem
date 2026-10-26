@@ -24,7 +24,7 @@
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
             <span>{{ item.label }}</span><strong>{{ item.day }}</strong>
-            <small class="rail-meta">{{ item.weekday }}<template v-if="countsReady"> · {{ item.count }}<span class="rail-unit">{{ ' ' + t('matches.matchCountUnit') }}</span></template><template v-else> · …</template></small>
+            <small class="rail-meta">{{ item.weekday }}<template v-if="countsReady"> · {{ item.count }}<span class="rail-unit">{{ ' ' + matchCountUnitLabel(item.count) }}</span></template><template v-else> · …</template></small>
           </button>
           <button type="button" class="date-rail-arrow" :disabled="loading" :aria-label="t('matches.nextDay')" :title="t('matches.nextDay')" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
@@ -65,7 +65,7 @@
                   <div v-for="lg in group.leagueGroups" :key="lg.name" class="league-group">
                     <div class="league-group-header">
                       <span class="league-name">{{ leagueLabel(lg.name, lg.displayName) }}</span>
-                      <span class="league-count">{{ t('matches.matchCount', { count: lg.items.length }) }}</span>
+                      <span class="league-count">{{ matchCountLabel(lg.items.length) }}</span>
                     </div>
                     <div class="matches-grid">
                       <MatchCard
@@ -394,6 +394,8 @@ const leagueLabel = (name, displayName = '') => {
   const key = LEAGUE_LABEL_KEYS[name]
   return key ? t(key) : name
 }
+const matchCountLabel = (count) => (count === 1 ? t('matches.matchCountOne') : t('matches.matchCount', { count }))
+const matchCountUnitLabel = (count) => (count === 1 ? t('matches.matchCountUnitOne') : t('matches.matchCountUnit'))
 const leagueOptions = computed(() => [
   { label: t('matches.allLeagues'), value: 'all' },
   ...PRODUCTION_LEAGUES.map(name => ({ label: leagueLabel(name), value: name }))
