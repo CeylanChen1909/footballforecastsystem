@@ -24,7 +24,7 @@
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
             <span>{{ item.label }}</span><strong>{{ item.day }}</strong>
-            <small class="rail-meta">{{ item.weekday }}<template v-if="countsReady"> · {{ item.count }}<span class="rail-unit"> {{ t('matches.matchCountUnit') }}</span></template><template v-else> · …</template></small>
+            <small class="rail-meta">{{ item.weekday }}<template v-if="countsReady"> · {{ item.count }}<span class="rail-unit">{{ ' ' + t('matches.matchCountUnit') }}</span></template><template v-else> · …</template></small>
           </button>
           <button type="button" class="date-rail-arrow" :disabled="loading" :aria-label="t('matches.nextDay')" :title="t('matches.nextDay')" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
