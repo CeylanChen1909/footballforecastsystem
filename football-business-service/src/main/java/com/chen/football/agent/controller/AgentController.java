@@ -13,6 +13,7 @@ import com.chen.football.agent.service.AgentRateLimitService;
 import com.chen.football.agent.service.AgentCancellationRegistry;
 import com.chen.football.agent.service.AgentMetricsService;
 import com.chen.football.agent.service.AgentEventBroadcaster;
+import com.chen.football.agent.service.AgentText;
 import com.chen.football.agent.service.AgentConcurrencyGuard;
 import com.chen.football.agent.service.FootballAgentService;
 import com.chen.football.agent.service.FootballChatAgentService;
@@ -73,18 +74,21 @@ public class AgentController {
 
     @PostMapping("/analyze")
     public ApiResponse<AgentAnalysisResponse> analyze(@RequestBody AgentAnalysisRequest request) {
-        requireLoginAndRateLimit();
-        requireTokenBudget(2048);
-        if (request == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "分析请求不能为空");
+        String lang = AgentText.resolve(null);
+        requireLoginAndRateLimit(lang);
+        requireTokenBudget(2048, lang);
+        if (request == null) throw error(HttpStatus.BAD_REQUEST, lang, "分析请求不能为空", "Analysis request is required.");
         if (request.prompt() != null && request.prompt().length() > 4000) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "分析问题不能超过 4000 个字符");
+            throw error(HttpStatus.PAYLOAD_TOO_LARGE, lang, "分析问题不能超过 4000 个字符",
+                    "The analysis question must not exceed 4000 characters.");
         }
         Long userId = UserContext.getUserId();
         if (!concurrencyGuard.tryAcquire(userId)) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Agent 当前正在处理较多请求，请稍后重试");
+            throw error(HttpStatus.SERVICE_UNAVAILABLE, lang, "Agent 当前正在处理较多请求，请稍后重试",
+                    "The assistant is handling many requests. Please try again later.");
         }
         try {
-            return ApiResponse.ok(agentService.analyze(request));
+            return ApiResponse.ok(agentService.analyze(request, lang));
         } finally {
             concurrencyGuard.release(userId);
         }
@@ -92,17 +96,19 @@ public class AgentController {
 
     @PostMapping("/chat")
     public ApiResponse<AgentChatResponse> chat(@RequestBody AgentChatRequest request) {
-        request = normalizeChatRequest(request);
-        validateChatRequest(request);
-        requireSessionAccess(request == null ? null : request.sessionId());
-        requireRateLimit();
-        requireTokenBudget(request == null || request.maxTokens() == null ? 2048 : request.maxTokens());
+        String lang = AgentText.resolve(null);
+        request = normalizeChatRequest(request, lang);
+        validateChatRequest(request, lang);
+        requireSessionAccess(request == null ? null : request.sessionId(), lang);
+        requireRateLimit(lang);
+        requireTokenBudget(request == null || request.maxTokens() == null ? 2048 : request.maxTokens(), lang);
         Long userId = UserContext.getUserId();
         if (!concurrencyGuard.tryAcquire(userId)) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Agent 当前正在处理较多请求，请稍后重试");
+            throw error(HttpStatus.SERVICE_UNAVAILABLE, lang, "Agent 当前正在处理较多请求，请稍后重试",
+                    "The assistant is handling many requests. Please try again later.");
         }
         try {
-            return ApiResponse.ok(chatAgentService.chat(request, userId));
+            return ApiResponse.ok(chatAgentService.chat(request, userId, null, lang));
         } finally {
             concurrencyGuard.release(userId);
         }
@@ -110,32 +116,38 @@ public class AgentController {
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<Map<String, Object>> chatStream(@RequestBody AgentChatRequest request) {
-        request = normalizeChatRequest(request);
-        validateChatRequest(request);
-        requireSessionAccess(request == null ? null : request.sessionId());
+        // Capture before returning the Flux: the servlet request thread (and
+        // its LangContext) is gone by the time the SSE worker subscribes.
+        String lang = AgentText.resolve(null);
+        request = normalizeChatRequest(request, lang);
+        validateChatRequest(request, lang);
+        requireSessionAccess(request == null ? null : request.sessionId(), lang);
         if (!rateLimitService.allow(UserContext.getUserId())) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Agent 请求过于频繁，请一分钟后再试");
+            throw error(HttpStatus.TOO_MANY_REQUESTS, lang, "Agent 请求过于频繁，请一分钟后再试",
+                    "Too many assistant requests. Please try again in a minute.");
         }
-        requireTokenBudget(request == null || request.maxTokens() == null ? 2048 : request.maxTokens());
+        requireTokenBudget(request == null || request.maxTokens() == null ? 2048 : request.maxTokens(), lang);
         Long userId = UserContext.getUserId();
         if (!concurrencyGuard.tryAcquire(userId)) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Agent 当前正在处理较多请求，请稍后重试");
+            throw error(HttpStatus.SERVICE_UNAVAILABLE, lang, "Agent 当前正在处理较多请求，请稍后重试",
+                    "The assistant is handling many requests. Please try again later.");
         }
-        return streamService.streamChat(request, userId)
+        return streamService.streamChat(request, userId, lang)
                 .doFinally(signal -> concurrencyGuard.release(userId));
     }
 
-    private void validateChatRequest(AgentChatRequest request) {
+    private void validateChatRequest(AgentChatRequest request, String lang) {
         if (request == null || request.message() == null || request.message().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请输入 Agent 问题");
+            throw error(HttpStatus.BAD_REQUEST, lang, "请输入 Agent 问题", "Please enter an assistant question.");
         }
     }
 
-    private AgentChatRequest normalizeChatRequest(AgentChatRequest request) {
+    private AgentChatRequest normalizeChatRequest(AgentChatRequest request, String lang) {
         if (request == null) return null;
         String message = request.message() == null ? "" : request.message().trim();
         if (message.length() > 4000) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Agent 问题不能超过 4000 个字符");
+            throw error(HttpStatus.PAYLOAD_TOO_LARGE, lang, "Agent 问题不能超过 4000 个字符",
+                    "The assistant question must not exceed 4000 characters.");
         }
         List<com.chen.football.agent.dto.AgentMessage> history = request.history() == null
                 ? List.of()
@@ -149,7 +161,7 @@ public class AgentController {
         Integer maxTokens = request.maxTokens() == null ? null : Math.max(128, Math.min(2048, request.maxTokens()));
         String sessionId = request.sessionId();
         if (sessionId != null && sessionId.length() > 64) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "会话 ID 无效");
+            throw error(HttpStatus.BAD_REQUEST, lang, "会话 ID 无效", "Invalid session ID.");
         }
         Map<String, Object> context = request.context() == null ? Map.of() : boundedContext(request.context());
         return new AgentChatRequest(message, history, sessionId, request.model(), request.provider(),
@@ -173,49 +185,55 @@ public class AgentController {
 
     @PostMapping("/chat/stream/{streamId}/cancel")
     public ApiResponse<Map<String, Object>> cancelStream(@PathVariable String streamId) {
+        String lang = AgentText.resolve(null);
         AdminGuard.requireLogin();
         if (!broadcaster.ownsStream(streamId, UserContext.getUserId())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent 流不存在或无权取消");
+            throw error(HttpStatus.NOT_FOUND, lang, "Agent 流不存在或无权取消",
+                    "Assistant stream not found or you are not allowed to cancel it.");
         }
         cancellationRegistry.cancel(streamId);
         return ApiResponse.ok(Map.of("ok", true, "streamId", streamId));
     }
 
-    private void requireRateLimit() {
+    private void requireRateLimit(String lang) {
         if (!rateLimitService.allow(UserContext.getUserId())) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Agent 请求过于频繁，请一分钟后再试");
+            throw error(HttpStatus.TOO_MANY_REQUESTS, lang, "Agent 请求过于频繁，请一分钟后再试",
+                    "Too many assistant requests. Please try again in a minute.");
         }
     }
 
-    private void requireTokenBudget(int requestedTokens) {
+    private void requireTokenBudget(int requestedTokens, String lang) {
         if (!rateLimitService.allowTokenBudget(UserContext.getUserId(), requestedTokens)) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Agent 今日模型额度已用尽，请明日再试");
+            throw error(HttpStatus.TOO_MANY_REQUESTS, lang, "Agent 今日模型额度已用尽，请明日再试",
+                    "Today's assistant model quota is exhausted. Please try again tomorrow.");
         }
     }
 
-    private void requireLoginAndRateLimit() {
+    private void requireLoginAndRateLimit(String lang) {
         AdminGuard.requireLogin();
-        requireRateLimit();
+        requireRateLimit(lang);
     }
 
-    private void requireSessionAccess(String sessionId) {
+    private void requireSessionAccess(String sessionId, String lang) {
         AdminGuard.requireLogin();
         if (sessionId == null || sessionId.isBlank()) return;
         Long userId = UserContext.getUserId();
         if (conversationStore.hasConversation(sessionId) && !conversationStore.ownsSession(userId, sessionId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权访问该 Agent 会话");
+            throw error(HttpStatus.FORBIDDEN, lang, "无权访问该 Agent 会话",
+                    "You do not have access to this assistant session.");
         }
     }
 
-    private void requireOwnedSession(String sessionId) {
+    private void requireOwnedSession(String sessionId, String lang) {
         AdminGuard.requireLogin();
         if (!conversationStore.ownsSession(UserContext.getUserId(), sessionId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent 会话不存在");
+            throw error(HttpStatus.NOT_FOUND, lang, "Agent 会话不存在", "Assistant session not found.");
         }
     }
 
     @GetMapping("/health")
     public ApiResponse<Map<String, Object>> health() {
+        String lang = AgentText.resolve(null);
         AdminGuard.requireLogin();
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("agent", "football-agent");
@@ -227,7 +245,7 @@ public class AgentController {
         result.put("status", modelReady ? "ok" : (pending ? "checking" : "degraded"));
         result.put("tools", agentService.toolNames());
         result.put("circuitBreaker", circuitBreaker.snapshot());
-        result.put("models", publicModelHealth(modelHealth));
+        result.put("models", publicModelHealth(modelHealth, lang));
         return ApiResponse.ok(result);
     }
 
@@ -239,32 +257,36 @@ public class AgentController {
 
     @GetMapping("/capabilities")
     public ApiResponse<List<Map<String, Object>>> capabilities() {
+        String lang = AgentText.resolve(null);
         AdminGuard.requireLogin();
-        return ApiResponse.ok(agentService.toolCapabilities());
+        return ApiResponse.ok(agentService.toolCapabilities(lang));
     }
 
     @GetMapping("/session/{sessionId}")
     public ApiResponse<Map<String, Object>> session(@PathVariable String sessionId) {
-        requireOwnedSession(sessionId);
+        requireOwnedSession(sessionId, AgentText.resolve(null));
         // 统一从持久化会话读取；旧的 Redis-only memory store 不再作为第二份事实。
         return ApiResponse.ok(conversationStore.snapshot(sessionId));
     }
 
     @GetMapping("/conversation/{sessionId}")
     public ApiResponse<Map<String, Object>> conversation(@PathVariable String sessionId) {
-        requireOwnedSession(sessionId);
+        requireOwnedSession(sessionId, AgentText.resolve(null));
         return ApiResponse.ok(conversationStore.snapshot(sessionId));
     }
 
     @GetMapping("/sessions")
     public ApiResponse<List<AgentConversationStore.SessionMeta>> sessions() {
+        String lang = AgentText.resolve(null);
         AdminGuard.requireLogin();
-        return ApiResponse.ok(conversationStore.listSessions(UserContext.getUserId()));
+        List<AgentConversationStore.SessionMeta> sessions = conversationStore.listSessions(UserContext.getUserId());
+        sessions.forEach(item -> item.title = AgentText.sessionTitle(lang, item.title));
+        return ApiResponse.ok(sessions);
     }
 
     @DeleteMapping("/sessions/{sessionId}")
     public ApiResponse<Map<String, Object>> deleteSession(@PathVariable String sessionId) {
-        requireOwnedSession(sessionId);
+        requireOwnedSession(sessionId, AgentText.resolve(null));
         conversationStore.deleteSession(UserContext.getUserId(), sessionId);
         return ApiResponse.ok(Map.of("ok", true));
     }
@@ -272,10 +294,11 @@ public class AgentController {
     @PatchMapping("/sessions/{sessionId}")
     public ApiResponse<Map<String, Object>> renameSession(@PathVariable String sessionId,
                                                             @RequestBody Map<String, Object> payload) {
-        requireOwnedSession(sessionId);
+        String lang = AgentText.resolve(null);
+        requireOwnedSession(sessionId, lang);
         String title = payload == null ? "" : String.valueOf(payload.getOrDefault("title", ""));
         if (!conversationStore.renameSession(UserContext.getUserId(), sessionId, title)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "会话标题不能为空");
+            throw error(HttpStatus.BAD_REQUEST, lang, "会话标题不能为空", "Session title is required.");
         }
         return ApiResponse.ok(Map.of("ok", true, "title", title.trim()));
     }
@@ -304,14 +327,23 @@ public class AgentController {
         return ApiResponse.ok(metricsService.summary(days));
     }
 
-    private Map<String, Object> publicModelHealth(Map<String, Object> snapshot) {
+    private ResponseStatusException error(HttpStatus status, String lang, String zh, String en) {
+        return new ResponseStatusException(status, AgentText.of(lang, zh, en));
+    }
+
+    private Map<String, Object> publicModelHealth(Map<String, Object> snapshot, String lang) {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> providers = (List<Map<String, Object>>) snapshot.getOrDefault("providers", List.of());
         result.put("providers", providers.stream().map(item -> {
             Map<String, Object> safe = new java.util.LinkedHashMap<>();
             safe.put("provider", item.get("provider"));
+            // Keep the canonical zh status enum for existing clients and add
+            // an explicit label for English clients.
             safe.put("status", item.get("status"));
+            String statusLabel = AgentText.statusLabel(lang, String.valueOf(item.get("status")));
+            safe.put("statusLabel", statusLabel);
+            safe.put("label", statusLabel);
             safe.put("configured", item.get("configured"));
             safe.put("lastCheckedAt", item.get("lastCheckedAt"));
             safe.put("model", item.get("model"));

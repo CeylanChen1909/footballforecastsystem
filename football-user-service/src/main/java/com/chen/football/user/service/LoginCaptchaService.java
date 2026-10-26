@@ -1,5 +1,7 @@
 package com.chen.football.user.service;
 
+import com.chen.football.common.i18n.I18nText;
+
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +31,7 @@ public class LoginCaptchaService {
     }
 
     public Map<String, Object> issue(String ip) {
-        if (!rateLimitService.isAllowed("captcha:" + ip, 20, 60)) return Map.of("ok", false, "message", "验证码请求过于频繁");
+        if (!rateLimitService.isAllowed("captcha:" + ip, 20, 60)) return Map.of("ok", false, "message", I18nText.translate("验证码请求过于频繁"));
         int a = 1 + RANDOM.nextInt(9);
         int b = 1 + RANDOM.nextInt(9);
         String id = UUID.randomUUID().toString();
@@ -38,7 +40,8 @@ public class LoginCaptchaService {
         } catch (RuntimeException unavailable) {
             localCaptchas.put(id, new CaptchaEntry(String.valueOf(a + b), Instant.now().plusSeconds(300)));
         }
-        return Map.of("ok", true, "captchaId", id, "question", a + " + " + b + " = ?", "expiresInSeconds", 300);
+        String question = I18nText.of(a + " + " + b + " = ?", "What is " + a + " + " + b + "?");
+        return Map.of("ok", true, "captchaId", id, "question", question, "expiresInSeconds", 300);
     }
 
     public boolean isRequired(String ip, String account) {

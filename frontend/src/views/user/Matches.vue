@@ -11,21 +11,21 @@
       </template>
     </AppTopNav>
 
-    <div v-if="onboardingVisible && (loading || matchCount > 0)" class="matches-onboarding" role="region" aria-label="使用引导">
-      <p class="matches-onboarding-copy">收藏一场比赛，开赛前 30 分钟在通知里提醒。</p>
-      <button type="button" class="matches-onboarding-dismiss" aria-label="关闭引导" @click="dismissOnboarding">知道了</button>
+    <div v-if="onboardingVisible && (loading || matchCount > 0)" class="matches-onboarding" role="region" :aria-label="t('matches.onboardingAria')">
+      <p class="matches-onboarding-copy">{{ t('matches.onboardingCopy') }}</p>
+      <button type="button" class="matches-onboarding-dismiss" :aria-label="t('matches.onboardingDismissAria')" @click="dismissOnboarding">{{ t('matches.onboardingDismiss') }}</button>
     </div>
 
     <el-container class="matches-layout">
       <el-main id="app-main" class="main-content" tabindex="-1">
-        <nav class="date-rail" :aria-label="`${matchesHeading}日期导航`">
-          <button type="button" class="date-rail-arrow" :disabled="loading" aria-label="查看前一天" title="查看前一天" @click="shiftDate(-1)">
+        <nav class="date-rail" :aria-label="t('matches.dateNavAria', { heading: matchesHeading })">
+          <button type="button" class="date-rail-arrow" :disabled="loading" :aria-label="t('matches.previousDay')" :title="t('matches.previousDay')" @click="shiftDate(-1)">
             <el-icon><ArrowLeft /></el-icon>
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
-            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ countsReady ? (item.count + " 场") : "…" }}</small>
+            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ countsReady ? t('matches.matchCount', { count: item.count }) : "…" }}</small>
           </button>
-          <button type="button" class="date-rail-arrow" :disabled="loading" aria-label="查看后一天" title="查看后一天" @click="shiftDate(1)">
+          <button type="button" class="date-rail-arrow" :disabled="loading" :aria-label="t('matches.nextDay')" :title="t('matches.nextDay')" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
           </button>
         </nav>
@@ -35,35 +35,35 @@
           <PageSection class="match-list-panel" variant="compact">
             <template #actions>
               <div class="match-list-actions sport-filters" :class="{ 'is-open': moreFilters }">
-                <select v-model="selectedLeague" class="league-filter native-filter-select" aria-label="按联赛筛选">
+                <select v-model="selectedLeague" class="league-filter native-filter-select" :aria-label="t('matches.filterByLeague')">
                   <option v-for="option in leagueOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                 </select>
-                <input v-model="teamKeyword" class="team-filter native-filter-input" type="search" enterkeyhint="search" placeholder="搜球队" aria-label="按球队筛选" />
-                <button type="button" class="filter-chip team-language-button" :aria-pressed="teamNameMode === 'en' ? 'true' : 'false'" :aria-label="teamNameMode === 'zh' ? '切换为英文球队名' : '切换为中文球队名'" @click="toggleTeamNameMode">
-                  {{ teamNameMode === 'zh' ? 'English' : '中文名' }}
+                <input v-model="teamKeyword" class="team-filter native-filter-input" type="search" enterkeyhint="search" :placeholder="t('matches.searchTeamsPlaceholder')" :aria-label="t('matches.filterByTeam')" />
+                <button type="button" class="filter-chip team-language-button" :aria-pressed="teamNameMode === 'en' ? 'true' : 'false'" :aria-label="teamNameMode === 'zh' ? t('matches.switchToEnglishNames') : t('matches.switchToChineseNames')" @click="toggleTeamNameMode">
+                  {{ teamNameMode === 'zh' ? t('matches.teamNameEnglish') : t('matches.teamNameChinese') }}
                 </button>
-                <button type="button" class="filter-chip favorites-chip" :class="{ active: onlyFavorites }" :aria-pressed="onlyFavorites ? 'true' : 'false'" @click="onlyFavorites = !onlyFavorites">只看收藏</button>
+                <button type="button" class="filter-chip favorites-chip" :class="{ active: onlyFavorites }" :aria-pressed="onlyFavorites ? 'true' : 'false'" @click="onlyFavorites = !onlyFavorites">{{ t('matches.onlyFavorites') }}</button>
                 <button type="button" class="filter-chip reminder-button" :class="{ active: remindersEnabled }" :aria-pressed="remindersEnabled ? 'true' : 'false'" :disabled="remindersChanging" @click="toggleMatchReminders">
-                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? '提醒开' : '提醒' }}</span>
+                  <el-icon><Bell /></el-icon><span class="reminder-label">{{ remindersEnabled ? t('matches.remindersOn') : t('matches.reminders') }}</span>
                 </button>
-                <button type="button" class="filters-more" :aria-expanded="moreFilters ? 'true' : 'false'" @click="moreFilters = !moreFilters">{{ moreFilters ? '收起' : '筛选' }}</button>
+                <button type="button" class="filters-more" :aria-expanded="moreFilters ? 'true' : 'false'" @click="moreFilters = !moreFilters">{{ moreFilters ? t('matches.collapseFilters') : t('matches.filters') }}</button>
                 <div class="match-count-tag" :aria-busy="loading ? 'true' : 'false'">
                   <span class="match-count-num">{{ loading ? '…' : matchCount }}</span>
-                  <span class="match-count-unit">场</span>
+                  <span class="match-count-unit">{{ t('matches.matchCountUnit') }}</span>
                 </div>
               </div>
             </template>
 
-            <div v-if="loading" class="matches-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载比赛数据">
+            <div v-if="loading" class="matches-skeleton" role="status" aria-live="polite" aria-busy="true" :aria-label="t('matches.loadingMatchesAria')">
               <MatchCardSkeleton v-for="n in 6" :key="n" />
             </div>
-            <PageState v-else-if="errorMsg" type="error" :title="errorMsg" action-text="重试" @action="loadCurrentView" />
+            <PageState v-else-if="errorMsg" type="error" :title="errorMsg" :action-text="t('matches.retry')" @action="loadCurrentView" />
             <template v-else>
               <div v-if="filteredMatches.length > 0" class="date-group-list">
                 <div v-for="group in groupedMatches" :key="group.date" class="date-group reveal">
                   <div v-for="lg in group.leagueGroups" :key="lg.name" class="league-group">
                     <div class="league-group-header">
-                      <span class="league-name">{{ lg.name }}</span>
+                      <span class="league-name">{{ leagueLabel(lg.name, lg.displayName) }}</span>
 
                     </div>
                     <div class="matches-grid">
@@ -94,7 +94,7 @@
     </el-container>
 
     <!-- 历史交锋弹窗 -->
-    <el-dialog v-model="h2hVisible" title="历史交锋" width="min(600px, 94vw)">
+    <el-dialog v-model="h2hVisible" :title="t('matches.h2hTitle')" width="min(600px, 94vw)">
       <div v-if="h2hLoading" class="loading-state">
         <el-skeleton :rows="5" animated />
       </div>
@@ -102,15 +102,15 @@
         <div class="h2h-summary">
           <div class="summary-item">
             <span class="summary-value">{{ h2hData.summary?.homeWins || 0 }}</span>
-            <span class="summary-label">主队胜</span>
+            <span class="summary-label">{{ t('matches.homeWins') }}</span>
           </div>
           <div class="summary-item">
             <span class="summary-value">{{ h2hData.summary?.draws || 0 }}</span>
-            <span class="summary-label">平局</span>
+            <span class="summary-label">{{ t('matches.draws') }}</span>
           </div>
           <div class="summary-item">
             <span class="summary-value">{{ h2hData.summary?.awayWins || 0 }}</span>
-            <span class="summary-label">客队胜</span>
+            <span class="summary-label">{{ t('matches.awayWins') }}</span>
           </div>
         </div>
         <div class="h2h-matches">
@@ -118,35 +118,35 @@
             <span class="h2h-date">{{ match.date }}</span>
             <span class="h2h-score">{{ match.homeScore }} - {{ match.awayScore }}</span>
           </div>
-          <div v-if="!h2hData.recentMatches?.length" class="h2h-empty">暂无历史交锋记录</div>
+          <div v-if="!h2hData.recentMatches?.length" class="h2h-empty">{{ t('matches.noH2H') }}</div>
         </div>
       </div>
     </el-dialog>
 
     <el-dialog v-model="contentVisible" :title="contentDialogTitle" width="min(820px, 94vw)">
       <div class="match-detail-tabs">
-          <PageState v-if="detailsLoading" type="loading" title="正在读取赛事数据..." :size="36" />
+          <PageState v-if="detailsLoading" type="loading" :title="t('matches.loadingDetails')" :size="36" />
           <div v-else class="match-detail-content">
             <div class="detail-source-line">
-              <span>数据源：{{ matchDetails?.source || '未连接' }}</span>
+              <span>{{ t('matches.dataSource', { source: matchDetails?.source || t('matches.notConnected') }) }}</span>
               <el-tag size="small" :type="detailStatusType">{{ detailStatusLabel }}</el-tag>
-              <el-tag v-if="matchDetails?.fallback?.status === 'NORMAL'" size="small" type="info">基础赛程已兜底</el-tag>
-              <el-button v-if="matchDetails?.refreshable" size="small" text :loading="detailsRefreshing" @click="refreshMatchDetails">刷新赛事数据</el-button>
+              <el-tag v-if="matchDetails?.fallback?.status === 'NORMAL'" size="small" type="info">{{ t('matches.fallbackSchedule') }}</el-tag>
+              <el-button v-if="matchDetails?.refreshable" size="small" text :loading="detailsRefreshing" @click="refreshMatchDetails">{{ t('matches.refreshDetails') }}</el-button>
             </div>
-            <el-alert v-if="detailStatusLabel !== '正常'" :title="detailStatusText" type="warning" :closable="false" show-icon />
+            <el-alert v-if="detailStatus !== 'NORMAL'" :title="detailStatusText" type="warning" :closable="false" show-icon />
             <div v-if="detailEvents.length" class="event-timeline">
               <div v-for="(event, index) in detailEvents" :key="'event-' + index" class="event-row">
                 <span class="event-minute">{{ formatEventMinute(event) }}</span>
-                <span class="event-team">{{ event.team?.name || '比赛事件' }}</span>
+                <span class="event-team">{{ displayTeamLabel(event.team) || t('matches.matchEvent') }}</span>
                 <span class="event-icon">{{ eventIcon(event) }}</span>
-                <span class="event-main">{{ event.player?.name || event.type || '事件' }}</span>
+                <span class="event-main">{{ event.player?.name || event.type || t('matches.event') }}</span>
                 <small>{{ event.detail || event.assist?.name || '' }}</small>
               </div>
             </div>
-            <div v-else class="detail-empty">暂无事件时间线。若比赛尚未开始或联赛不提供事件数据，这里会保持为空。</div>
+            <div v-else class="detail-empty">{{ t('matches.noEvents') }}</div>
 
             <div v-if="detailStats.length" class="detail-section-block">
-              <div class="detail-section-title">技术统计</div>
+              <div class="detail-section-title">{{ t('matches.statistics') }}</div>
               <div class="detail-stat-grid">
                 <div v-for="(row, index) in detailStats" :key="'stat-' + index" class="detail-stat-row">
                   <span>{{ row.label }}</span><strong>{{ row.home }}</strong><small>{{ row.type }}</small><strong>{{ row.away }}</strong>
@@ -155,22 +155,22 @@
             </div>
 
             <div class="detail-section-block prematch-info-block">
-              <div class="detail-section-title">赛前信息</div>
+              <div class="detail-section-title">{{ t('matches.prematchInfo') }}</div>
               <div class="prematch-info-grid">
-                <div><span>伤停</span><strong>{{ prematchInjurySummary }}</strong></div>
-                <div><span>首发</span><strong>{{ prematchLineupSummary }}</strong></div>
-                <div><span>xG / 射门</span><strong>{{ prematchStatsSummary }}</strong></div>
+                <div><span>{{ t('matches.injuries') }}</span><strong>{{ prematchInjurySummary }}</strong></div>
+                <div><span>{{ t('matches.lineup') }}</span><strong>{{ prematchLineupSummary }}</strong></div>
+                <div><span>{{ t('matches.xgShots') }}</span><strong>{{ prematchStatsSummary }}</strong></div>
               </div>
-              <small class="prematch-info-note">数据以最近一次赛前快照为准；首发通常在开赛前约一小时确认。</small>
+              <small class="prematch-info-note">{{ t('matches.prematchNote') }}</small>
             </div>
 
             <div v-if="detailLineups.length" class="detail-section-block">
-              <div class="detail-section-title">阵容</div>
+              <div class="detail-section-title">{{ t('matches.lineups') }}</div>
               <div class="lineup-grid">
                 <div v-for="(lineup, index) in detailLineups" :key="'lineup-' + index" class="lineup-card">
-                  <strong>{{ lineup.team?.name || '球队' }}</strong>
-                  <span>阵型 {{ lineup.formation || '待公布' }}</span>
-                  <small>首发 {{ lineup.startXI?.length || 0 }} 人 · 替补 {{ lineup.substitutes?.length || 0 }} 人</small>
+                  <strong>{{ displayTeamLabel(lineup.team) || t('matches.team') }}</strong>
+                  <span>{{ t('matches.formation', { formation: lineup.formation || t('matches.toBeAnnounced') }) }}</span>
+                  <small>{{ t('matches.lineupSummary', { starters: lineup.startXI?.length || 0, subs: lineup.substitutes?.length || 0 }) }}</small>
                 </div>
               </div>
             </div>
@@ -195,9 +195,10 @@ import PageSection from '../../components/layout/PageSection.vue'
 import PageState from '../../components/layout/PageState.vue'
 import MatchCardSkeleton from '../../components/matches/MatchCardSkeleton.vue'
 import MatchCard from '../../components/MatchCard.vue'
-import { getBusinessDate } from '../../utils/match'
-import { getTeamSearchTokens, normalizeTeamSearch } from '../../utils/teamNames'
+import { getBusinessDate, getLeagueDisplay, getTeamDisplay } from '../../utils/match'
+import { displayLeagueName, displayTeamName, getTeamSearchTokens, normalizeTeamSearch, getLeagueDisplayName } from '../../utils/teamNames'
 import { useMatchRecommendations } from '../../composables/useMatchRecommendations'
+import { useI18n } from '../../i18n'
 
 // Defer focus rail + changelog off the matches critical path (LCP: date rail + list/skeleton).
 const MatchFocusRail = defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))
@@ -209,9 +210,10 @@ void PredictionDiscovery
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const { t, locale } = useI18n()
 const loading = ref(false)
 const errorMsg = ref('')
-const dataQuality = ref({ status: 'UNKNOWN', statusText: '未检测', message: '' })
+const dataQuality = ref({ status: 'UNKNOWN', statusText: '', message: '' })
 const rawMatches = ref([])
 const dateCountsCache = ref(new Map())
 const { items: hotMatches, meta: hotMeta, loading: hotLoading, error: hotError, stale: hotStale, load: loadHotMatches } = useMatchRecommendations({ limit: 6 })
@@ -221,6 +223,10 @@ const matchFavorites = ref([])
 const selectedLeague = ref('all')
 const teamKeyword = ref('')
 const TEAM_NAME_MODE_KEY = 'ff_team_name_mode'
+// Fallbacks forwarded as route/API values when a provider omits a team name.
+// These are request parameters, not display copy, so their values stay stable.
+const ROUTE_HOME_FALLBACK = '主队'
+const ROUTE_AWAY_FALLBACK = '客队'
 // New key so old football_team_name_mode=en no longer wins; default zh. Do not migrate en.
 const teamNameMode = ref(localStorage.getItem(TEAM_NAME_MODE_KEY) === 'en' ? 'en' : 'zh')
 const ONBOARDING_KEY = 'football_matches_onboarding_dismissed_v1'
@@ -255,8 +261,11 @@ const detailsRefreshing = ref(false)
 const matchDetails = ref(null)
 const contentDialogTitle = computed(() => {
   const match = contentMatch.value
-  if (!match) return '赛事数据'
-  return (match.homeTeamName || '主队') + ' vs ' + (match.awayTeamName || '客队') + ' · 赛事数据'
+  if (!match) return t('matches.matchDataTitle')
+  return t('matches.matchDataTitleWithTeams', {
+    home: matchTeamLabel(match, 'home') || t('matches.homeTeam'),
+    away: matchTeamLabel(match, 'away') || t('matches.awayTeam')
+  })
 })
 const detailEvents = computed(() => Array.isArray(matchDetails.value?.details?.events)
   ? matchDetails.value.details.events : [])
@@ -267,9 +276,9 @@ const detailStats = computed(() => {
     ? matchDetails.value.details.statistics : []
   const byType = new Map()
   rows.forEach(teamBlock => {
-    const team = teamBlock?.team?.name || '球队'
+    const team = teamBlock?.team?.name || t('matches.team')
     ;(teamBlock?.statistics || []).forEach(stat => {
-      const type = stat?.type || '统计'
+      const type = stat?.type || t('matches.statisticType')
       const row = byType.get(type) || { type, label: type, home: '-', away: '-', assigned: 0 }
       if (row.assigned === 0) row.home = stat?.value ?? '-'
       else if (row.assigned === 1) row.away = stat?.value ?? '-'
@@ -297,63 +306,97 @@ const prematchOddsSummary = computed(() => {
   const home = pick('home')?.odd
   const draw = pick('draw')?.odd
   const away = pick('away')?.odd
-  return home && draw && away ? `${home.toFixed(2)} / ${draw.toFixed(2)} / ${away.toFixed(2)}` : '暂无'
+  return home && draw && away ? `${home.toFixed(2)} / ${draw.toFixed(2)} / ${away.toFixed(2)}` : t('matches.none')
 })
 const prematchInjurySummary = computed(() => {
   const rows = Array.isArray(matchDetails.value?.details?.injuries) ? matchDetails.value.details.injuries : []
-  return rows.length ? `${rows.length} 人` : (matchDetails.value?.statuses?.injuries === 'EMPTY' ? '暂无伤停' : '待确认')
+  return rows.length ? t('matches.injuryCount', { count: rows.length }) : (matchDetails.value?.statuses?.injuries === 'EMPTY' ? t('matches.noInjuries') : t('matches.toBeConfirmed'))
 })
 const prematchLineupSummary = computed(() => {
-  if (!detailLineups.value.length) return matchDetails.value?.statuses?.lineups === 'EMPTY' ? '待公布' : '待确认'
+  if (!detailLineups.value.length) return matchDetails.value?.statuses?.lineups === 'EMPTY' ? t('matches.toBeAnnounced') : t('matches.toBeConfirmed')
   const starters = detailLineups.value.reduce((sum, lineup) => sum + (Array.isArray(lineup?.startXI) ? lineup.startXI.length : 0), 0)
-  return `${starters} 名首发`
+  return t('matches.startingCount', { count: starters })
 })
 const prematchStatsSummary = computed(() => {
   const xg = detailStats.value.find(row => String(row.type).toLowerCase().includes('expected goals') || String(row.type).toLowerCase() === 'xg')
   const shots = detailStats.value.find(row => String(row.type).toLowerCase() === 'total shots')
   if (xg) return `${xg.home} / ${xg.away}`
-  if (shots) return `射门 ${shots.home} / ${shots.away}`
-  return matchDetails.value?.statuses?.statistics === 'UNSUPPORTED' ? '套餐不提供' : '暂无'
+  if (shots) return t('matches.shots', { home: shots.home, away: shots.away })
+  return matchDetails.value?.statuses?.statistics === 'UNSUPPORTED' ? t('matches.planNotIncluded') : t('matches.none')
 })
 const detailStatus = computed(() => matchDetails.value?.dataStatus || 'UNKNOWN')
-const detailStatusLabel = computed(() => matchDetails.value?.dataStatusText || '未检测')
-const detailStatusText = computed(() => detailStatus.value === 'QUOTA_LIMITED'
-  ? '外部赛事数据源当前受额度或套餐限制，已保留本地缓存。'
-  : detailStatus.value === 'NOT_CONFIGURED'
-    ? '尚未配置 API-Football 密钥，当前只能展示本地比赛基础数据。'
-    : detailStatus.value === 'PARTIAL'
-      ? '部分赛事数据已返回，其余数据暂不可用。'
-      : detailStatus.value === 'UNSUPPORTED'
-        ? '该比赛阶段暂不提供这类赛事数据。'
-      : detailStatus.value === 'EMPTY'
-        ? '数据源响应为空，该联赛可能暂不提供这类赛事数据。'
-        : '赛事数据源暂时不可用，稍后可以再次刷新。')
+const detailStatusLabel = computed(() => {
+  const status = detailStatus.value
+  const key = `matches.dataStatus.${status}`
+  const translated = t(key)
+  if (translated !== key) return translated
+  return matchDetails.value?.dataStatusText || t('matches.notChecked')
+})
+const detailStatusText = computed(() => {
+  const key = {
+    QUOTA_LIMITED: 'matches.statusQuotaLimitedText',
+    NOT_CONFIGURED: 'matches.statusNotConfiguredText',
+    PARTIAL: 'matches.statusPartialText',
+    UNSUPPORTED: 'matches.statusUnsupportedText',
+    EMPTY: 'matches.statusEmptyText'
+  }[detailStatus.value] || 'matches.statusUnavailableText'
+  return t(key)
+})
 const detailStatusType = computed(() => detailStatus.value === 'NORMAL' ? 'success' : detailStatus.value === 'EMPTY' || detailStatus.value === 'UNSUPPORTED' ? 'info' : 'warning')
 
 const getMatchDate = (match) => match?.matchDate || String(match?.fixture?.date || '').slice(0, 10)
 const formatDateLabel = (date) => {
-  if (!date) return '日期未知'
+  if (!date) return t('matches.dateUnknown')
   const today = formatLocalDate(new Date())
   const tomorrow = formatLocalDate(new Date(Date.now() + 86400000))
   const yesterday = formatLocalDate(new Date(Date.now() - 86400000))
-  if (date === today) return `${date} · 今天`
-  if (date === tomorrow) return `${date} · 明天`
-  if (date === yesterday) return `${date} · 昨天`
+  if (date === today) return t('matches.dateToday', { date })
+  if (date === tomorrow) return t('matches.dateTomorrow', { date })
+  if (date === yesterday) return t('matches.dateYesterday', { date })
   return date
 }
 const weekdayLabel = (date) => {
   if (!date) return '-'
-  return new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', weekday: 'long' }).format(new Date(`${date}T00:00:00+08:00`))
+  return new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', weekday: 'long' }).format(new Date(`${date}T00:00:00+08:00`))
 }
-const getLeagueName = (match) => match?.league?.name || match?.leagueName || '其他联赛'
+const getLeagueName = (match) => getLeagueDisplayName(match?.league?.name || match?.leagueName || match?.leagueDisplayName || match?.league?.nameEn || t('matches.leagueOther'))
+const displayTeamLabel = (team) => displayTeamName(
+  team?.name || team?.teamName || '',
+  team?.teamDisplayName || team?.displayName || team?.nameEn
+)
+const matchTeamLabel = (match, side) => displayTeamName(
+  match?.[`${side}TeamName`] || match?.teams?.[side]?.name || '',
+  getTeamDisplay(match, side)
+)
 // All new actions use the stable local matchId. fixture.id remains a provider
 // compatibility field for legacy clients and must not be used as a route key.
 const getMatchId = (match) => match?.matchId || match?.id || match?.fixture?.id || match?.fixtureId || match?.externalMatchId
-const leagueOptions = computed(() => {
-  const names = Array.from(new Set((rawMatches.value || []).map(getLeagueName).filter(Boolean)))
-    .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
-  return [{ label: '全部联赛', value: 'all' }, ...names.map(name => ({ label: name, value: name }))]
-})
+// Fixed production list (match CompetitionHub) so 欧冠/欧国联 always appear
+// even when the current date window only has UNL (or other) fixtures.
+const PRODUCTION_LEAGUES = ['英超','西甲','意甲','德甲','法甲','荷甲','葡超','英冠','欧冠','欧国联']
+// Chinese league names are canonical filter values and must stay unchanged;
+// only their visible labels are translated.
+const LEAGUE_LABEL_KEYS = {
+  英超: 'matches.league.premierLeague',
+  西甲: 'matches.league.laLiga',
+  意甲: 'matches.league.serieA',
+  德甲: 'matches.league.bundesliga',
+  法甲: 'matches.league.ligue1',
+  荷甲: 'matches.league.eredivisie',
+  葡超: 'matches.league.primeiraLiga',
+  英冠: 'matches.league.championship',
+  欧冠: 'matches.league.championsLeague',
+  欧国联: 'matches.league.nationsLeague'
+}
+const leagueLabel = (name, displayName = '') => {
+  if (name) return displayLeagueName(name, displayName)
+  const key = LEAGUE_LABEL_KEYS[name]
+  return key ? t(key) : name
+}
+const leagueOptions = computed(() => [
+  { label: t('matches.allLeagues'), value: 'all' },
+  ...PRODUCTION_LEAGUES.map(name => ({ label: leagueLabel(name), value: name }))
+])
 const filteredMatches = computed(() => {
   const matches = rawMatches.value || []
   const keyword = normalizeTeamSearch(teamKeyword.value)
@@ -377,39 +420,39 @@ const isOpsSpeakMessage = (msg) => {
   return !s ? false : (s.includes('主数据源') || s.includes('完成本次检查') || s.includes('已返回') || s.includes('部分赛事数据'))
 }
 const fanEmptyDescription = computed(() => selectedLeague.value === 'all'
-  ? '这一天还没有赛程，换个日期看看'
-  : '这一天该联赛没有赛程，可切换联赛或换个日期')
+  ? t('matches.fanEmptyAll')
+  : t('matches.fanEmptyLeague'))
 const emptyStateTitle = computed(() => {
   // Favorites filter empty must never contradict 「0场」with ops 「已返回N场」
   if (onlyFavorites.value) {
-    return matchFavorites.value.length ? '这一天没有已收藏的比赛' : '还没有收藏的比赛'
+    return matchFavorites.value.length ? t('matches.favoritesEmptyDay') : t('matches.favoritesEmpty')
   }
   if (isOpsEmptyStatus.value) {
-    if (dataQuality.value?.status === 'SOURCE_LIMITED') return '数据源额度受限'
-    if (dataQuality.value?.status === 'SYNC_FAILED') return '数据同步失败'
+    if (dataQuality.value?.status === 'SOURCE_LIMITED') return t('matches.sourceLimited')
+    if (dataQuality.value?.status === 'SYNC_FAILED') return t('matches.syncFailed')
   }
-  return selectedLeague.value === 'all' ? '当天暂无比赛' : '该联赛当天暂无比赛'
+  return selectedLeague.value === 'all' ? t('matches.emptyDay') : t('matches.emptyLeagueDay')
 })
 const emptyStateDescription = computed(() => {
   if (onlyFavorites.value) {
     return matchFavorites.value.length
-      ? '换一天看看，或关掉「只看收藏」浏览全部赛程。'
-      : '在比赛卡片上点收藏，之后可在这里快速找到它们。'
+      ? t('matches.favoritesEmptyDayDesc')
+      : t('matches.favoritesEmptyDesc')
   }
   if (isOpsEmptyStatus.value) {
     const raw = dataQuality.value?.message || ''
     if (!isOpsSpeakMessage(raw) && raw) return raw
     return dataQuality.value?.status === 'SOURCE_LIMITED'
-      ? '数据源暂时受限，请稍后重试。'
-      : '同步失败，请稍后重试。'
+      ? t('matches.sourceLimitedDesc')
+      : t('matches.syncFailedDesc')
   }
   // Fan-facing empty day — never surface ops-speak like 「主数据源已完成本次检查」
   return fanEmptyDescription.value
 })
 const emptyStateActionText = computed(() => {
-  if (onlyFavorites.value) return matchFavorites.value.length ? '查看全部比赛' : '浏览赛程'
-  if (isOpsEmptyStatus.value) return '重试'
-  return selectedLeague.value === 'all' ? '查看昨天' : '查看全部联赛'
+  if (onlyFavorites.value) return matchFavorites.value.length ? t('matches.emptyActionAll') : t('matches.emptyActionBrowse')
+  if (isOpsEmptyStatus.value) return t('matches.retry')
+  return selectedLeague.value === 'all' ? t('matches.emptyActionYesterday') : t('matches.emptyActionAllLeagues')
 })
 const onEmptyStateAction = () => {
   if (onlyFavorites.value) {
@@ -460,12 +503,16 @@ const dateRail = computed(() => {
     const date = new Date(`${base}T00:00:00`)
     date.setDate(date.getDate() + offset)
     const iso = formatLocalDate(date)
-    const label = iso === today ? '今天' : iso === tomorrow ? '明天' : `${iso.slice(5, 7)}月`
+    const label = iso === today
+      ? t('matches.today')
+      : iso === tomorrow
+        ? t('matches.tomorrow')
+        : new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', timeZone: 'Asia/Shanghai' }).format(new Date(`${iso}T00:00:00+08:00`))
     return {
       date: iso,
       label,
       day: iso.slice(-2),
-      weekday: new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date),
+      weekday: new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short' }).format(date),
       count: dateCounts.value.get(iso) || 0
     }
   })
@@ -492,12 +539,12 @@ const groupedMatches = computed(() => {
     const leagueMap = new Map()
     items.forEach(m => {
       const lg = getLeagueName(m)
-      if (!leagueMap.has(lg)) leagueMap.set(lg, [])
-      leagueMap.get(lg).push(m)
+      if (!leagueMap.has(lg)) leagueMap.set(lg, { name: lg, displayName: getLeagueDisplay(m), items: [] })
+      leagueMap.get(lg).items.push(m)
     })
-    const leagueGroups = Array.from(leagueMap.entries()).map(([name, list]) => ({
-      name,
-      items: list.sort((a, b) => String(a?.fixture?.date || '').localeCompare(String(b?.fixture?.date || '')))
+    const leagueGroups = Array.from(leagueMap.values()).map(group => ({
+      ...group,
+      items: group.items.sort((a, b) => String(a?.fixture?.date || '').localeCompare(String(b?.fixture?.date || '')))
     }))
     return {
       date,
@@ -514,10 +561,10 @@ const todayDate = computed(() => formatLocalDate(new Date()))
 // context; it is intentionally not rendered as a duplicate visual page title.
 const matchesHeading = computed(() => {
   const date = selectedDate.value || todayDate.value
-  if (date === todayDate.value) return '今日比赛'
+  if (date === todayDate.value) return t('matches.headingToday')
   const tomorrow = formatLocalDate(new Date(Date.now() + 86400000))
-  if (date === tomorrow) return '明日比赛'
-  return `${date}比赛`
+  if (date === tomorrow) return t('matches.headingTomorrow')
+  return t('matches.headingDate', { date })
 })
 const favoritesCount = computed(() => matchFavorites.value?.length || 0)
 const toggleTeamNameMode = () => {
@@ -592,7 +639,7 @@ const loadMatches = async () => {
     rawMatches.value = deduplicateMatches(normalizeMatchList(res).filter(match => getMatchDate(match) >= todayDate.value))
     // Empty days use PageState fan copy only — no ElMessage toast/banner (looks like product empty copy to reviewers).
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
+    errorMsg.value = e.message || t('matches.loadFailed')
   } finally {
     loading.value = false
   }
@@ -615,7 +662,7 @@ const loadMatchesByDate = async (date) => {
     dateCountsCache.value = nextCounts
     // Empty days: PageState only — silence ElMessage.info toast.
   } catch (e) {
-    errorMsg.value = e.message || '加载比赛失败，请稍后重试'
+    errorMsg.value = e.message || t('matches.loadFailed')
   } finally {
     loading.value = false
   }
@@ -654,7 +701,7 @@ const showH2H = async (fixtureId, homeTeamId, awayTeamId, homeTeamName, awayTeam
 const openMatchDetails = async (match) => {
   const fixtureId = getMatchId(match)
   if (!fixtureId) {
-    ElMessage.info('当前比赛缺少可关联的赛事编号')
+    ElMessage.info(t('matches.missingMatchId'))
     return
   }
   analyticsApi.track('match_opened', { page: '/matches', entityType: 'match', entityId: fixtureId, properties: { league: match?.league?.name || match?.leagueName } }).catch(() => {})
@@ -668,7 +715,7 @@ const openMatchDetails = async (match) => {
     const result = await matchApi.getDetails(fixtureId)
     matchDetails.value = result?.data || result
   } catch {
-    ElMessage.warning('赛事数据暂时不可用，请稍后重试')
+    ElMessage.warning(t('matches.detailsUnavailable'))
   } finally {
     detailsLoading.value = false
   }
@@ -723,9 +770,9 @@ const refreshMatchDetails = async () => {
   try {
     const res = await matchApi.refreshDetails(fixtureId)
     matchDetails.value = res?.data || res
-    ElMessage.success('赛事数据已刷新')
+    ElMessage.success(t('matches.detailsRefreshed'))
   } catch {
-    ElMessage.warning('赛事数据刷新失败，请稍后重试')
+    ElMessage.warning(t('matches.detailsRefreshFailed'))
   } finally {
     detailsRefreshing.value = false
   }
@@ -746,26 +793,30 @@ const eventIcon = (event) => {
 }
 const goPredict = (matchOrFixtureId, homeId, awayId, homeTeamNameArg, awayTeamNameArg) => {
   let fixtureId, hId, aId, homeTeamName, awayTeamName, leagueName, leagueId, round, matchTime, homeLogo, awayLogo
+  let homeTeamDisplayName = '', awayTeamDisplayName = '', leagueDisplay = ''
 
   if (typeof matchOrFixtureId === 'object' && matchOrFixtureId !== null) {
     const match = matchOrFixtureId
     fixtureId = getMatchId(match)
     hId = match.teams?.home?.id || 0
     aId = match.teams?.away?.id || 0
-    homeTeamName = match.teams?.home?.name || '主队'
-    awayTeamName = match.teams?.away?.name || '客队'
+    homeTeamName = match.teams?.home?.name || ROUTE_HOME_FALLBACK
+    awayTeamName = match.teams?.away?.name || ROUTE_AWAY_FALLBACK
     homeLogo = match.teams?.home?.logo || ''
     awayLogo = match.teams?.away?.logo || ''
     leagueName = match.league?.name || ''
     leagueId = match.league?.id || ''
     round = match.league?.round || ''
     matchTime = match.fixture?.date || ''
+    homeTeamDisplayName = getTeamDisplay(match, 'home')
+    awayTeamDisplayName = getTeamDisplay(match, 'away')
+    leagueDisplay = getLeagueDisplay(match)
   } else {
       fixtureId = matchOrFixtureId
     hId = homeId || 0
     aId = awayId || 0
-    homeTeamName = homeTeamNameArg || '主队'
-    awayTeamName = awayTeamNameArg || '客队'
+    homeTeamName = homeTeamNameArg || ROUTE_HOME_FALLBACK
+    awayTeamName = awayTeamNameArg || ROUTE_AWAY_FALLBACK
     homeLogo = ''
     awayLogo = ''
     leagueName = ''
@@ -785,9 +836,12 @@ const goPredict = (matchOrFixtureId, homeId, awayId, homeTeamNameArg, awayTeamNa
         awayId: aId,
         homeName: homeTeamName,
         awayName: awayTeamName,
+        homeTeamDisplayName,
+        awayTeamDisplayName,
         homeLogo,
         awayLogo,
         leagueName,
+        leagueDisplay,
         leagueId,
         round,
         matchTime,
@@ -810,8 +864,8 @@ const openAgent = (match) => {
       fixtureId: String(matchId),
       homeTeamId: match.teams?.home?.id || '',
       awayTeamId: match.teams?.away?.id || '',
-      homeName: match.teams?.home?.name || '主队',
-      awayName: match.teams?.away?.name || '客队',
+      homeName: match.teams?.home?.name || ROUTE_HOME_FALLBACK,
+      awayName: match.teams?.away?.name || ROUTE_AWAY_FALLBACK,
       leagueName: match.league?.name || '',
       matchTime: match.fixture?.date || ''
     }
@@ -826,9 +880,11 @@ const goTeamSquad = (teamName, side, match) => {
     path: `/team/${encodeURIComponent(target)}/squad`,
     query: {
       name: target,
+      teamDisplayName: getTeamDisplay(match, side),
       teamId: String(selectedTeam.id || ''),
       logo: selectedTeam.logo || '',
       league: match?.league?.name || match?.leagueName || '',
+      leagueDisplay: getLeagueDisplay(match),
       season: String(new Date().getFullYear())
     }
   })
@@ -842,25 +898,25 @@ const toggleMatchFavorite = async (match) => {
     if (exists) {
       await favoriteApi.removeMatch(fixtureId)
       removeMatchReminder(fixtureId)
-      ElMessage.success('已取消收藏比赛')
+      ElMessage.success(t('matches.unfavorited'))
     } else {
-      const homeName = match?.teams?.home?.name || '主队'
-      const awayName = match?.teams?.away?.name || '客队'
+      const homeName = match?.teams?.home?.name || ROUTE_HOME_FALLBACK
+      const awayName = match?.teams?.away?.name || ROUTE_AWAY_FALLBACK
       await favoriteApi.addMatch(fixtureId, `${homeName} vs ${awayName}`, {
         leagueName: match?.league?.name || match?.leagueName || '',
         matchTime: match?.fixture?.date || match?.matchTime || ''
       })
       saveMatchReminder({ fixtureId: String(fixtureId), title: `${homeName} vs ${awayName}`, matchTime: match?.fixture?.date || match?.matchTime || '', notified: false })
-      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      ElMessage.success(t('matches.favorited'))
       maybeAskBrowserNotifyAfterFavorite()
     }
     await loadFavorites()
   } catch (e) {
     const msg = String(e?.message || e?.response?.data?.message || '')
     if (msg.toLowerCase().includes('unauthorized')) {
-      ElMessage.error('登录已过期，请重新登录')
+      ElMessage.error(t('matches.sessionExpired'))
     } else {
-      ElMessage.error('收藏操作失败，请先登录')
+      ElMessage.error(t('matches.favoriteFailed'))
     }
   }
 }
@@ -886,7 +942,7 @@ const checkMatchReminders = () => {
     const raw = String(item.matchTime || '').replace(' ', 'T')
     const start = new Date(raw && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}+08:00`).getTime()
     if (!Number.isFinite(start) || start <= now || start - now > 30 * 60 * 1000 || item.notified) return
-    new Notification('比赛即将开始', { body: `${item.title} · 30 分钟内开赛`, tag: `football-${item.fixtureId}` })
+    new Notification(t('matches.reminderNotificationTitle'), { body: t('matches.reminderNotificationBody', { title: item.title }), tag: `football-${item.fixtureId}` })
     item.notified = true
     changed = true
   })
@@ -899,9 +955,9 @@ const maybeAskBrowserNotifyAfterFavorite = async () => {
   if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
   try {
     await ElMessageBox.confirm(
-      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可随时忽略。',
-      '开启浏览器通知',
-      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+      t('matches.browserNotifyPrompt'),
+      t('matches.browserNotifyTitle'),
+      { confirmButtonText: t('matches.browserNotifyConfirm'), cancelButtonText: t('matches.browserNotifyCancel'), type: 'info', distinguishCancelAndClose: true }
     )
     const permission = await Notification.requestPermission()
     if (permission === 'granted' && !remindersEnabled.value) {
@@ -914,20 +970,20 @@ const maybeAskBrowserNotifyAfterFavorite = async () => {
 }
 
 const enableMatchReminders = async () => {
-  if (typeof Notification === 'undefined') return ElMessage.info('当前浏览器不支持开赛提醒')
+  if (typeof Notification === 'undefined') return ElMessage.info(t('matches.browserUnsupported'))
   const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
-  if (permission !== 'granted') return ElMessage.warning('请在浏览器设置中允许通知后再开启提醒')
+  if (permission !== 'granted') return ElMessage.warning(t('matches.notificationsBlocked'))
   remindersEnabled.value = true
   localStorage.setItem('football_match_reminders_enabled', '1')
   if (userStore.token) userApi.updatePreferences({ matchRemindersEnabled: true }).catch(() => {})
-  ElMessage.success('已开启收藏比赛的开赛提醒')
+  ElMessage.success(t('matches.remindersEnabled'))
   checkMatchReminders()
 }
 const disableMatchReminders = () => {
   remindersEnabled.value = false
   localStorage.setItem('football_match_reminders_enabled', '0')
   if (userStore.token) userApi.updatePreferences({ matchRemindersEnabled: false }).catch(() => {})
-  ElMessage.success('已关闭开赛提醒')
+  ElMessage.success(t('matches.remindersDisabled'))
 }
 const toggleMatchReminders = async () => {
   if (remindersChanging.value) return
@@ -999,6 +1055,13 @@ watch(() => route.query.discover, (value) => {
 }, { immediate: true })
 watch(hotMatches, () => {
   if (route.query.discover === 'predict') scrollToPredictionDiscovery()
+})
+
+// Locale changes must refresh server-provided display fields (league/team
+// names, data-quality copy) instead of only re-rendering local translations.
+watch(locale, async () => {
+  await Promise.allSettled([loadCurrentView(), loadDateCounts(), loadFavorites()])
+  loadHotMatches('', { silent: true })
 })
 
 

@@ -6,6 +6,7 @@ import com.chen.football.crawler.service.HistoricalBackfillService;
 import com.chen.football.crawler.service.MatchCrawlerService;
 import com.chen.football.crawler.service.StandingCrawlerService;
 import com.chen.football.common.util.AdminGuard;
+import com.chen.football.common.i18n.LabelCatalog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ public class CrawlerTaskController {
                                    @RequestParam(name = "league", required = false) String league) {
         // 手动触发会消耗外部数据源额度，必须由管理员执行。
         AdminGuard.requirePermission("CRAWLER");
+        league = LabelCatalog.canonicalLeague(league);
         String taskName = "manual:" + (type == null ? "unknown" : type.trim());
         if (!taskStatusService.tryStart(taskName)) {
             return Map.of("success", false, "message", "相同采集任务正在执行，请稍后查看任务状态");

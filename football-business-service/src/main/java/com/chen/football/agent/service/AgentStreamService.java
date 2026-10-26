@@ -59,10 +59,15 @@ public class AgentStreamService {
     }
 
     public Flux<Map<String, Object>> streamChat(AgentChatRequest request) {
-        return streamChat(request, null);
+        return streamChat(request, null, AgentText.resolve(null));
     }
 
     public Flux<Map<String, Object>> streamChat(AgentChatRequest request, Long userId) {
+        return streamChat(request, userId, AgentText.resolve(null));
+    }
+
+    public Flux<Map<String, Object>> streamChat(AgentChatRequest request, Long userId, String lang) {
+        String language = AgentText.resolve(lang);
         String streamId = broadcaster.startStream(request, userId);
         Instant start = Instant.now();
 
@@ -81,7 +86,7 @@ public class AgentStreamService {
                     if (cancellationRegistry.isCancelled(streamId)) return;
                     AgentChatResponse response = chatAgentService.chat(request, userId, event -> {
                         if (!cancellationRegistry.isCancelled(streamId)) sink.next(event);
-                    });
+                    }, language);
                     if (cancellationRegistry.isCancelled(streamId)) return;
                     String answer = response.answer() == null ? "" : response.answer();
 
@@ -94,7 +99,7 @@ public class AgentStreamService {
                     if (reasoning != null && !String.valueOf(reasoning).isBlank()) {
                         sink.next(metaEvent("reasoning", Map.of(
                                 "content", String.valueOf(reasoning),
-                                "label", "模型推理摘要"
+                                "label", AgentText.translate(language, "模型推理摘要")
                         )));
                     }
 
@@ -135,7 +140,10 @@ public class AgentStreamService {
                     sink.next(metaEvent("stream_end", end));
                 } catch (Exception e) {
                     if (!cancellationRegistry.isCancelled(streamId)) {
-                        sink.next(metaEvent("error", Map.of("message", e.getMessage() == null ? "Agent 处理失败" : e.getMessage(), "type", e.getClass().getSimpleName())));
+                        String message = e.getMessage() == null
+                                ? AgentText.translate(language, "Agent 处理失败")
+                                : AgentText.translate(language, e.getMessage());
+                        sink.next(metaEvent("error", Map.of("message", message, "type", e.getClass().getSimpleName())));
                     }
                 } finally {
                     heartbeat.cancel(true);
@@ -146,7 +154,8 @@ public class AgentStreamService {
                 });
             } catch (RejectedExecutionException ex) {
                 heartbeat.cancel(true);
-                sink.next(metaEvent("error", Map.of("message", "Agent 当前请求较多，请稍后重试", "type", "BUSY")));
+                sink.next(metaEvent("error", Map.of("message",
+                        AgentText.translate(language, "Agent 当前请求较多，请稍后重试"), "type", "BUSY")));
                 broadcaster.drain(streamId);
                 sink.complete();
                 return;

@@ -22,7 +22,7 @@ class AgentAnswerValidatorTest {
         );
         AgentToolRun run = new AgentToolRun("team-roster", .7, Map.of(), Map.of("squad_context", squad),
                 List.of("squad_context"), List.of(), Map.of(), List.of(Map.of("tool", "squad_context", "status", "ok")));
-        AgentAnswerValidator.Validation result = validator.validate("目前没有可用名单", run);
+        AgentAnswerValidator.Validation result = validator.validate("目前没有可用名单", run, "en");
         assertTrue(result.answer().contains("Pedri"));
         assertTrue(Boolean.FALSE.equals(result.metadata().get("grounded")));
     }
@@ -38,7 +38,7 @@ class AgentAnswerValidatorTest {
         AgentToolRun run = new AgentToolRun("schedule", .7, context,
                 Map.of("crawler_summary", schedule), List.of("crawler_summary"),
                 List.of(), Map.of(), List.of());
-        AgentAnswerValidator.Validation result = validator.validate("以上所有比赛均未生成预测。", run);
+        AgentAnswerValidator.Validation result = validator.validate("以上所有比赛均未生成预测。", run, "zh");
         assertTrue(result.answer().contains("已生成 7 场"));
         assertTrue(result.answer().contains("不能将这批比赛统一标记"));
         assertTrue(Boolean.FALSE.equals(result.metadata().get("grounded")));
@@ -56,7 +56,7 @@ class AgentAnswerValidatorTest {
                 Map.of("crawler_summary", schedule), List.of("crawler_summary"),
                 List.of(), Map.of(), List.of());
         AgentAnswerValidator.Validation result = validator.validate(
-                "全部6场已生成预测。当前没有伤停数据，无法核验首发。", run);
+                "全部6场已生成预测。当前没有伤停数据，无法核验首发。", run, "zh");
         assertTrue(result.metadata().get("warnings") instanceof List<?> warnings && warnings.isEmpty());
     }
 }

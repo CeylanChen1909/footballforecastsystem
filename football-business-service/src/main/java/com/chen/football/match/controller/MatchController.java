@@ -4,6 +4,7 @@ import com.chen.football.common.dto.ApiResponse;
 import com.chen.football.common.dto.FixtureDetailResponse;
 import com.chen.football.common.dto.FixtureListResponse;
 import com.chen.football.common.dto.LeagueListResponse;
+import com.chen.football.common.i18n.I18nText;
 import com.chen.football.match.service.MatchService;
 import com.chen.football.match.service.MatchDetailsService;
 import com.chen.football.prediction.service.PrematchFeatureService;
@@ -34,7 +35,7 @@ public class MatchController {
         try {
             return ApiResponse.ok(matchService.getTodayFixtures().block());
         } catch (Exception e) {
-            return ApiResponse.ok(FixtureListResponse.empty(e.getMessage()));
+            return ApiResponse.ok(FixtureListResponse.empty(I18nText.translate(e.getMessage())));
         }
     }
 
@@ -44,7 +45,7 @@ public class MatchController {
         try {
             return ApiResponse.ok(matchService.getFixturesByDate(date).block());
         } catch (Exception e) {
-            return ApiResponse.ok(FixtureListResponse.empty(e.getMessage()));
+            return ApiResponse.ok(FixtureListResponse.empty(I18nText.translate(e.getMessage())));
         }
     }
 
@@ -54,7 +55,7 @@ public class MatchController {
         try {
             return ApiResponse.ok(matchService.getFixtureDetail(fixtureId).block());
         } catch (Exception e) {
-            return ApiResponse.ok(FixtureDetailResponse.empty(fixtureId, e.getMessage()));
+            return ApiResponse.ok(FixtureDetailResponse.empty(fixtureId, I18nText.translate(e.getMessage())));
         }
     }
 

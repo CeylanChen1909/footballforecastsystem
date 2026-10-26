@@ -1,3 +1,7 @@
+import { locale, t } from '../i18n'
+
+const dateLocale = () => (locale.value === 'zh' ? 'zh-CN' : 'en-US')
+
 const LIVE_STATUSES = ['LIVE', 'IN_PLAY', 'PAUSED', 'HT', '1H', '2H', 'ET']
 const FINISHED_STATUSES = ['FT', 'AET', 'PEN', 'FINISHED']
 const CANCELLED_STATUSES = ['CANC', 'CANCELED', 'CANCELLED', 'PST', 'POSTPONED', 'PPD', 'ABD', 'AWD', 'WO', 'SOURCE_REMOVED']
@@ -8,14 +12,60 @@ export const normalizeList = value => Array.isArray(value)
     : Array.isArray(value?.records) ? value.records
       : Array.isArray(value?.response) ? value.response : []
 
+const firstDisplayText = (...values) => values
+  .map(value => (value == null ? '' : String(value).trim()))
+  .find(Boolean) || ''
+const hasChinese = value => /[\u4e00-\u9fff]/.test(String(value || ''))
+const isEnglishLabel = value => /[A-Za-z]/.test(String(value || '')) && !hasChinese(value)
+// Legacy payloads may keep the canonical name in `teams.*.name`/`league.name`
+// and put the localised value in a top-level field. Only accept that field
+// when it matches the active locale so internal filter values never leak into
+// the wrong language.
+const topLevelDisplay = (value, source) => {
+  if (!value || value === source) return ''
+  return locale.value === 'en' ? (isEnglishLabel(value) ? value : '') : (hasChinese(value) ? value : '')
+}
+
 export const getMatchId = match => String(match?.matchId || match?.id || match?.fixtureId || match?.fixture?.id || match?.externalMatchId || '')
 export const getHomeTeam = match => match?.teams?.home || { name: match?.homeTeamName, logo: match?.homeTeamLogo, id: match?.homeTeamId }
 export const getAwayTeam = match => match?.teams?.away || { name: match?.awayTeamName, logo: match?.awayTeamLogo, id: match?.awayTeamId }
-export const getHomeName = match => getHomeTeam(match)?.name || match?.homeTeamName || '主队'
-export const getAwayName = match => getAwayTeam(match)?.name || match?.awayTeamName || '客队'
+export const getHomeName = match => getHomeTeam(match)?.name || match?.homeTeamName || t('matches.homeTeam')
+export const getAwayName = match => getAwayTeam(match)?.name || match?.awayTeamName || t('matches.awayTeam')
 export const getHomeLogo = match => getHomeTeam(match)?.logo || match?.homeTeamLogo || ''
 export const getAwayLogo = match => getAwayTeam(match)?.logo || match?.awayTeamLogo || ''
-export const getLeagueName = match => match?.league?.name || match?.leagueName || '联赛待同步'
+export const getLeagueName = match => match?.league?.name || match?.leagueName || t('matches.leaguePending')
+
+/** Optional backend-localised display values; empty strings mean "not provided". */
+export const getTeamDisplay = (match, side = 'home') => {
+  const team = side === 'home' ? getHomeTeam(match) : getAwayTeam(match)
+  const explicit = firstDisplayText(
+    team?.teamDisplayName,
+    team?.teamDisplay,
+    team?.displayName,
+    team?.display,
+    team?.nameEn,
+    match?.[`${side}TeamDisplayName`],
+    match?.[`${side}TeamDisplay`],
+    match?.[`${side}TeamNameEn`]
+  )
+  if (explicit) return explicit
+  return topLevelDisplay(match?.[`${side}TeamName`] || '', team?.name || '')
+}
+
+export const getLeagueDisplay = match => firstDisplayText(
+  match?.league?.leagueDisplay,
+  match?.league?.leagueDisplayName,
+  match?.league?.displayName,
+  match?.league?.display,
+  match?.league?.nameEn,
+  match?.leagueDisplay,
+  match?.leagueDisplayName,
+  topLevelDisplay(match?.leagueName || '', match?.league?.name || ''),
+  // The backend already localises league.name; keep it as the last fallback
+  // so an unknown competition still shows a label instead of going blank.
+  match?.league?.name
+)
+
 export const getMatchDate = match => match?.matchDate || String(match?.fixture?.date || match?.matchTime || '').slice(0, 10)
 
 const todayInBusinessZone = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date())
@@ -61,10 +111,27 @@ export const isLive = match => LIVE_STATUSES.includes(getDisplayStatusKey(match)
 export const isFinished = match => FINISHED_STATUSES.includes(getDisplayStatusKey(match))
 export const isCancelled = match => CANCELLED_STATUSES.includes(getDisplayStatusKey(match))
 export const isUpcoming = match => !isFinished(match) && !isCancelled(match) && getDisplayStatusKey(match) !== 'STALE'
-export const getStatusText = match => ({
-  NS: '未开赛', LIVE: '进行中', IN_PLAY: '进行中', PAUSED: '暂停', HT: '中场', '1H': '上半场', '2H': '下半场', ET: '加时',
-  FT: '已结束', AET: '已结束', PEN: '已结束', FINISHED: '已结束', PST: '已推迟', POSTPONED: '已推迟', CANC: '已取消', CANCELLED: '已取消', STALE: '状态待更新', SOURCE_REMOVED: '赛程已变更'
-}[getDisplayStatusKey(match)] || '待同步')
+const STATUS_TEXT_KEYS = {
+  NS: 'matches.status.NS',
+  LIVE: 'matches.status.LIVE',
+  IN_PLAY: 'matches.status.LIVE',
+  PAUSED: 'matches.status.PAUSED',
+  HT: 'matches.status.HT',
+  '1H': 'matches.status.1H',
+  '2H': 'matches.status.2H',
+  ET: 'matches.status.ET',
+  FT: 'matches.status.FT',
+  AET: 'matches.status.FT',
+  PEN: 'matches.status.FT',
+  FINISHED: 'matches.status.FT',
+  PST: 'matches.status.PST',
+  POSTPONED: 'matches.status.PST',
+  CANC: 'matches.status.CANC',
+  CANCELLED: 'matches.status.CANC',
+  STALE: 'matches.status.STALE',
+  SOURCE_REMOVED: 'matches.status.SOURCE_REMOVED'
+}
+export const getStatusText = match => t(STATUS_TEXT_KEYS[getDisplayStatusKey(match)] || 'matches.statusPending')
 export const getStatusClass = match => isLive(match) ? 'live' : isFinished(match) ? 'finished' : isCancelled(match) ? 'cancelled' : getDisplayStatusKey(match) === 'STALE' ? 'stale' : 'upcoming'
 
 export const normalizeMatches = value => {
@@ -80,31 +147,31 @@ export const normalizeMatches = value => {
 
 export const formatMatchTime = (match, options = {}) => {
   const timestamp = getMatchTimestamp(match)
-  if (!timestamp) return '时间待定'
+  if (!timestamp) return t('matches.timeTbd')
   if (hasSyntheticBbcTime(match)) {
-    const date = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit' }).format(new Date(timestamp))
-    return `${date} · 时间待同步`
+    const date = new Intl.DateTimeFormat(dateLocale(), { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit' }).format(new Date(timestamp))
+    return `${date} · ${t('matches.timePending')}`
   }
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(dateLocale(), {
     timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', ...options
   }).format(new Date(timestamp))
 }
 
 export const formatShortDate = value => value
-  ? new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit' }).format(new Date(value))
-  : '日期未知'
+  ? new Intl.DateTimeFormat(dateLocale(), { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit' }).format(new Date(value))
+  : t('matches.dateUnknown')
 
 export const formatCountdown = (match, now = Date.now()) => {
   if (isFinished(match) || isCancelled(match)) return ''
   const timestamp = getMatchTimestamp(match)
-  if (!timestamp || timestamp <= now) return isLive(match) ? '正在进行' : timestamp && timestamp < now ? '状态待更新' : '即将开始'
+  if (!timestamp || timestamp <= now) return isLive(match) ? t('matches.countdownLive') : timestamp && timestamp < now ? t('matches.countdownStale') : t('matches.countdownSoon')
   const seconds = Math.max(0, Math.floor((timestamp - now) / 1000))
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  if (days > 0) return `${days}天 ${String(hours).padStart(2, '0')}小时后`
-  if (hours > 0) return `${hours}小时 ${String(minutes).padStart(2, '0')}分后`
-  return `${Math.max(1, minutes)}分钟后`
+  if (days > 0) return t('matches.countdownDays', { days, hours: String(hours).padStart(2, '0') })
+  if (hours > 0) return t('matches.countdownHours', { hours, minutes: String(minutes).padStart(2, '0') })
+  return t('matches.countdownMinutes', { minutes: Math.max(1, minutes) })
 }
 
 export const teamInitial = value => String(value || '?').trim().slice(0, 1).toUpperCase()

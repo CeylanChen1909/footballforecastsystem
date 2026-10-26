@@ -1,6 +1,8 @@
 package com.chen.football.match.service;
 
 import com.chen.football.common.client.ApiFootballClient;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.common.client.FootballDataClient;
 import com.chen.football.common.config.ApiFootballProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -221,6 +223,7 @@ public class MatchDetailsService {
     private Map<String, Object> bundle(Long fixtureId,
                                        Map<String, Object> match,
                                        Map<String, Snapshot> snapshots) {
+        enrichMatchDisplay(match);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("fixtureId", fixtureId);
         data.put("fixture", match);
@@ -260,6 +263,17 @@ public class MatchDetailsService {
             data.put("fallback", loadFootballDataFallback(match));
         }
         return data;
+    }
+
+    /** Adds display-only names without changing persisted snake_case values. */
+    private void enrichMatchDisplay(Map<String, Object> match) {
+        if (match == null || match.isEmpty()) return;
+        match.put("league_display_name", LabelCatalog.leagueDisplay(string(match.get("league_name"))));
+        match.put("league_name_en", LabelCatalog.leagueEnglish(string(match.get("league_name"))));
+        match.put("home_team_display_name", LabelCatalog.teamDisplay(string(match.get("home_team_name"))));
+        match.put("home_team_name_en", LabelCatalog.teamEnglish(string(match.get("home_team_name"))));
+        match.put("away_team_display_name", LabelCatalog.teamDisplay(string(match.get("away_team_name"))));
+        match.put("away_team_name_en", LabelCatalog.teamEnglish(string(match.get("away_team_name"))));
     }
 
     private Map<String, Object> errorBundle(Long fixtureId, String message) {
@@ -444,14 +458,14 @@ public class MatchDetailsService {
 
     private String statusText(String status) {
         return switch (status) {
-            case "NORMAL" -> "正常";
-            case "PARTIAL" -> "部分可用";
-            case "EMPTY" -> "空数据";
-            case "QUOTA_LIMITED" -> "额度受限";
-            case "REQUEST_FAILED" -> "请求失败";
-            case "NOT_CONFIGURED" -> "未配置数据源";
-            case "UNSUPPORTED" -> "该比赛阶段不提供此数据";
-            default -> "未检测";
+            case "NORMAL" -> I18nText.of("正常", "Normal");
+            case "PARTIAL" -> I18nText.of("部分可用", "Partially available");
+            case "EMPTY" -> I18nText.of("空数据", "No data");
+            case "QUOTA_LIMITED" -> I18nText.of("额度受限", "Quota limited");
+            case "REQUEST_FAILED" -> I18nText.of("请求失败", "Request failed");
+            case "NOT_CONFIGURED" -> I18nText.of("未配置数据源", "Data source not configured");
+            case "UNSUPPORTED" -> I18nText.of("该比赛阶段不提供此数据", "This data is not available for this match stage");
+            default -> I18nText.of("未检测", "Not checked");
         };
     }
 

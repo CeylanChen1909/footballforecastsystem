@@ -17,21 +17,28 @@ public class AgentResultParser {
         this.objectMapper = objectMapper;
     }
 
-    @SuppressWarnings("unchecked")
     public AgentStructuredResult parse(Map<String, Object> aiResult) {
+        return parse(aiResult, AgentText.resolve(null));
+    }
+
+    @SuppressWarnings("unchecked")
+    public AgentStructuredResult parse(Map<String, Object> aiResult, String lang) {
+        String language = AgentText.resolve(lang);
         if (aiResult == null) {
-            return AgentStructuredResult.fallback("模型返回为空", null);
+            return AgentStructuredResult.fallback(AgentText.translate(language, "模型返回为空"), null, language);
         }
         Object content = aiResult.get("content");
         if (content == null || String.valueOf(content).isBlank()) {
             Object summary = aiResult.get("summary");
-            String text = summary == null ? "模型未返回可解析内容" : String.valueOf(summary);
-            return AgentStructuredResult.fallback(text, text);
+            String text = summary == null
+                    ? AgentText.translate(language, "模型未返回可解析内容")
+                    : String.valueOf(summary);
+            return AgentStructuredResult.fallback(text, text, language);
         }
         String text = String.valueOf(content).trim();
         String json = AgentJsonTools.extractJson(text);
         if (json == null || !AgentJsonTools.looksLikeJson(json)) {
-            return AgentStructuredResult.fallback(text, text);
+            return AgentStructuredResult.fallback(text, text, language);
         }
         try {
             Map<String, Object> parsed = objectMapper.readValue(json, Map.class);
@@ -43,7 +50,7 @@ public class AgentResultParser {
             List<String> followUp = boundedList(parsed.get("followUpQuestions"), 5, 300);
             return new AgentStructuredResult(summary, confidence, keyPoints, risks, recommendation, followUp, true, text);
         } catch (JsonProcessingException e) {
-            return AgentStructuredResult.fallback(text, text);
+            return AgentStructuredResult.fallback(text, text, language);
         }
     }
 

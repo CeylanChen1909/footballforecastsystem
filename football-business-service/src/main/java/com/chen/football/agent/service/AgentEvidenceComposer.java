@@ -10,6 +10,11 @@ public final class AgentEvidenceComposer {
     private AgentEvidenceComposer() { }
 
     public static List<Map<String, Object>> facts(AgentToolRun run) {
+        return facts(run, AgentText.resolve(null));
+    }
+
+    public static List<Map<String, Object>> facts(AgentToolRun run, String lang) {
+        String language = AgentText.resolve(lang);
         List<Map<String, Object>> result = new ArrayList<>();
         if (run == null) return result;
         for (Map<String, Object> evidence : run.evidence()) {
@@ -17,7 +22,7 @@ public final class AgentEvidenceComposer {
             if (!List.of("ok", "partial", "available").contains(status.toLowerCase())) continue;
             Map<String, Object> fact = new LinkedHashMap<>();
             fact.put("tool", evidence.get("tool"));
-            fact.put("label", evidence.get("label"));
+            fact.put("label", AgentText.translate(language, String.valueOf(evidence.get("label"))));
             fact.put("status", status);
             fact.put("recordCount", evidence.getOrDefault("recordCount", 0));
             if (evidence.get("sourceUpdatedAt") != null) fact.put("sourceUpdatedAt", evidence.get("sourceUpdatedAt"));
@@ -28,6 +33,11 @@ public final class AgentEvidenceComposer {
     }
 
     public static List<Map<String, Object>> unknowns(AgentToolRun run) {
+        return unknowns(run, AgentText.resolve(null));
+    }
+
+    public static List<Map<String, Object>> unknowns(AgentToolRun run, String lang) {
+        String language = AgentText.resolve(lang);
         List<Map<String, Object>> result = new ArrayList<>();
         if (run == null) return result;
         for (Map<String, Object> evidence : run.evidence()) {
@@ -35,17 +45,21 @@ public final class AgentEvidenceComposer {
             if (List.of("ok", "available").contains(status.toLowerCase())) continue;
             Map<String, Object> unknown = new LinkedHashMap<>();
             unknown.put("tool", evidence.get("tool"));
-            unknown.put("label", evidence.get("label"));
+            unknown.put("label", AgentText.translate(language, String.valueOf(evidence.get("label"))));
             unknown.put("status", status);
-            unknown.put("message", statusMessage(status));
+            unknown.put("message", AgentText.translate(language, statusMessage(status)));
             result.add(unknown);
         }
         return result;
     }
 
     public static Map<String, Object> quality(AgentToolRun run) {
-        List<Map<String, Object>> facts = facts(run);
-        List<Map<String, Object>> unknowns = unknowns(run);
+        return quality(run, AgentText.resolve(null));
+    }
+
+    public static Map<String, Object> quality(AgentToolRun run, String lang) {
+        List<Map<String, Object>> facts = facts(run, lang);
+        List<Map<String, Object>> unknowns = unknowns(run, lang);
         String level;
         if (facts.isEmpty()) level = "low";
         else if (unknowns.isEmpty()) level = "high";
@@ -54,7 +68,8 @@ public final class AgentEvidenceComposer {
         quality.put("level", level);
         quality.put("availableSources", facts.size());
         quality.put("unknownSources", unknowns.size());
-        quality.put("reason", unknowns.isEmpty() ? "关键工具均返回可用数据" : "仍有数据源未能提供完整事实");
+        quality.put("reason", AgentText.translate(AgentText.resolve(lang),
+                unknowns.isEmpty() ? "关键工具均返回可用数据" : "仍有数据源未能提供完整事实"));
         return quality;
     }
 

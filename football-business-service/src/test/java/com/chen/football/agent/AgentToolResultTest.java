@@ -10,10 +10,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AgentToolResultTest {
     @Test
     void normalizesLegacyErrorAndAddsSourceMetadata() {
-        Map<String, Object> result = AgentToolResult.normalize("squad_context", Map.of("error", "timeout"));
+        Map<String, Object> result = AgentToolResult.normalize("squad_context", Map.of("error", "timeout"), "zh");
         assertEquals("REQUEST_FAILED", result.get("status"));
         assertEquals("公开球队阵容源", result.get("source"));
         assertEquals("squad_context", result.get("tool"));
+    }
+
+    @Test
+    void englishToolResultLocalizesFixedSourceAndMessage() {
+        Map<String, Object> result = AgentToolResult.normalize("squad_context",
+                Map.of("error", "timeout", "message", "阵容请求失败"), "en");
+        assertEquals("Public squad source", result.get("source"));
+        assertEquals("Squad request failed", result.get("message"));
     }
 
     @Test

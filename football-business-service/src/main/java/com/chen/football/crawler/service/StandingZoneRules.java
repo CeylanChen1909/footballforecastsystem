@@ -1,5 +1,8 @@
 package com.chen.football.crawler.service;
 
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +20,39 @@ import java.util.Map;
  */
 public final class StandingZoneRules {
     private static final String CURRENT_VARIANT = "2026/2027";
+
+    /** English renderings for the user-facing rule notes. */
+    private static final Map<String, String> NOTE_EN = Map.ofEntries(
+            Map.entry("按 2026/27 基础名次：英超前五进入欧冠正赛；杯赛和欧战冠军名额可能顺延。",
+                    "2026/27 baseline: the top five Premier League clubs enter the Champions League league phase; cup winners and UEFA title holders may shift places down."),
+            Map.entry("按 2026/27 基础名次：西甲前五进入欧冠正赛；杯赛和欧战冠军名额可能顺延。",
+                    "2026/27 baseline: the top five La Liga clubs enter the Champions League league phase; cup winners and UEFA title holders may shift places down."),
+            Map.entry("按当前法甲名额分配：前三欧冠正赛，第 4 名欧冠资格赛，第 5 名欧联正赛，第 6 名欧协联资格赛；杯赛和欧战冠军名额可能顺延。",
+                    "Current Ligue 1 allocation: top three enter the Champions League league phase, 4th enters Champions League qualifying, 5th enters the Europa League league phase, 6th enters Conference League qualifying; cup winners and UEFA title holders may shift places down."),
+            Map.entry("按 2026/27 access list：前两名进入欧冠正赛，第 3 名欧联资格赛，第 4–7 名争夺欧协联资格。",
+                    "2026/27 access list: top two enter the Champions League league phase, 3rd enters Europa League qualifying, and 4th–7th contest Conference League qualification."),
+            Map.entry("按 2026/27 最终 access list：前两名进入欧冠正赛；第 2 个席位来自欧战冠军重平衡，非永久联赛固定名额。",
+                    "Final 2026/27 access list: the top two enter the Champions League league phase; the second place comes from UEFA title-holder rebalancing and is not a permanent fixed league slot."),
+            Map.entry("按当前已配置的法甲名额分配：前三欧冠正赛，第 4 名欧冠资格赛，第 5 名欧联正赛，第 6 名欧协联资格赛；杯赛和欧战冠军名额可能顺延。",
+                    "Configured Ligue 1 allocation: top three enter the Champions League league phase, 4th enters Champions League qualifying, 5th enters the Europa League league phase, 6th enters Conference League qualifying; cup winners and UEFA title holders may shift places down."),
+            Map.entry("按联赛基础名次：冠军欧冠正赛，亚军欧冠资格赛，第 3 名欧联资格赛，第 4–7 名争夺欧协联资格。",
+                    "League baseline: the champion enters the Champions League league phase, runner-up enters Champions League qualifying, 3rd enters Europa League qualifying, and 4th–7th contest Conference League qualification."),
+            Map.entry("按联赛基础名次：冠军欧冠正赛，亚军欧冠资格赛，第 3 名欧联资格赛，第 4 名欧协联资格赛。",
+                    "League baseline: the champion enters the Champions League league phase, runner-up enters Champions League qualifying, 3rd enters Europa League qualifying, and 4th enters Conference League qualifying."),
+            Map.entry("英冠不参加欧战：前两名直接升级，第 3–6 名参加升级附加赛。",
+                    "The Championship does not enter UEFA competitions: the top two are promoted automatically and 3rd–6th enter the promotion play-offs."),
+            Map.entry("按联赛基础名次：前四欧冠正赛，第 5 名欧联正赛，第 6 名欧协联资格赛。",
+                    "League baseline: the top four enter the Champions League league phase, 5th enters the Europa League league phase, and 6th enters Conference League qualifying."),
+            Map.entry("欧冠联赛阶段积分榜：不按国内联赛欧战名次区着色；排名仅反映联赛阶段成绩。",
+                    "Champions League league-phase table: domestic qualification zones are not applied; the ranking reflects league-phase results only."),
+            Map.entry("欧国联为多组赛制：按组展示组内排名，不套用国内联赛欧冠区规则。",
+                    "The Nations League uses multiple groups: rankings are shown within each group and domestic Champions League zone rules do not apply."),
+            Map.entry("该联赛尚未配置欧战名次规则；不会用默认前四规则伪造欧冠区域。",
+                    "No UEFA qualification rules are configured for this league; a default top-four rule is never used to invent Champions League zones."),
+            Map.entry("按 2026/27 access list：联赛冠军进入欧冠正赛；其余欧战名额与资格赛轮次受协会杯赛和 UEFA 重平衡影响。",
+                    "2026/27 access list: the league champion enters the Champions League league phase; other UEFA places and qualifying rounds depend on association cups and UEFA rebalancing."),
+            Map.entry("未指定赛季", "Season not specified")
+    );
 
     private static final Map<String, String> LEAGUE_ALIASES = Map.ofEntries(
             Map.entry("英超", "英超"), Map.entry("premierleague", "英超"), Map.entry("epl", "英超"), Map.entry("pl", "英超"),
@@ -53,7 +89,7 @@ public final class StandingZoneRules {
         if (rank == null || rank <= 0 || total <= 0) return Zone.none();
         Rule rule = ruleFor(leagueName, season);
         for (Band band : rule.bands()) {
-            if (rank >= band.start() && rank <= band.end()) return new Zone(band.code(), band.label());
+            if (rank >= band.start() && rank <= band.end()) return zone(band.code(), band.label());
         }
         if (rule.relegationPlayoffFromBottom() > 0
                 && rank == total - rule.relegationPlayoffFromBottom()) {
@@ -68,14 +104,14 @@ public final class StandingZoneRules {
     public static Map<String, Object> describe(String leagueName, String season, int total) {
         Rule rule = ruleFor(leagueName, season);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("league", rule.league());
+        result.put("league", LabelCatalog.leagueDisplay(rule.league()));
         result.put("season", rule.season());
-        result.put("note", rule.note());
+        result.put("note", localizedNote(rule.note()));
         List<Map<String, Object>> zones = new ArrayList<>();
         for (Band band : rule.bands()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("code", band.code());
-            item.put("label", band.label());
+            item.put("label", LabelCatalog.zoneDisplay(band.label()));
             item.put("from", band.start());
             item.put("to", band.end());
             zones.add(item);
@@ -94,13 +130,17 @@ public final class StandingZoneRules {
     private static Map<String, Object> zoneDescription(String code, String label, int from, int to) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("code", code);
-        item.put("label", label);
+        item.put("label", LabelCatalog.zoneDisplay(label));
         item.put("from", from);
         item.put("to", to);
         return item;
     }
 
-    private static Zone zone(String code, String label) { return new Zone(code, label); }
+    private static String localizedNote(String note) {
+        return I18nText.of(note, NOTE_EN.getOrDefault(note, note));
+    }
+
+    private static Zone zone(String code, String label) { return new Zone(code, LabelCatalog.zoneDisplay(label)); }
 
     private static Rule ruleFor(String leagueName, String season) {
         String league = canonicalLeague(leagueName);

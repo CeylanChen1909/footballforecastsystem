@@ -20,6 +20,9 @@ import com.chen.football.crawler.source.LeagueNameNormalizer;
 import com.chen.football.crawler.source.DataSourceManager;
 import com.chen.football.crawler.source.ProductionLeagueScope;
 import com.chen.football.common.util.AdminGuard;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.common.service.RedisCacheService;
 import com.chen.football.common.client.ApiFootballClient;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -299,7 +302,7 @@ public class CrawlerController {
             }
             if (ChronoUnit.DAYS.between(windowStart, windowEnd) > 30) windowEnd = windowStart.plusDays(30);
             int safeSize = Math.max(1, Math.min(size, 500));
-            String cacheKey = "home:summary:" + windowStart + ":" + windowEnd + ":" + safeSize;
+            String cacheKey = "home:summary:" + LangContext.get() + ":" + windowStart + ":" + windowEnd + ":" + safeSize;
             Map<String, Object> cached = redisCacheService.get(cacheKey, Map.class);
             if (cached != null && !cached.isEmpty()) {
                 log.debug("[HomeSummary] cache_hit window={}..{} matches={} latencyMs={}", windowStart, windowEnd, cached.getOrDefault("total", 0), (System.nanoTime() - startedAt) / 1_000_000);
@@ -355,7 +358,7 @@ public class CrawlerController {
                 windowEnd = windowStart.plusDays(30);
             }
             int safeSize = Math.max(6, Math.min(size, 60));
-            String cacheKey = "home:brief:" + windowStart + ":" + windowEnd + ":" + safeSize;
+            String cacheKey = "home:brief:" + LangContext.get() + ":" + windowStart + ":" + windowEnd + ":" + safeSize;
             Map<String, Object> cached = redisCacheService.get(cacheKey, Map.class);
             if (cached != null && !cached.isEmpty()) {
                 return Map.of("success", true, "message", "获取成功（缓存）", "data", cached);
@@ -630,6 +633,7 @@ public class CrawlerController {
     @GetMapping("/standings/{leagueId}")
     public Map<String, Object> getStandings(@PathVariable("leagueId") String leagueId,
                                             @RequestParam(name = "season", defaultValue = "") String season) {
+        leagueId = LabelCatalog.canonicalLeague(leagueId);
         try {
             String targetSeason = season == null || season.isBlank() ? getCurrentSeason() : season;
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsByLeagueName(leagueId, targetSeason);
@@ -645,6 +649,7 @@ public class CrawlerController {
     @GetMapping("/standings/{leagueId}/db")
     public Map<String, Object> getStandingsFromDb(@PathVariable("leagueId") String leagueId,
                                                   @RequestParam(name = "season", defaultValue = "") String season) {
+        leagueId = LabelCatalog.canonicalLeague(leagueId);
         try {
             String targetSeason = season.isBlank() ? getCurrentSeason() : season;
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsFromDb(leagueId, targetSeason);
@@ -659,6 +664,7 @@ public class CrawlerController {
      */
     @GetMapping("/teams/league/{leagueName}")
     public Map<String, Object> getTeamsByLeague(@PathVariable("leagueName") String leagueName) {
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         try {
             List<CrawlerTeam> teams = visibleTeams(crawlerTeamMapper.findByLeague(leagueName));
             Map<String, CrawlerStanding> standingsByName = new LinkedHashMap<>();
@@ -672,11 +678,16 @@ public class CrawlerController {
                 String sourceTeamId = standing == null ? "" : String.valueOf(standing.getTeamId() == null ? "" : standing.getTeamId());
                 item.put("id", sourceTeamId.isBlank() ? (team.getId() == null ? 0L : team.getId()) : sourceTeamId);
                 item.put("teamId", sourceTeamId);
-                item.put("name", team.getName() == null ? "" : team.getName());
+                item.put("name", LabelCatalog.teamDisplay(team.getName()));
+                item.put("nameZh", LabelCatalog.teamChinese(team.getName()));
+                item.put("nameEn", LabelCatalog.teamEnglish(team.getName()));
                 item.put("canonicalKey", identityMappingService.teamKey(sourceTeamId.isBlank() ? String.valueOf(team.getId() == null ? "" : team.getId()) : sourceTeamId, team.getName()));
                 item.put("logo", standing != null && standing.getTeamLogo() != null && !standing.getTeamLogo().isBlank() ? standing.getTeamLogo() : (team.getLogo() == null ? "" : team.getLogo()));
                 item.put("country", team.getCountry() == null ? "" : team.getCountry());
                 item.put("league", team.getLeagueName() == null ? "" : team.getLeagueName());
+                item.put("leagueDisplayName", LabelCatalog.leagueDisplay(team.getLeagueName()));
+                item.put("leagueNameEn", LabelCatalog.leagueEnglish(team.getLeagueName()));
+                item.put("leagueNameZh", LabelCatalog.leagueChinese(team.getLeagueName()));
                 return item;
             }).toList();
 
@@ -743,11 +754,16 @@ public class CrawlerController {
         target.computeIfAbsent(key, ignored -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", teamId == null ? "" : teamId);
-            item.put("name", teamName.trim());
+            item.put("name", LabelCatalog.teamDisplay(teamName.trim()));
+            item.put("nameZh", LabelCatalog.teamChinese(teamName.trim()));
+            item.put("nameEn", LabelCatalog.teamEnglish(teamName.trim()));
             item.put("canonicalKey", identityMappingService.teamKey(teamId, teamName.trim()));
             item.put("logo", logo == null ? "" : logo);
             item.put("country", "");
             item.put("league", leagueName == null ? "" : leagueName);
+            item.put("leagueDisplayName", LabelCatalog.leagueDisplay(leagueName));
+            item.put("leagueNameEn", LabelCatalog.leagueEnglish(leagueName));
+            item.put("leagueNameZh", LabelCatalog.leagueChinese(leagueName));
             return item;
         });
     }
@@ -778,15 +794,23 @@ public class CrawlerController {
     @GetMapping("/teams/search")
     public Map<String, Object> searchTeams(@RequestParam("name") String name) {
         try {
-            List<CrawlerTeam> teams = visibleTeams(crawlerTeamMapper.searchByName(name));
+            // Chinese names are expanded back to the English canonical name used
+            // by the primary crawler directory, so either language works.
+            String searchQuery = I18nText.containsChinese(name) ? LabelCatalog.teamEnglish(name) : name;
+            List<CrawlerTeam> teams = visibleTeams(crawlerTeamMapper.searchByName(searchQuery));
             List<Map<String, Object>> response = teams.stream().map(team -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("id", team.getId() == null ? 0L : team.getId());
-                item.put("name", team.getName() == null ? "" : team.getName());
+                item.put("name", LabelCatalog.teamDisplay(team.getName()));
+                item.put("nameZh", LabelCatalog.teamChinese(team.getName()));
+                item.put("nameEn", LabelCatalog.teamEnglish(team.getName()));
                 item.put("canonicalKey", identityMappingService.teamKey(String.valueOf(team.getId() == null ? "" : team.getId()), team.getName()));
                 item.put("logo", team.getLogo() == null ? "" : team.getLogo());
                 item.put("country", team.getCountry() == null ? "" : team.getCountry());
                 item.put("league", team.getLeagueName() == null ? "" : team.getLeagueName());
+                item.put("leagueDisplayName", LabelCatalog.leagueDisplay(team.getLeagueName()));
+                item.put("leagueNameEn", LabelCatalog.leagueEnglish(team.getLeagueName()));
+                item.put("leagueNameZh", LabelCatalog.leagueChinese(team.getLeagueName()));
                 return item;
             }).toList();
 
@@ -815,9 +839,10 @@ public class CrawlerController {
                                             @RequestParam(name = "season", defaultValue = "0") int season,
                                             @RequestParam(name = "force", defaultValue = "false") boolean force) {
         String safeName = teamName == null ? "" : teamName.trim();
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         // v2 将 ESPN 公共阵容源纳入缓存键，避免复用早期 API-Football 的
         // NOT_CONFIGURED/EMPTY 结果，让已经打开过页面的用户仍然看到旧空状态。
-        String cacheKey = "v2|" + safeName.toLowerCase(Locale.ROOT) + "|" + (leagueName == null ? "" : leagueName) + "|" + season;
+        String cacheKey = "v2|" + LangContext.get() + "|" + safeName.toLowerCase(Locale.ROOT) + "|" + (leagueName == null ? "" : leagueName) + "|" + season;
         SquadCacheEntry cached = squadCache.get(cacheKey);
         if (!force && cached != null && cached.expiresAt() > System.currentTimeMillis()) {
             return cached.payload();
@@ -957,8 +982,9 @@ public class CrawlerController {
         data.put("message", message);
         data.put("teamId", teamId == null ? "" : teamId);
         data.put("source", source == null ? "" : source);
-        data.put("response", players == null ? List.of() : players);
-        data.put("results", players == null ? 0 : players.size());
+        List<Map<String, Object>> localizedPlayers = localizeSquadPlayers(players);
+        data.put("response", localizedPlayers);
+        data.put("results", localizedPlayers.size());
         return Map.of("success", true, "message", "获取阵容资料", "data", data);
     }
 
@@ -987,6 +1013,7 @@ public class CrawlerController {
             data.put("message", message);
             data.put("teamId", row.getOrDefault("external_team_id", ""));
             ensureSquadPhotoFallbacks(players);
+            players = localizeSquadPlayers(players);
             data.put("response", players);
             data.put("results", players.size());
             data.put("lastSyncedAt", row.get("fetched_at"));
@@ -1084,6 +1111,28 @@ public class CrawlerController {
         long ttl = "AVAILABLE".equals(status) || "EMPTY".equals(status) ? 12 * 60 * 60 * 1000L
                 : "QUOTA_LIMITED".equals(status) ? 30 * 60 * 1000L : 5 * 60 * 1000L;
         return System.currentTimeMillis() + ttl;
+    }
+
+    /** Localizes mutable player rows while keeping the canonical raw position. */
+    private List<Map<String, Object>> localizeSquadPlayers(List<Map<String, Object>> players) {
+        if (players == null || players.isEmpty()) return players == null ? List.of() : players;
+        List<Map<String, Object>> localized = new ArrayList<>(players.size());
+        for (Map<String, Object> player : players) {
+            if (player == null) {
+                localized.add(null);
+                continue;
+            }
+            Map<String, Object> row = new LinkedHashMap<>(player);
+            Object rawPosition = row.get("position");
+            if (rawPosition != null && !String.valueOf(rawPosition).isBlank()) {
+                row.putIfAbsent("positionRaw", rawPosition);
+                row.put("position", LabelCatalog.positionDisplay(String.valueOf(rawPosition)));
+                row.put("positionEn", LabelCatalog.positionEnglish(String.valueOf(rawPosition)));
+                row.put("positionZh", LabelCatalog.positionChinese(String.valueOf(rawPosition)));
+            }
+            localized.add(row);
+        }
+        return localized;
     }
 
     /** Add portrait URLs to old cached ESPN rows created before avatar support. */
@@ -1286,6 +1335,7 @@ public class CrawlerController {
     @GetMapping("/standings/league/{leagueName}")
     public Map<String, Object> getStandingsByLeagueName(@PathVariable("leagueName") String leagueName,
                                                         @RequestParam(name = "season", required = false) String season) {
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         try {
             List<CrawlerStanding> standings = standingCrawlerService.getStandingsByLeagueName(leagueName, season);
             return buildStandingsResponse(standings, leagueName);
@@ -1297,6 +1347,7 @@ public class CrawlerController {
     /** 获取联赛已有积分榜赛季，前端只展示真实可用的赛季选项。 */
     @GetMapping("/standings/league/{leagueName}/seasons")
     public Map<String, Object> getStandingSeasons(@PathVariable("leagueName") String leagueName) {
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         try {
             List<String> seasons = standingCrawlerService.getSeasonsByLeagueName(leagueName);
             return Map.of("success", true, "message", "获取成功", "data", Map.of("response", seasons, "results", seasons.size()));
@@ -1320,6 +1371,7 @@ public class CrawlerController {
     @PostMapping("/standings/league/{leagueName}/refresh")
     public Map<String, Object> refreshStandings(@PathVariable("leagueName") String leagueName) {
         AdminGuard.requirePermission("CRAWLER");
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         try {
             List<CrawlerStanding> standings = standingCrawlerService.crawlStandingsByLeague(leagueName);
             return buildStandingsResponse(standings, leagueName);
@@ -1336,11 +1388,20 @@ public class CrawlerController {
                                              @RequestParam("awayTeam") String awayTeam,
                                              @RequestParam(name = "limit", defaultValue = "10") int limit) {
         try {
-            List<CrawlerMatch> matches = matchCrawlerService.getHeadToHead(homeTeam, awayTeam, limit);
+            // Normalize once at the request boundary.  This keeps the summary
+            // orientation logic independent of whether the caller sent a
+            // Chinese name, an English name or a club alias.
+            String canonicalHome = LabelCatalog.teamEnglish(homeTeam);
+            String canonicalAway = LabelCatalog.teamEnglish(awayTeam);
+            List<CrawlerMatch> matches = matchCrawlerService.getHeadToHead(canonicalHome, canonicalAway, limit);
             Map<String, Object> data = new LinkedHashMap<>();
-            data.put("homeTeam", homeTeam);
-            data.put("awayTeam", awayTeam);
-            data.put("summary", buildHeadToHeadSummary(matches, homeTeam, awayTeam));
+            data.put("homeTeam", LabelCatalog.teamDisplay(canonicalHome));
+            data.put("awayTeam", LabelCatalog.teamDisplay(canonicalAway));
+            data.put("homeTeamNameEn", canonicalHome);
+            data.put("awayTeamNameEn", canonicalAway);
+            data.put("homeTeamNameZh", LabelCatalog.teamChinese(canonicalHome));
+            data.put("awayTeamNameZh", LabelCatalog.teamChinese(canonicalAway));
+            data.put("summary", buildHeadToHeadSummary(matches, canonicalHome, canonicalAway));
             data.put("matches", formatMatches(matches));
             data.put("results", matches.size());
             return Map.of("success", true, "message", "获取成功", "data", data);
@@ -1405,27 +1466,55 @@ public class CrawlerController {
             // league
             Map<String, Object> league = new LinkedHashMap<>();
             league.put("id", match.getLeagueId() != null ? match.getLeagueId() : "0");
-            league.put("name", leagueNameNormalizer.normalize(match.getLeagueName(), match.getLeagueId(), match.getSource()));
+            String normalizedLeague = leagueNameNormalizer.normalize(match.getLeagueName(), match.getLeagueId(), match.getSource());
+            league.put("name", LabelCatalog.leagueDisplay(normalizedLeague));
+            league.put("nameZh", LabelCatalog.leagueChinese(normalizedLeague));
+            league.put("nameEn", LabelCatalog.leagueEnglish(normalizedLeague));
             league.put("logo", "");
             league.put("round", match.getRound() != null ? match.getRound() : "");
             item.put("league", league);
 
+            // Keep the persisted/canonical league value for filters and request
+            // round-trips. English clients render the additive display fields
+            // instead of having to translate the Chinese internal value.
+            item.put("leagueName", match.getLeagueName());
+            item.put("leagueDisplayName", LabelCatalog.leagueDisplay(normalizedLeague));
+            item.put("leagueNameEn", LabelCatalog.leagueEnglish(normalizedLeague));
+            item.put("leagueNameZh", LabelCatalog.leagueChinese(normalizedLeague));
+
             // teams
             Map<String, Object> teams = new LinkedHashMap<>();
 
+            String homeTeamName = match.getHomeTeamName() != null ? match.getHomeTeamName() : I18nText.of("主队", "Home team");
             Map<String, Object> home = new LinkedHashMap<>();
             home.put("id", match.getHomeTeamId() != null ? match.getHomeTeamId() : "0");
-            home.put("name", match.getHomeTeamName() != null ? match.getHomeTeamName() : "主队");
+            home.put("name", LabelCatalog.teamDisplay(homeTeamName));
+            home.put("nameZh", LabelCatalog.teamChinese(homeTeamName));
+            home.put("nameEn", LabelCatalog.teamEnglish(homeTeamName));
             home.put("logo", match.getHomeTeamLogo() != null ? match.getHomeTeamLogo() : "");
 
+            String awayTeamName = match.getAwayTeamName() != null ? match.getAwayTeamName() : I18nText.of("客队", "Away team");
             Map<String, Object> away = new LinkedHashMap<>();
             away.put("id", match.getAwayTeamId() != null ? match.getAwayTeamId() : "0");
-            away.put("name", match.getAwayTeamName() != null ? match.getAwayTeamName() : "客队");
+            away.put("name", LabelCatalog.teamDisplay(awayTeamName));
+            away.put("nameZh", LabelCatalog.teamChinese(awayTeamName));
+            away.put("nameEn", LabelCatalog.teamEnglish(awayTeamName));
             away.put("logo", match.getAwayTeamLogo() != null ? match.getAwayTeamLogo() : "");
 
             teams.put("home", home);
             teams.put("away", away);
             item.put("teams", teams);
+
+            // Flat team fields mirror leagueName: raw values stay canonical and
+            // display values follow the active request language.
+            item.put("homeTeamName", match.getHomeTeamName());
+            item.put("homeTeamDisplayName", LabelCatalog.teamDisplay(match.getHomeTeamName()));
+            item.put("homeTeamNameEn", LabelCatalog.teamEnglish(match.getHomeTeamName()));
+            item.put("homeTeamNameZh", LabelCatalog.teamChinese(match.getHomeTeamName()));
+            item.put("awayTeamName", match.getAwayTeamName());
+            item.put("awayTeamDisplayName", LabelCatalog.teamDisplay(match.getAwayTeamName()));
+            item.put("awayTeamNameEn", LabelCatalog.teamEnglish(match.getAwayTeamName()));
+            item.put("awayTeamNameZh", LabelCatalog.teamChinese(match.getAwayTeamName()));
 
             // goals
             Map<String, Object> goals = new LinkedHashMap<>();
@@ -1495,17 +1584,29 @@ public class CrawlerController {
                 "externalMatchId", match.getExternalMatchId() == null ? "" : match.getExternalMatchId(),
                 "source", match.getSource() == null ? "" : match.getSource()
         ));
+        // Keep the canonical values for filter/request round-trips and expose
+        // localized display fields for rendering.
         data.put("leagueName", match.getLeagueName());
+        data.put("leagueDisplayName", LabelCatalog.leagueDisplay(match.getLeagueName()));
+        data.put("leagueNameZh", LabelCatalog.leagueChinese(match.getLeagueName()));
+        data.put("leagueNameEn", LabelCatalog.leagueEnglish(match.getLeagueName()));
         data.put("leagueId", match.getLeagueId());
         data.put("homeTeamName", match.getHomeTeamName());
+        data.put("homeTeamDisplayName", LabelCatalog.teamDisplay(match.getHomeTeamName()));
+        data.put("homeTeamNameZh", LabelCatalog.teamChinese(match.getHomeTeamName()));
+        data.put("homeTeamNameEn", LabelCatalog.teamEnglish(match.getHomeTeamName()));
         data.put("homeTeamId", match.getHomeTeamId());
         data.put("homeTeamLogo", match.getHomeTeamLogo());
         data.put("awayTeamName", match.getAwayTeamName());
+        data.put("awayTeamDisplayName", LabelCatalog.teamDisplay(match.getAwayTeamName()));
+        data.put("awayTeamNameZh", LabelCatalog.teamChinese(match.getAwayTeamName()));
+        data.put("awayTeamNameEn", LabelCatalog.teamEnglish(match.getAwayTeamName()));
         data.put("awayTeamId", match.getAwayTeamId());
         data.put("awayTeamLogo", match.getAwayTeamLogo());
         data.put("homeScore", match.getHomeScore());
         data.put("awayScore", match.getAwayScore());
         data.put("status", match.getStatus());
+        data.put("statusText", getStatusText(match.getStatus()));
         data.put("matchTime", match.getMatchTime() == null ? null : match.getMatchTime().atZone(BUSINESS_ZONE).toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         data.put("venue", match.getVenue());
         data.put("round", match.getRound());
@@ -1583,17 +1684,19 @@ public class CrawlerController {
         int homeWins = 0;
         int awayWins = 0;
         int draws = 0;
+        String canonicalHome = LabelCatalog.teamEnglish(homeTeam);
+        String canonicalAway = LabelCatalog.teamEnglish(awayTeam);
         for (CrawlerMatch match : matches) {
             Integer homeScore = match.getHomeScore();
             Integer awayScore = match.getAwayScore();
             if (homeScore == null || awayScore == null) {
                 continue;
             }
-            if (homeTeam.equals(match.getHomeTeamName()) && awayTeam.equals(match.getAwayTeamName())) {
+            if (sameTeam(canonicalHome, match.getHomeTeamName()) && sameTeam(canonicalAway, match.getAwayTeamName())) {
                 if (homeScore > awayScore) homeWins++;
                 else if (homeScore < awayScore) awayWins++;
                 else draws++;
-            } else if (homeTeam.equals(match.getAwayTeamName()) && awayTeam.equals(match.getHomeTeamName())) {
+            } else if (sameTeam(canonicalHome, match.getAwayTeamName()) && sameTeam(canonicalAway, match.getHomeTeamName())) {
                 if (awayScore > homeScore) homeWins++;
                 else if (awayScore < homeScore) awayWins++;
                 else draws++;
@@ -1605,6 +1708,13 @@ public class CrawlerController {
         data.put("draws", draws);
         data.put("total", matches.size());
         return data;
+    }
+
+    private boolean sameTeam(String expectedCanonicalName, String actualName) {
+        if (expectedCanonicalName == null || expectedCanonicalName.isBlank() || actualName == null || actualName.isBlank()) {
+            return false;
+        }
+        return expectedCanonicalName.equalsIgnoreCase(LabelCatalog.teamEnglish(actualName));
     }
 
     private List<Map<String, Object>> formatStandings(List<CrawlerStanding> standings) {
@@ -1635,12 +1745,15 @@ public class CrawlerController {
             String groupLabel = standing.getGroupLabel() == null ? "" : standing.getGroupLabel();
             item.put("group", groupLabel);
             item.put("groupLabel", groupLabel);
-            item.put("team", Map.of(
-                    "id", teamId,
-                    "canonicalKey", identityMappingService.teamKey(teamId, teamName),
-                    "name", teamName,
-                    "logo", standing.getTeamLogo() != null ? standing.getTeamLogo() : ""
-            ));
+            Map<String, Object> team = new LinkedHashMap<>();
+            team.put("id", teamId);
+            team.put("canonicalKey", identityMappingService.teamKey(teamId, teamName));
+            team.put("name", LabelCatalog.teamDisplay(teamName));
+            team.put("nameZh", LabelCatalog.teamChinese(teamName));
+            team.put("nameEn", LabelCatalog.teamEnglish(teamName));
+            team.put("rawName", teamName);
+            team.put("logo", standing.getTeamLogo() != null ? standing.getTeamLogo() : "");
+            item.put("team", team);
             item.put("canonicalKey", identityMappingService.teamKey(teamId, teamName));
             int zoneTotal = groupTotals.getOrDefault(groupLabel, (long) (standings == null ? 0 : standings.size())).intValue();
             StandingZoneRules.Zone zone = StandingZoneRules.resolve(leagueName, season, standing.getRank(), zoneTotal);
@@ -1699,7 +1812,12 @@ public class CrawlerController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("response", rows);
         data.put("results", rows.size());
+        // leagueName stays canonical (filters and season requests round-trip
+        // it); the display fields are safe to render directly.
         data.put("leagueName", leagueName);
+        data.put("leagueDisplayName", LabelCatalog.leagueDisplay(leagueName));
+        data.put("leagueNameZh", LabelCatalog.leagueChinese(leagueName));
+        data.put("leagueNameEn", LabelCatalog.leagueEnglish(leagueName));
         data.put("groups", groups);
         data.put("groupCount", groups.size());
         data.put("dataQuality", standingQuality(safeStandings, leagueName, groups.size()));
@@ -1755,17 +1873,17 @@ public class CrawlerController {
     }
 
     private String getStatusText(String status) {
-        if (status == null) return "未开始";
+        if (status == null) return I18nText.of("未开始", "Not started");
         return switch (status) {
-            case "LIVE" -> "进行中";
-            case "HT" -> "中场";
-            case "FT" -> "完场";
-            case "1H" -> "上半场";
-            case "2H" -> "下半场";
-            case "CANCEL" -> "取消";
-            case "POSTP" -> "推迟";
-            case "SOURCE_REMOVED" -> "赛程已变更";
-            default -> "未开始";
+            case "LIVE" -> I18nText.of("进行中", "Live");
+            case "HT" -> I18nText.of("中场", "Half-time");
+            case "FT" -> I18nText.of("完场", "Full-time");
+            case "1H" -> I18nText.of("上半场", "First half");
+            case "2H" -> I18nText.of("下半场", "Second half");
+            case "CANCEL" -> I18nText.of("取消", "Cancelled");
+            case "POSTP" -> I18nText.of("推迟", "Postponed");
+            case "SOURCE_REMOVED" -> I18nText.of("赛程已变更", "Fixture changed");
+            default -> I18nText.of("未开始", "Not started");
         };
     }
 

@@ -1,5 +1,7 @@
 package com.chen.football.user.dto;
 
+import com.chen.football.common.i18n.I18nText;
+
 public record AuthResponse(
         boolean ok,
         String message,
@@ -22,10 +24,10 @@ public record AuthResponse(
     }
 
     public static AuthResponse failure(String message) {
-        return new AuthResponse(false, message, null, null, null, null, null, null, false, null, null);
+        return new AuthResponse(false, I18nText.translate(message), null, null, null, null, null, null, false, null, null);
     }
 
     public static AuthResponse failureWithCaptcha(String message, String captchaId, String captchaQuestion) {
-        return new AuthResponse(false, message, null, null, null, null, null, null, true, captchaId, captchaQuestion);
+        return new AuthResponse(false, I18nText.translate(message), null, null, null, null, null, null, true, captchaId, captchaQuestion);
     }
 }

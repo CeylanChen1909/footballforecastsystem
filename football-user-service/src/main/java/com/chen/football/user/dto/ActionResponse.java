@@ -1,5 +1,7 @@
 package com.chen.football.user.dto;
 
+import com.chen.football.common.i18n.I18nText;
+
 public record ActionResponse(
         boolean ok,
         String message
@@ -9,10 +11,10 @@ public record ActionResponse(
     }
 
     public static ActionResponse success(String message) {
-        return new ActionResponse(true, message);
+        return new ActionResponse(true, I18nText.translate(message));
     }
 
     public static ActionResponse fail(String message) {
-        return new ActionResponse(false, message);
+        return new ActionResponse(false, I18nText.translate(message));
     }
 }

@@ -55,3 +55,4 @@ football-ml-service/__pycache__/
 
 ### 运行时媒体缓存（由服务生成，不进入版本库） ###
 data/media-cache/
+frontend/dist.new/

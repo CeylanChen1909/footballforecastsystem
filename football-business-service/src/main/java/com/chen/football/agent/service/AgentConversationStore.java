@@ -87,10 +87,14 @@ public class AgentConversationStore {
     }
 
     public void append(String sessionId, List<AgentMessage> messages, Map<String, Object> metadata) {
-        append(sessionId, messages, metadata, null);
+        append(sessionId, messages, metadata, null, AgentText.resolve(null));
     }
 
     public void append(String sessionId, List<AgentMessage> messages, Map<String, Object> metadata, Long userId) {
+        append(sessionId, messages, metadata, userId, AgentText.resolve(null));
+    }
+
+    public void append(String sessionId, List<AgentMessage> messages, Map<String, Object> metadata, Long userId, String lang) {
         if (sessionId == null || sessionId.isBlank() || messages == null || messages.isEmpty()) return;
         Object lock = SESSION_LOCKS.computeIfAbsent(sessionId, ignored -> new Object());
         synchronized (lock) {
@@ -119,7 +123,7 @@ public class AgentConversationStore {
                 snapshot.metadata = metadata == null ? Map.of() : new LinkedHashMap<>(metadata);
                 snapshot.lastUpdatedAt = Instant.now().toString();
                 cacheService.set(key(sessionId), snapshot, DEFAULT_TTL_SECONDS);
-                persistSnapshot(sessionId, userId, snapshot, null, null);
+                persistSnapshot(sessionId, userId, snapshot, null, null, lang);
             } finally {
                 SESSION_LOCKS.remove(sessionId, lock);
             }
@@ -136,6 +140,10 @@ public class AgentConversationStore {
     }
 
     public void registerSession(Long userId, String sessionId, String title, String preview) {
+        registerSession(userId, sessionId, title, preview, AgentText.resolve(null));
+    }
+
+    public void registerSession(Long userId, String sessionId, String title, String preview, String lang) {
         if (userId == null || sessionId == null || sessionId.isBlank()) return;
         ConversationSnapshot snapshot = loadSnapshot(sessionId);
         if (snapshot == null) {
@@ -145,7 +153,7 @@ public class AgentConversationStore {
             snapshot.metadata = new LinkedHashMap<>();
             snapshot.lastUpdatedAt = Instant.now().toString();
         }
-        persistSnapshot(sessionId, userId, snapshot, title, preview);
+        persistSnapshot(sessionId, userId, snapshot, title, preview, lang);
         SessionIndex index = cacheService.get(indexKey(userId), SessionIndex.class);
         if (index == null) index = new SessionIndex();
         if (index.items == null) index.items = new ArrayList<>();
@@ -155,7 +163,7 @@ public class AgentConversationStore {
             item.id = sessionId;
             index.items.add(item);
         }
-        item.title = title == null || title.isBlank() ? "新会话" : title.trim();
+        item.title = title == null || title.isBlank() ? AgentText.defaultSessionTitle(lang) : title.trim();
         item.preview = preview;
         item.updatedAt = Instant.now().toString();
         index.items.sort((a, b) -> String.valueOf(b.updatedAt).compareTo(String.valueOf(a.updatedAt)));
@@ -268,18 +276,20 @@ public class AgentConversationStore {
         return cacheService.get(key(sessionId), ConversationSnapshot.class);
     }
 
-    private void persistSnapshot(String sessionId, Long userId, ConversationSnapshot snapshot, String title, String preview) {
+    private void persistSnapshot(String sessionId, Long userId, ConversationSnapshot snapshot, String title, String preview, String lang) {
         if (userId == null || sessionId == null || snapshot == null) return;
         try {
             String messagesJson = objectMapper.writeValueAsString(snapshot);
             String metadataJson = objectMapper.writeValueAsString(snapshot.metadata == null ? Map.of() : snapshot.metadata);
             LocalDateTime now = LocalDateTime.now();
-            String safeTitle = title == null || title.isBlank() ? "新会话" : title.trim().replaceAll("\\s+", " ");
+            String safeTitle = title == null || title.isBlank()
+                    ? AgentText.defaultSessionTitle(lang)
+                    : title.trim().replaceAll("\\s+", " ");
             if (safeTitle.length() > 64) safeTitle = safeTitle.substring(0, 64);
             String safePreview = preview == null ? null : preview.trim().replaceAll("\\s+", " ");
             if (safePreview != null && safePreview.length() > 512) safePreview = safePreview.substring(0, 512);
             jdbcTemplate.update("INSERT INTO t_agent_conversation (session_id,user_id,title,preview,messages_json,metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?) " +
-                            "ON DUPLICATE KEY UPDATE user_id=VALUES(user_id),title=CASE WHEN VALUES(title)='新会话' THEN title ELSE VALUES(title) END,preview=COALESCE(VALUES(preview),preview),messages_json=VALUES(messages_json),metadata_json=VALUES(metadata_json),updated_at=VALUES(updated_at)",
+                            "ON DUPLICATE KEY UPDATE user_id=VALUES(user_id),title=CASE WHEN VALUES(title) IN ('新会话','New session') THEN title ELSE VALUES(title) END,preview=COALESCE(VALUES(preview),preview),messages_json=VALUES(messages_json),metadata_json=VALUES(metadata_json),updated_at=VALUES(updated_at)",
                     sessionId, userId, safeTitle, safePreview, messagesJson, metadataJson, now, now);
         } catch (Exception ex) {
             log.debug("写入 Agent 会话数据库失败，将保留 Redis: {}", ex.getMessage());

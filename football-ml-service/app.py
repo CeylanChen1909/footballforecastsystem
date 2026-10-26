@@ -7,6 +7,8 @@ import sys
 import json
 import math
 import shutil
+import copy
+from flask import has_request_context
 
 app = Flask(__name__)
 # The inference service is private and receives compact JSON feature payloads.
@@ -19,9 +21,94 @@ ML_ALLOWED_ORIGINS = [origin.strip() for origin in os.environ.get(
 CORS(app, resources={r"/*": {"origins": ML_ALLOWED_ORIGINS}})
 
 
+SUPPORTED_LANGS = ("en", "zh")
+MODEL_SCOPE_WARNING_EN = (
+    "Single-match probabilities are calibrated with rolling time validation; "
+    "combine them with data completeness and do not over-interpret low-confidence results."
+)
+
+
+def normalize_lang(value):
+    if value is None:
+        return None
+    raw = str(value).strip().lower().replace("_", "-")
+    if raw.startswith("zh"):
+        return "zh"
+    if raw.startswith("en"):
+        return "en"
+    return None
+
+
+def _accept_language_lang(header):
+    if not header:
+        return None
+    weighted = []
+    for index, part in enumerate(str(header).split(",")):
+        item = part.strip()
+        if not item:
+            continue
+        tag = item
+        quality = 1.0
+        if ";" in item:
+            tag, _, parameter = item.partition(";")
+            tag = tag.strip()
+            parameter = parameter.strip()
+            if parameter.startswith("q="):
+                try:
+                    quality = float(parameter[2:])
+                except ValueError:
+                    quality = 1.0
+        if quality <= 0:
+            continue
+        lang = normalize_lang(tag)
+        if lang:
+            weighted.append((quality, -index, lang))
+    if not weighted:
+        return None
+    return sorted(weighted, reverse=True)[0][2]
+
+
+def resolve_lang(data=None):
+    """Resolve en|zh from ?lang, X-Lang, Accept-Language, body lang (default en)."""
+    explicit = normalize_lang(request.args.get("lang")) if has_request_context() else None
+    if explicit:
+        return explicit
+    if has_request_context():
+        explicit = normalize_lang(request.headers.get("X-Lang"))
+        if explicit:
+            return explicit
+        accepted = _accept_language_lang(request.headers.get("Accept-Language"))
+        if accepted:
+            return accepted
+    if isinstance(data, dict):
+        explicit = normalize_lang(data.get("lang"))
+        if explicit:
+            return explicit
+    return "en"
+
+
+def tr(zh, en, lang):
+    return zh if lang == "zh" else en
+
+
+def localize_text(value, lang):
+    if lang == "zh" or not isinstance(value, str):
+        return value
+    return MODEL_SCOPE_WARNING_EN if value == "单场概率经过时间滚动校准；仍建议结合数据完整度，低置信度结果不应强行解读" else value
+
+
+def localized_model_metrics(lang):
+    """Return a defensive copy with localized model_scope.warning fields."""
+    metrics = copy.deepcopy(model_metrics)
+    scope = metrics.get("model_scope")
+    if isinstance(scope, dict) and scope.get("warning"):
+        scope["warning"] = localize_text(scope["warning"], lang)
+    return metrics
+
+
 @app.errorhandler(413)
 def request_too_large(_error):
-    return jsonify({"error": "请求体过大"}), 413
+    return jsonify({"error": tr("请求体过大", "Request body too large", resolve_lang())}), 413
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
 MODEL_PATH = os.path.join(MODEL_DIR, "xgboost_model.json")
@@ -53,11 +140,12 @@ def require_internal_auth():
     """Protect model inference/admin endpoints when the service is reachable on a network."""
     if not ML_REQUIRE_INTERNAL_AUTH:
         return None
+    lang = resolve_lang()
     if not ML_INTERNAL_TOKEN:
-        return jsonify({"ok": False, "message": "model internal authentication is not configured"}), 503
+        return jsonify({"ok": False, "message": tr("模型内部鉴权尚未配置", "Model internal authentication is not configured", lang)}), 503
     provided = request.headers.get("X-ML-Internal-Token", "")
     if provided != ML_INTERNAL_TOKEN:
-        return jsonify({"ok": False, "message": "unauthorized"}), 401
+        return jsonify({"ok": False, "message": tr("未授权", "Unauthorized", lang)}), 401
     return None
 
 
@@ -165,7 +253,7 @@ FEATURE_KEYS = LEGACY_FEATURE_KEYS + ADVANCED_FEATURE_KEYS
 OPTIONAL_FEATURE_KEYS = []
 
 
-def validate_prediction_payload(data):
+def validate_prediction_payload(data, lang="en"):
     """Validate the small numeric contract shared by Java and this service.
 
     Missing fields remain backward-compatible (the feature builder supplies
@@ -174,15 +262,15 @@ def validate_prediction_payload(data):
     non-deterministic probabilities.
     """
     if not isinstance(data, dict):
-        return "请求体必须是 JSON 对象"
+        return tr("请求体必须是 JSON 对象", "Request body must be a JSON object", lang)
     for key, value in data.items():
         if not isinstance(value, (int, float)) or isinstance(value, bool):
             # Metadata fields are tolerated; feature-looking fields are not.
             if key in FEATURE_KEYS or key in ADVANCED_FEATURE_KEYS:
-                return f"特征 {key} 必须是数字"
+                return tr(f"特征 {key} 必须是数字", f"Feature {key} must be a number", lang)
             continue
         if not math.isfinite(float(value)):
-            return f"特征 {key} 必须是有限数字"
+            return tr(f"特征 {key} 必须是有限数字", f"Feature {key} must be a finite number", lang)
     return None
 
 
@@ -259,7 +347,7 @@ def build_features(data, requested_features=None):
     return np.array(features, dtype=np.float64).reshape(1, -1)
 
 
-def prediction_metadata(probabilities, threshold=None):
+def prediction_metadata(probabilities, threshold=None, lang="en"):
     """返回判定强度，不把最大类别概率冒充校准置信度。"""
     values = sorted([float(v) for v in probabilities], reverse=True)
     margin = max(0.0, values[0] - values[1]) if len(values) > 1 else 0.0
@@ -272,7 +360,7 @@ def prediction_metadata(probabilities, threshold=None):
     return {
         "decisionMargin": round(margin, 4),
         "confidenceType": "decision-margin",
-        "confidenceLabel": "倾向明确" if margin >= 0.20 else ("存在分歧" if margin >= 0.08 else "接近均势"),
+        "confidenceLabel": (tr("倾向明确", "Clear lean", lang) if margin >= 0.20 else (tr("存在分歧", "Split signals", lang) if margin >= 0.08 else tr("接近均势", "Close to even", lang))),
         "recommendation": "low-confidence" if low_confidence else ("normal" if margin >= 0.08 else "cautious"),
         "confidenceStatus": "LOW_CONFIDENCE" if low_confidence else "CALIBRATED",
         "abstainThreshold": round(threshold, 3)
@@ -329,7 +417,7 @@ def normalize_league_code(data):
     return ""
 
 
-def bundle_prediction(data, bundle, metrics, route):
+def bundle_prediction(data, bundle, metrics, route, lang="en"):
     """Run a specialist/global bundle with its own feature order and weights."""
     requested = bundle.get("feature_names") or feature_names
     features = build_features(data, requested)
@@ -356,14 +444,17 @@ def bundle_prediction(data, bundle, metrics, route):
         "resultLabel": result_label,
         "modelVersion": metrics.get("strategy", bundle.get("strategy", route)),
         "modelRoute": route,
-        "explanation": f"{route}：主队胜率{home_win_prob*100:.1f}%，平局概率{draw_prob*100:.1f}%，客队胜率{away_win_prob*100:.1f}%。",
-        "topFeatures": build_top_features(data), "modelQuality": metrics,
-        "qualityGate": {"eligible": True, "route": route, "checks": (metrics.get("promotion") or {}).get("checks", {})},
-        **prediction_metadata([home_win_prob, draw_prob, away_win_prob], bundle.get("abstain_threshold", metrics.get("abstain_threshold", 0.45)))
+        "explanation": (f"{route}: home win {home_win_prob*100:.1f}%, draw {draw_prob*100:.1f}%, away win {away_win_prob*100:.1f}%."
+                        if lang == "en" else
+                        f"{route}：主队胜率{home_win_prob*100:.1f}%，平局概率{draw_prob*100:.1f}%，客队胜率{away_win_prob*100:.1f}%。"),
+        "topFeatures": build_top_features(data, lang), "modelQuality": localized_model_metrics(lang),
+        "qualityGate": {"eligible": True, "route": route, "checks": (metrics.get("promotion") or {}).get("checks", {}),
+                        "message": tr("模型通过生产门槛", "Model meets the production gate", lang)},
+        **prediction_metadata([home_win_prob, draw_prob, away_win_prob], bundle.get("abstain_threshold", metrics.get("abstain_threshold", 0.45)), lang)
     }
 
 
-def build_top_features(data):
+def build_top_features(data, lang="en"):
     h_elo = float(data.get("home_elo", 1500.0))
     a_elo = float(data.get("away_elo", 1500.0))
     h_wr = float(data.get("home_win_rate", 0.45))
@@ -379,14 +470,14 @@ def build_top_features(data):
     h2h_aw = int(data.get("h2h_away_wins", 0))
 
     raw = [
-        {"feature": "elo_diff", "label": "ELO差值", "importance": abs(h_elo - a_elo), "value": round(h_elo - a_elo, 2), "unit": "rating"},
-        {"feature": "win_rate_diff", "label": "近期胜率差", "importance": abs(h_wr - a_wr) * 100, "value": round((h_wr - a_wr) * 100, 2), "unit": "%"},
-        {"feature": "goal_diff", "label": "场均进球差", "importance": abs(h_ag - a_ag) * 10, "value": round(h_ag - a_ag, 2), "unit": "goals"},
-        {"feature": "defensive_diff", "label": "场均失球差", "importance": abs(h_al - a_al) * 10, "value": round(h_al - a_al, 2), "unit": "goals"},
-        {"feature": "h2h_balance", "label": "历史交锋平衡", "importance": abs(h2h_hw - h2h_aw) * 5 + h2h_d * 2, "value": h2h_hw - h2h_aw, "unit": "matches"},
-        {"feature": "rest_days_diff", "label": "休息天数差", "importance": abs(h_dr - a_dr) * 2, "value": h_dr - a_dr, "unit": "days"},
-        {"feature": "home_team_strength", "label": "主队综合强度", "importance": h_elo * 0.25 + h_wr * 60 + h_ag * 20, "value": round(h_elo * 0.25 + h_wr * 60 + h_ag * 20, 2), "unit": "score"},
-        {"feature": "away_team_strength", "label": "客队综合强度", "importance": a_elo * 0.25 + a_wr * 60 + a_ag * 20, "value": round(a_elo * 0.25 + a_wr * 60 + a_ag * 20, 2), "unit": "score"},
+        {"feature": "elo_diff", "label": tr("ELO差值", "ELO difference", lang), "importance": abs(h_elo - a_elo), "value": round(h_elo - a_elo, 2), "unit": "rating"},
+        {"feature": "win_rate_diff", "label": tr("近期胜率差", "Recent win-rate gap", lang), "importance": abs(h_wr - a_wr) * 100, "value": round((h_wr - a_wr) * 100, 2), "unit": "%"},
+        {"feature": "goal_diff", "label": tr("场均进球差", "Goals-per-match gap", lang), "importance": abs(h_ag - a_ag) * 10, "value": round(h_ag - a_ag, 2), "unit": "goals"},
+        {"feature": "defensive_diff", "label": tr("场均失球差", "Goals-conceded gap", lang), "importance": abs(h_al - a_al) * 10, "value": round(h_al - a_al, 2), "unit": "goals"},
+        {"feature": "h2h_balance", "label": tr("历史交锋平衡", "Head-to-head balance", lang), "importance": abs(h2h_hw - h2h_aw) * 5 + h2h_d * 2, "value": h2h_hw - h2h_aw, "unit": "matches"},
+        {"feature": "rest_days_diff", "label": tr("休息天数差", "Rest-days gap", lang), "importance": abs(h_dr - a_dr) * 2, "value": h_dr - a_dr, "unit": "days"},
+        {"feature": "home_team_strength", "label": tr("主队综合强度", "Home team overall strength", lang), "importance": h_elo * 0.25 + h_wr * 60 + h_ag * 20, "value": round(h_elo * 0.25 + h_wr * 60 + h_ag * 20, 2), "unit": "score"},
+        {"feature": "away_team_strength", "label": tr("客队综合强度", "Away team overall strength", lang), "importance": a_elo * 0.25 + a_wr * 60 + a_ag * 20, "value": round(a_elo * 0.25 + a_wr * 60 + a_ag * 20, 2), "unit": "score"},
     ]
     raw.sort(key=lambda x: x["importance"], reverse=True)
     return raw[:5]
@@ -413,7 +504,7 @@ def poisson_probabilities(features):
     return np.asarray(probabilities)
 
 
-def production_quality_gate():
+def production_quality_gate(lang="en"):
     """Return the explicit production gate used by both API and UI.
 
     A calibrated probability is not enough when the model is no better than
@@ -442,11 +533,14 @@ def production_quality_gate():
     return {
         "eligible": all(checks.values()),
         "checks": checks,
-        "message": "模型通过生产门槛" if all(checks.values()) else "当前模型未显著超过基线或平局识别不足，使用透明ELO兜底",
+        "message": (tr("模型通过生产门槛", "Model meets the production gate", lang)
+                    if all(checks.values()) else
+                    tr("当前模型未显著超过基线或平局识别不足，使用透明ELO兜底",
+                       "The current model does not clearly beat the baseline or lacks draw recognition; a transparent ELO fallback is used.", lang)),
     }
 
 
-def baseline_prediction(data):
+def baseline_prediction(data, lang="en"):
     """Point-in-time ELO + Poisson fallback when the promoted model is absent."""
     features = build_features(data)
     elo = elo_probabilities(features)[0]
@@ -460,18 +554,27 @@ def baseline_prediction(data):
     if h_prob >= d_prob and h_prob >= a_prob:
         label = "HOME_WIN"
         explanation = (
+            f"ELO analysis ({int(h_elo)} vs {int(a_elo)}): the home team has a theoretical win probability of "
+            f"{h_prob*100:.1f}% and a clear home advantage."
+            if lang == "en" else
             f"基于ELO评分系统({int(h_elo)} vs {int(a_elo)})分析，"
             f"主队理论胜率{h_prob*100:.1f}%，主场优势明显"
         )
     elif a_prob >= h_prob:
         label = "AWAY_WIN"
         explanation = (
+            f"The away team has the higher ELO rating ({int(a_elo)}); its theoretical win probability is "
+            f"{a_prob*100:.1f}% and recent head-to-head results favour the visitors."
+            if lang == "en" else
             f"客队ELO评分({int(a_elo)})更高，理论胜率{a_prob*100:.1f}%，"
             f"交锋往绩对客队有利"
         )
     else:
         label = "DRAW"
-        explanation = "两队实力接近，平局概率最大，预计双方握手言和"
+        explanation = (
+            "The teams are evenly matched; a draw has the highest probability and both sides are expected to share the points."
+            if lang == "en" else "两队实力接近，平局概率最大，预计双方握手言和"
+        )
 
     return {
         "homeWinProb": round(h_prob, 4),
@@ -481,15 +584,16 @@ def baseline_prediction(data):
         "modelVersion": "baseline-elo-poisson-v2",
         "modelRoute": "global-generic" if normalize_league_code(data) not in SPECIALIST_CODES else "global-fallback",
         "explanation": explanation,
-        "topFeatures": build_top_features(data),
-        "modelQuality": model_metrics,
-        "qualityGate": production_quality_gate(),
-        **prediction_metadata([h_prob, d_prob, a_prob])
+        "topFeatures": build_top_features(data, lang),
+        "modelQuality": localized_model_metrics(lang),
+        "qualityGate": production_quality_gate(lang),
+        **prediction_metadata([h_prob, d_prob, a_prob], lang=lang)
     }
 
 
 @app.route("/health", methods=["GET"])
 def health():
+    lang = resolve_lang()
     candidate_promotion = {"accepted": None, "decision": "UNKNOWN"}
     if os.path.exists(CANDIDATE_TRAIN_RESULTS_PATH):
         try:
@@ -501,8 +605,8 @@ def health():
     if not active_strategy and hybrid_model is not None:
         active_strategy = hybrid_model.get("strategy", "hybrid-xgb-logreg-elo-poisson-v3")
     return jsonify({"status": "ok", "model_ready": model_ready, "hybrid_ready": hybrid_model is not None,
-                    "model_metrics": model_metrics,
-                    "qualityGate": production_quality_gate(),
+                    "model_metrics": localized_model_metrics(lang),
+                    "qualityGate": production_quality_gate(lang),
                     "modelRegistry": {"active": active_strategy or "baseline-elo-poisson-v2",
                                        "rollbackAvailable": os.path.exists(os.path.join(MODEL_DIR, "hybrid_model.previous.joblib")),
                                        "candidateAvailable": os.path.exists(os.path.join(MODEL_DIR, "hybrid_model.candidate.joblib")),
@@ -538,8 +642,10 @@ def predict():
     try:
         data = request.get_json(silent=True)
     except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
-    payload_error = validate_prediction_payload(data)
+        lang = resolve_lang()
+        return jsonify({"error": tr("无效的 JSON", "Invalid JSON", lang)}), 400
+    lang = resolve_lang(data)
+    payload_error = validate_prediction_payload(data, lang)
     if payload_error:
         return jsonify({"error": payload_error}), 400
 
@@ -551,11 +657,11 @@ def predict():
     if specialist is not None:
         try:
             return jsonify(bundle_prediction(data, specialist, specialist_metrics.get(specialist_code, {}),
-                                            f"league-specialist-{specialist_code}"))
+                                            f"league-specialist-{specialist_code}", lang))
         except Exception as exc:
             print(f"[ML] Specialist prediction error ({specialist_code}), falling back: {exc}", file=sys.stderr)
 
-    if hybrid_model is not None and production_quality_gate()["eligible"]:
+    if hybrid_model is not None and production_quality_gate(lang)["eligible"]:
         try:
             features = build_features(data)
             xgb_model = hybrid_model["xgb"]
@@ -592,6 +698,13 @@ def predict():
                 "resultLabel": result_label,
                 "modelVersion": model_metrics.get("strategy", hybrid_model.get("strategy", "hybrid-xgb-logreg-elo-poisson-v3")),
                 "explanation": (
+                    (f"Calibrated ELO prediction: home win {home_win_prob*100:.1f}%, draw {draw_prob*100:.1f}%, "
+                     f"away win {away_win_prob*100:.1f}%. The model uses rolling time validation and passed the stability gate before release."
+                     if model_metrics.get("strategy", hybrid_model.get("strategy")) == "elo-calibrated-v3" else
+                     f"Hybrid model prediction: home win {home_win_prob*100:.1f}%, draw {draw_prob*100:.1f}%, "
+                     f"away win {away_win_prob*100:.1f}%. It blends XGBoost, logistic regression, ELO and a goal-distribution baseline, "
+                     f"with weights selected automatically on rolling validation windows.")
+                    if lang == "en" else
                     (f"校准 ELO 预测：主队胜率{home_win_prob*100:.1f}%，平局概率{draw_prob*100:.1f}%，"
                      f"客队胜率{away_win_prob*100:.1f}%。模型采用时间滚动验证，并在上线前通过稳定性门槛。"
                      if model_metrics.get("strategy", hybrid_model.get("strategy")) == "elo-calibrated-v3" else
@@ -599,19 +712,19 @@ def predict():
                      f"客队胜率{away_win_prob*100:.1f}%。结果融合 XGBoost、逻辑回归、ELO 与进球分布基线，"
                      f"权重按时间滚动验证集自动选择。")
                 ),
-                "topFeatures": build_top_features(data),
-                "modelQuality": model_metrics,
-                "qualityGate": production_quality_gate(),
-                **prediction_metadata([home_win_prob, draw_prob, away_win_prob], hybrid_model.get("abstain_threshold"))
+                "topFeatures": build_top_features(data, lang),
+                "modelQuality": localized_model_metrics(lang),
+                "qualityGate": production_quality_gate(lang),
+                **prediction_metadata([home_win_prob, draw_prob, away_win_prob], hybrid_model.get("abstain_threshold"), lang)
             })
         except Exception as e:
             print(f"[ML] Hybrid prediction error, falling back: {e}", file=sys.stderr)
 
-    if hybrid_model is not None and not production_quality_gate()["eligible"]:
-        return baseline_prediction(data)
+    if hybrid_model is not None and not production_quality_gate(lang)["eligible"]:
+        return baseline_prediction(data, lang)
 
     if not model_ready or model is None:
-        result = baseline_prediction(data)
+        result = baseline_prediction(data, lang)
         return jsonify(result)
 
     try:
@@ -636,6 +749,9 @@ def predict():
             result_label = "DRAW"
 
         explanation = (
+            f"XGBoost prediction: home win {home_win_prob*100:.1f}%, draw {draw_prob*100:.1f}%, "
+            f"away win {away_win_prob*100:.1f}%. It accounts for recent form, head-to-head results and home/away effects."
+            if lang == "en" else
             f"XGBoost模型预测：主队胜率{home_win_prob*100:.1f}%，"
             f"平局概率{draw_prob*100:.1f}%，客队胜率{away_win_prob*100:.1f}%。"
             f"综合考虑双方近期表现、历史交锋及主客场因素。"
@@ -648,15 +764,16 @@ def predict():
             "resultLabel": result_label,
             "modelVersion": "xgboost-v2",
             "explanation": explanation,
-            "topFeatures": build_top_features(data),
-            "modelQuality": model_metrics,
-            "qualityGate": production_quality_gate(),
-            **prediction_metadata([home_win_prob, draw_prob, away_win_prob])
+            "topFeatures": build_top_features(data, lang),
+            "modelQuality": localized_model_metrics(lang),
+            "qualityGate": production_quality_gate(lang),
+            **prediction_metadata([home_win_prob, draw_prob, away_win_prob], lang=lang)
         })
 
     except Exception as e:
         print(f"[ML] Prediction error: {e}", file=sys.stderr)
-        return jsonify({"error": "模型推理失败，请检查特征契约或服务日志"}), 500
+        return jsonify({"error": tr("模型推理失败，请检查特征契约或服务日志",
+                                    "Model inference failed; check the feature contract or service logs", lang)}), 500
 
 
 @app.route("/reload", methods=["POST"])
@@ -677,9 +794,10 @@ def rollback_model():
     if auth_error is not None:
         return auth_error
     if not ML_ADMIN_TOKEN or request.headers.get("X-ML-Admin-Token", "") != ML_ADMIN_TOKEN:
-        return jsonify({"ok": False, "message": "model rollback is disabled or unauthorized"}), 403
+        lang = resolve_lang()
+        return jsonify({"ok": False, "message": tr("模型回滚已禁用或未授权", "Model rollback is disabled or unauthorized", lang)}), 403
     if not os.path.exists(PREVIOUS_HYBRID_MODEL_PATH) or not os.path.exists(PREVIOUS_TRAIN_RESULTS_PATH):
-        return jsonify({"ok": False, "message": "no rollback artifact available"}), 409
+        return jsonify({"ok": False, "message": tr("没有可用的回滚产物", "No rollback artifact is available", resolve_lang())}), 409
     try:
         shutil.copy2(HYBRID_MODEL_PATH, HYBRID_MODEL_PATH + ".before-rollback")
         shutil.copy2(TRAIN_RESULTS_PATH, TRAIN_RESULTS_PATH + ".before-rollback")
@@ -689,7 +807,7 @@ def rollback_model():
         return jsonify({"ok": True, "model_ready": model_ready, "modelRegistry": {"active": "previous", "rollbackAvailable": True}})
     except Exception as exc:
         print(f"[ML] Rollback error: {exc}", file=sys.stderr)
-        return jsonify({"ok": False, "message": "模型回滚失败，请检查服务日志"}), 500
+        return jsonify({"ok": False, "message": tr("模型回滚失败，请检查服务日志", "Model rollback failed; check the service logs", resolve_lang())}), 500
 
 
 if __name__ == "__main__":

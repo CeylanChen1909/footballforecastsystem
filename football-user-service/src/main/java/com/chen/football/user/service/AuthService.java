@@ -3,6 +3,7 @@ package com.chen.football.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chen.football.common.exception.BusinessException;
 import com.chen.football.common.exception.UnauthorizedException;
+import com.chen.football.common.i18n.I18nText;
 import com.chen.football.common.service.AdminAuditService;
 import com.chen.football.common.service.UserSessionStateService;
 import com.chen.football.common.util.JwtUtil;
@@ -503,7 +504,7 @@ public class AuthService {
     private Map<String, Object> fail(String message) {
         Map<String, Object> resp = new HashMap<>();
         resp.put("ok", false);
-        resp.put("message", message);
+        resp.put("message", I18nText.translate(message));
         return resp;
     }
 

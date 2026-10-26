@@ -7,8 +7,10 @@ import com.chen.football.common.dto.MatchStatus;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Mapper
 public interface CrawlerMatchMapper extends BaseMapper<CrawlerMatch> {
@@ -270,11 +272,39 @@ public interface CrawlerMatchMapper extends BaseMapper<CrawlerMatch> {
     }
 
     default List<CrawlerMatch> findHeadToHead(String homeTeam, String awayTeam, int limit) {
+        return findHeadToHead(
+                homeTeam == null ? List.of() : List.of(homeTeam),
+                awayTeam == null ? List.of() : List.of(awayTeam),
+                limit);
+    }
+
+    /**
+     * Head-to-head lookup across every known spelling of each team.  The
+     * primary production feed stores English club names, while legacy imports
+     * and the shipped seed data store Chinese names; accepting both candidate
+     * sets makes the result independent of the request language.
+     */
+    default List<CrawlerMatch> findHeadToHead(Collection<String> homeTeams,
+                                              Collection<String> awayTeams,
+                                              int limit) {
+        List<String> homes = cleanTeamNames(homeTeams);
+        List<String> aways = cleanTeamNames(awayTeams);
+        if (homes.isEmpty() || aways.isEmpty()) return List.of();
         return selectList(Wrappers.<CrawlerMatch>lambdaQuery()
-                .and(w -> w.eq(CrawlerMatch::getHomeTeamName, homeTeam).eq(CrawlerMatch::getAwayTeamName, awayTeam)
-                        .or().eq(CrawlerMatch::getHomeTeamName, awayTeam).eq(CrawlerMatch::getAwayTeamName, homeTeam))
+                .and(w -> w.in(CrawlerMatch::getHomeTeamName, homes).in(CrawlerMatch::getAwayTeamName, aways)
+                        .or().in(CrawlerMatch::getHomeTeamName, aways).in(CrawlerMatch::getAwayTeamName, homes))
                 .orderByDesc(CrawlerMatch::getMatchTime)
                 .last("LIMIT " + Math.max(1, Math.min(limit, 20))));
+    }
+
+    private static List<String> cleanTeamNames(Collection<String> names) {
+        if (names == null) return List.of();
+        return names.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(name -> !name.isEmpty())
+                .distinct()
+                .toList();
     }
 
     default Integer countByDate(Date date) {

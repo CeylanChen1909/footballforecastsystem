@@ -4,6 +4,9 @@ import com.chen.football.common.dto.FixtureDetailResponse;
 import com.chen.football.common.dto.FixtureListResponse;
 import com.chen.football.common.dto.LeagueItem;
 import com.chen.football.common.dto.LeagueListResponse;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.common.service.RedisCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +41,7 @@ public class MatchService {
     @SuppressWarnings("unchecked")
     public Mono<FixtureListResponse> getTodayFixtures() {
         String today = LocalDate.now(ZoneId.of("Asia/Shanghai")).toString();
-        String key = "fixtures:today:" + today;
+        String key = "fixtures:today:" + LangContext.get() + ":" + today;
         FixtureListResponse cached = cacheService.get(key, FixtureListResponse.class);
         if (cached != null) {
             return Mono.just(cached);
@@ -53,7 +56,7 @@ public class MatchService {
 
     @SuppressWarnings("unchecked")
     public Mono<FixtureListResponse> getFixturesByDate(String date) {
-        String key = "fixtures:date:" + date;
+        String key = "fixtures:date:" + LangContext.get() + ":" + date;
         FixtureListResponse cached = cacheService.get(key, FixtureListResponse.class);
         if (cached != null) {
             return Mono.just(cached);
@@ -68,21 +71,25 @@ public class MatchService {
 
     public Mono<LeagueListResponse> getLeagues() {
         List<LeagueItem> leagues = List.of(
-                new LeagueItem(39, "英超"),
-                new LeagueItem(140, "西甲"),
-                new LeagueItem(135, "意甲"),
-                new LeagueItem(78, "德甲"),
-                new LeagueItem(61, "法甲"),
-                new LeagueItem(88, "荷甲"),
-                new LeagueItem(94, "葡超"),
-                new LeagueItem(40, "英冠")
+                league(39, "英超"),
+                league(140, "西甲"),
+                league(135, "意甲"),
+                league(78, "德甲"),
+                league(61, "法甲"),
+                league(88, "荷甲"),
+                league(94, "葡超"),
+                league(40, "英冠")
         );
         return Mono.just(new LeagueListResponse(leagues, leagues.size()));
     }
 
+    private LeagueItem league(int id, String canonicalName) {
+        return new LeagueItem(id, LabelCatalog.leagueDisplay(canonicalName));
+    }
+
     @SuppressWarnings("unchecked")
     public Mono<FixtureDetailResponse> getFixtureDetail(Long fixtureId) {
-        String key = "fixture:detail:" + fixtureId;
+        String key = "fixture:detail:" + LangContext.get() + ":" + fixtureId;
         FixtureDetailResponse cached = cacheService.get(key, FixtureDetailResponse.class);
         if (cached != null) {
             return Mono.just(cached);
@@ -94,7 +101,7 @@ public class MatchService {
         Object resp = raw.get("response");
         Map<String, Object> detailMap = resp instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
         int results = raw.get("results") instanceof Number n ? n.intValue() : 0;
-        String error = raw.get("error") == null ? null : String.valueOf(raw.get("error"));
+        String error = raw.get("error") == null ? null : I18nText.translate(String.valueOf(raw.get("error")));
         FixtureDetailResponse converted = new FixtureDetailResponse(fixtureId, detailMap, results, error);
         // Cache the public DTO, not the crawler envelope.  The two shapes are
         // intentionally different; caching the envelope makes every cache hit
@@ -108,7 +115,7 @@ public class MatchService {
         Object resp = raw.get("response");
         List<Map<String, Object>> list = resp instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
         int results = raw.get("results") instanceof Number n ? n.intValue() : list.size();
-        String error = raw.get("error") == null ? null : String.valueOf(raw.get("error"));
+        String error = raw.get("error") == null ? null : I18nText.translate(String.valueOf(raw.get("error")));
         return new FixtureListResponse(list, results, error);
     }
 

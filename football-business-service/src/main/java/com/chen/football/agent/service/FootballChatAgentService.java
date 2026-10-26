@@ -53,10 +53,15 @@ public class FootballChatAgentService {
     }
 
     public AgentChatResponse chat(AgentChatRequest request, Long userId) {
-        return chat(request, userId, null);
+        return chat(request, userId, null, AgentText.resolve(null));
     }
 
     public AgentChatResponse chat(AgentChatRequest request, Long userId, Consumer<Map<String, Object>> eventSink) {
+        return chat(request, userId, eventSink, AgentText.resolve(null));
+    }
+
+    public AgentChatResponse chat(AgentChatRequest request, Long userId, Consumer<Map<String, Object>> eventSink, String lang) {
+        String language = AgentText.resolve(lang);
         String requestId = UUID.randomUUID().toString();
         Instant start = Instant.now();
         String sessionId = resolveSessionId(request.sessionId());
@@ -65,14 +70,14 @@ public class FootballChatAgentService {
         Map<String, Object> intent = intentClassifier.classify(userMessage);
         String intentName = String.valueOf(intent.getOrDefault("intent", "general"));
 
-        AgentToolRun toolRun = toolAgentService.executeChatTools(request, userId, eventSink);
+        AgentToolRun toolRun = toolAgentService.executeChatTools(request, userId, eventSink, language);
         Map<String, Object> toolContext = new LinkedHashMap<>(toolRun.context());
         toolContext.put("toolOutputs", toolRun.toolOutputs());
         toolContext.put("toolSteps", toolRun.steps());
         toolContext.put("toolLatencies", toolRun.toolLatencies());
         toolContext.put("evidence", toolRun.evidence());
 
-        String cacheKey = buildCacheKey(sessionId, userMessage, request.history(), request.context(), request.provider(), request.model(), request.temperature(), request.maxTokens(), request.thinking(), intentName);
+        String cacheKey = buildCacheKey(sessionId, userMessage, request.history(), request.context(), request.provider(), request.model(), request.temperature(), request.maxTokens(), request.thinking(), intentName, language);
         // Tool-backed conversations must reflect current fixture/model data;
         // only cache context-free synchronous chat replies.
         AgentChatResponse cached = eventSink == null && cacheableToolRun(toolRun)
@@ -119,7 +124,7 @@ public class FootballChatAgentService {
         context.put("intentConfidence", intent.getOrDefault("confidence", 0.0));
         context.putAll(toolContext);
 
-        String prompt = AgentPromptFactory.buildChatPrompt(request, messages, context, toolRun.toolOutputs(), toolRun.evidence());
+        String prompt = AgentPromptFactory.buildChatPrompt(request, messages, context, toolRun.toolOutputs(), toolRun.evidence(), language);
         Map<String, Object> ai;
         if (eventSink != null) {
             ai = modelRouter.chatStreaming(
@@ -133,10 +138,10 @@ public class FootballChatAgentService {
         } else {
             ai = modelRouter.chat(prompt, request.provider(), request.model(), request.thinking());
         }
-        AgentAnswerValidator.Validation validation = answerValidator.validate(resolveAnswer(ai), toolRun);
+        AgentAnswerValidator.Validation validation = answerValidator.validate(resolveAnswer(ai, language), toolRun, language);
         String answer = validation.answer();
-        List<Map<String, Object>> facts = AgentEvidenceComposer.facts(toolRun);
-        List<Map<String, Object>> unknowns = AgentEvidenceComposer.unknowns(toolRun);
+        List<Map<String, Object>> facts = AgentEvidenceComposer.facts(toolRun, language);
+        List<Map<String, Object>> unknowns = AgentEvidenceComposer.unknowns(toolRun, language);
 
         List<AgentMessage> newTurn = new ArrayList<>();
         if (!userMessage.isBlank()) {
@@ -151,21 +156,23 @@ public class FootballChatAgentService {
         conversationMetadata.put("model", ai.getOrDefault("model", request.model()));
         conversationMetadata.put("fallbackFrom", ai.getOrDefault("fallbackFrom", ""));
         conversationMetadata.put("streamed", Boolean.TRUE.equals(ai.get("streamed")));
-        conversationMetadata.put("reasoning", summarizeReasoning(ai.getOrDefault("reasoning", extractRawReasoning(ai.get("raw")))));
+        conversationMetadata.put("reasoning", summarizeReasoning(ai.getOrDefault("reasoning", extractRawReasoning(ai.get("raw"))), language));
         conversationMetadata.put("evidence", toolRun.evidence());
         conversationMetadata.put("facts", facts);
         conversationMetadata.put("unknowns", unknowns);
         conversationMetadata.put("answerValidation", validation.metadata());
-        conversationMetadata.put("dataQuality", AgentEvidenceComposer.quality(toolRun));
+        conversationMetadata.put("dataQuality", AgentEvidenceComposer.quality(toolRun, language));
         conversationMetadata.put("contextSnapshot", safeContextSnapshot(toolRun.context()));
         conversationMetadata.put("evidenceSources", toolRun.evidence().stream().map(item -> String.valueOf(item.getOrDefault("label", item.get("source")))).distinct().toList());
         conversationMetadata.put("toolSteps", toolRun.steps());
         conversationMetadata.put("toolLatencies", toolRun.toolLatencies());
-        conversationMetadata.put("artifacts", buildArtifacts(toolRun));
-        conversationMetadata.put("actions", buildActions(toolRun));
+        conversationMetadata.put("artifacts", buildArtifacts(toolRun, language));
+        conversationMetadata.put("actions", buildActions(toolRun, language));
         conversationMetadata.put("dataFreshness", latestDataTimestamp(toolRun.evidence()));
-        conversationStore.append(sessionId, newTurn, conversationMetadata, userId);
-        conversationStore.registerSession(userId, sessionId, userMessage.isBlank() ? "新会话" : userMessage.substring(0, Math.min(24, userMessage.length())), userMessage);
+        conversationStore.append(sessionId, newTurn, conversationMetadata, userId, language);
+        conversationStore.registerSession(userId, sessionId,
+                userMessage.isBlank() ? AgentText.defaultSessionTitle(language) : userMessage.substring(0, Math.min(24, userMessage.length())),
+                userMessage, language);
 
         List<AgentMessage> transcript = new ArrayList<>(messages);
         transcript.add(AgentMessage.assistant(answer));
@@ -188,23 +195,23 @@ public class FootballChatAgentService {
         metadata.put("requestedProvider", request.provider());
         metadata.put("fallbackFrom", ai.getOrDefault("fallbackFrom", ""));
         metadata.put("thinkingEnabled", request.thinking() == null || request.thinking());
-        metadata.put("reasoning", summarizeReasoning(ai.getOrDefault("reasoning", extractRawReasoning(ai.get("raw")))));
+        metadata.put("reasoning", summarizeReasoning(ai.getOrDefault("reasoning", extractRawReasoning(ai.get("raw"))), language));
         metadata.put("cacheHit", false);
         metadata.put("intent", intentName);
         metadata.put("intentConfidence", intent.getOrDefault("confidence", 0.0));
         metadata.put("evidenceSources", toolRun.evidence().isEmpty()
-                ? evidenceSources(intentName)
+                ? evidenceSources(intentName, language)
                 : toolRun.evidence().stream().map(item -> String.valueOf(item.getOrDefault("label", item.get("source")))).distinct().toList());
         metadata.put("evidence", toolRun.evidence());
         metadata.put("facts", facts);
         metadata.put("unknowns", unknowns);
         metadata.put("answerValidation", validation.metadata());
-        metadata.put("dataQuality", AgentEvidenceComposer.quality(toolRun));
+        metadata.put("dataQuality", AgentEvidenceComposer.quality(toolRun, language));
         metadata.put("toolSteps", toolRun.steps());
         metadata.put("toolLatencies", toolRun.toolLatencies());
         metadata.put("skippedTools", toolRun.skippedTools());
-        metadata.put("artifacts", buildArtifacts(toolRun));
-        metadata.put("actions", buildActions(toolRun));
+        metadata.put("artifacts", buildArtifacts(toolRun, language));
+        metadata.put("actions", buildActions(toolRun, language));
         metadata.put("dataFreshness", latestDataTimestamp(toolRun.evidence()));
 
         AgentChatResponse response = new AgentChatResponse(
@@ -269,6 +276,10 @@ public class FootballChatAgentService {
     }
 
     private String resolveAnswer(Map<String, Object> ai) {
+        return resolveAnswer(ai, AgentText.resolve(null));
+    }
+
+    private String resolveAnswer(Map<String, Object> ai, String lang) {
         Object content = ai.get("content");
         if (content != null && !String.valueOf(content).isBlank()) {
             return normalizeAnswer(String.valueOf(content));
@@ -281,11 +292,15 @@ public class FootballChatAgentService {
         if (summary != null && !String.valueOf(summary).isBlank()) {
             return normalizeAnswer(String.valueOf(summary));
         }
-        return "暂时无法生成回复，请稍后重试。";
+        return AgentText.translate(lang, "暂时无法生成回复，请稍后重试。");
     }
 
     private List<String> evidenceSources(String intent) {
-        return switch (intent) {
+        return evidenceSources(intent, AgentText.resolve(null));
+    }
+
+    private List<String> evidenceSources(String intent, String lang) {
+        List<String> labels = switch (intent) {
             case "schedule" -> List.of("主爬虫赛程源", "本地赛程数据库");
             case "match-analysis" -> List.of("赛程与赛事上下文", "预测模型");
             case "team-analysis" -> List.of("球队资料", "近期赛程");
@@ -294,17 +309,22 @@ public class FootballChatAgentService {
             case "prediction" -> List.of("预测模型", "球队近期数据");
             default -> List.of("ChenFootball 当前数据集");
         };
+        return labels.stream().map(label -> AgentText.translate(lang, label)).toList();
     }
 
     private List<Map<String, Object>> buildArtifacts(AgentToolRun run) {
+        return buildArtifacts(run, AgentText.resolve(null));
+    }
+
+    private List<Map<String, Object>> buildArtifacts(AgentToolRun run, String lang) {
         List<Map<String, Object>> artifacts = new ArrayList<>();
         Map<String, Object> context = run.context();
         if (run.toolOutputs().containsKey("match_context") || context.containsKey("fixtureId")) {
             Map<String, Object> match = new LinkedHashMap<>();
             match.put("type", "match");
             match.put("fixtureId", context.get("fixtureId"));
-            match.put("homeTeamName", context.getOrDefault("homeTeamName", "主队"));
-            match.put("awayTeamName", context.getOrDefault("awayTeamName", "客队"));
+            match.put("homeTeamName", contextTeamName(context.get("homeTeamName"), lang, "主队"));
+            match.put("awayTeamName", contextTeamName(context.get("awayTeamName"), lang, "客队"));
             match.put("homeTeamLogo", context.get("homeTeamLogo"));
             match.put("awayTeamLogo", context.get("awayTeamLogo"));
             match.put("leagueName", context.get("leagueName"));
@@ -369,14 +389,25 @@ public class FootballChatAgentService {
         return artifacts;
     }
 
+    private String contextTeamName(Object value, String lang, String zhDefault) {
+        String name = value == null || String.valueOf(value).isBlank()
+                ? AgentText.translate(lang, zhDefault)
+                : String.valueOf(value);
+        return AgentText.teamName(lang, name);
+    }
+
     private List<Map<String, Object>> buildActions(AgentToolRun run) {
+        return buildActions(run, AgentText.resolve(null));
+    }
+
+    private List<Map<String, Object>> buildActions(AgentToolRun run, String lang) {
         List<Map<String, Object>> actions = new ArrayList<>();
         Map<String, Object> context = run.context();
         Object fixtureId = context.get("fixtureId");
         if (fixtureId != null && !String.valueOf(fixtureId).isBlank()) {
             Map<String, Object> action = new LinkedHashMap<>();
             action.put("type", "open-match");
-            action.put("label", "打开比赛");
+            action.put("label", AgentText.translate(lang, "打开比赛"));
             action.put("fixtureId", fixtureId);
             action.put("homeTeamName", context.get("homeTeamName"));
             action.put("awayTeamName", context.get("awayTeamName"));
@@ -392,7 +423,7 @@ public class FootballChatAgentService {
         if (teamId != null && !String.valueOf(teamId).isBlank()) {
             Map<String, Object> action = new LinkedHashMap<>();
             action.put("type", "open-team");
-            action.put("label", "查看球队阵容");
+            action.put("label", AgentText.translate(lang, "查看球队阵容"));
             action.put("teamId", teamId);
             actions.add(action);
         }
@@ -402,9 +433,11 @@ public class FootballChatAgentService {
                 if (candidate == null || String.valueOf(candidate).isBlank()) continue;
                 Map<String, Object> action = new LinkedHashMap<>();
                 action.put("type", "select-team");
-                action.put("label", "选择 " + candidate);
-                action.put("teamName", candidate);
-                action.put("prompt", "请查询 " + candidate + " 的相关资料");
+                String displayName = AgentText.teamName(lang, String.valueOf(candidate));
+                action.put("label", AgentText.of(lang, "选择 ", "Select ") + displayName);
+                action.put("teamName", displayName);
+                action.put("prompt", AgentText.of(lang, "请查询 " + displayName + " 的相关资料",
+                        "Look up information about " + displayName));
                 actions.add(action);
             }
         }
@@ -462,11 +495,16 @@ public class FootballChatAgentService {
      * as a provider-generated summary, not as a source of facts.
      */
     private String summarizeReasoning(Object value) {
+        return summarizeReasoning(value, AgentText.resolve(null));
+    }
+
+    private String summarizeReasoning(Object value, String lang) {
         if (value == null) return null;
         String text = String.valueOf(value).trim();
         if (text.isBlank()) return null;
         int max = 800;
-        return text.length() <= max ? text : text.substring(0, max) + "\n[推理摘要已截断]";
+        return text.length() <= max ? text
+                : text.substring(0, max) + AgentText.of(lang, "\n[推理摘要已截断]", "\n[Reasoning summary truncated]");
     }
 
     private String resolveSessionId(String sessionId) {
@@ -501,14 +539,17 @@ public class FootballChatAgentService {
 
     private boolean isCacheableModel(Map<String, Object> ai, String answer) {
         if (ai == null || !"ok".equalsIgnoreCase(String.valueOf(ai.getOrDefault("status", "")))) return false;
-        return answer != null && !answer.isBlank() && !answer.contains("暂时无法生成回复");
+        return answer != null && !answer.isBlank()
+                && !answer.contains("暂时无法生成回复")
+                && !answer.contains("Unable to generate a reply");
     }
 
-    private String buildCacheKey(String sessionId, String userMessage, List<AgentMessage> history, Map<String, Object> context, String provider, String model, Double temperature, Integer maxTokens, Boolean thinking, String intent) {
+    private String buildCacheKey(String sessionId, String userMessage, List<AgentMessage> history, Map<String, Object> context, String provider, String model, Double temperature, Integer maxTokens, Boolean thinking, String intent, String lang) {
         String historySig = Integer.toHexString(String.valueOf(history).hashCode());
         String contextSig = context == null ? "0" : Integer.toHexString(context.toString().hashCode());
         return String.join(":",
                 "session-v3", sessionId,
+                "lang", AgentText.resolve(lang),
                 "policy", modelRouter.policyFingerprint(),
                 "intent", intent == null ? "general" : intent,
                 "thinking", String.valueOf(thinking == null || thinking),

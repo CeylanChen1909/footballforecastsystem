@@ -1,6 +1,9 @@
 package com.chen.football.crawler;
 
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.crawler.service.StandingZoneRules;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -10,6 +13,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StandingZoneRulesTest {
+
+    @BeforeEach
+    void useChineseForLegacyAssertions() {
+        LangContext.set("zh");
+    }
+
+    @AfterEach
+    void clearLanguage() {
+        LangContext.clear();
+    }
 
     @Test
     void frenchLeagueUsesQualificationAndConferenceSlotsInsteadOfTopFourShortcut() {
@@ -46,6 +59,17 @@ class StandingZoneRulesTest {
         assertTrue(String.valueOf(description.get("note")).contains("欧冠资格赛"));
         List<?> zones = (List<?>) description.get("zones");
         assertTrue(zones.stream().anyMatch(zone -> ((Map<?, ?>) zone).get("code").equals("CHAMPIONS_LEAGUE_QUALIFYING")));
+    }
+
+    @Test
+    void englishModeLocalizesNotesLabelsAndLeagueNames() {
+        LangContext.set("en");
+        Map<String, Object> description = StandingZoneRules.describe("法甲", "2026", 18);
+        assertEquals("Ligue 1", description.get("league"));
+        assertTrue(String.valueOf(description.get("note")).contains("Champions League qualifying"));
+        List<?> zones = (List<?>) description.get("zones");
+        assertTrue(zones.stream().anyMatch(zone -> "UEFA Champions League qualifying".equals(((Map<?, ?>) zone).get("label"))));
+        assertEquals("UEFA Champions League", StandingZoneRules.resolve("英超", "2026", 1, 20).label());
     }
 
     @Test

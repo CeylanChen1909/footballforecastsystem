@@ -1,6 +1,8 @@
 package com.chen.football.prediction.service;
 
 import com.chen.football.common.context.UserContext;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.common.config.CrawlerProperties;
 import com.chen.football.common.dto.MatchPredictionRequest;
 import com.chen.football.common.dto.MatchPredictionResponse;
@@ -193,7 +195,7 @@ public class PersistencePredictionService {
                 // 有至少一场双方历史时，使用可解释的 ELO + Poisson 保守基线。
                 // 这比把 0/缺失值塞进训练模型更安全，同时不再让新赛季
                 // 或升班马被一律显示为“完全没有预测”。
-                return baselinePrediction(req, features, "历史样本有限，使用 ELO+Poisson 保守基线");
+                return baselinePrediction(req, features, I18nText.of("历史样本有限，使用 ELO+Poisson 保守基线", "Limited historical sample; using a conservative ELO+Poisson baseline"));
             }
             return unavailablePrediction(req, features, features.gateReason(req));
         }
@@ -201,8 +203,8 @@ public class PersistencePredictionService {
             return callPythonInference(req, features);
         }
         String reason = !features.optional.missing.isEmpty()
-                ? "赛前增强特征缺失，使用透明 ELO+Poisson 基线"
-                : "未启用 Python 模型";
+                ? I18nText.of("赛前增强特征缺失，使用透明 ELO+Poisson 基线", "Prematch enriched features are missing; using a transparent ELO+Poisson baseline")
+                : I18nText.of("未启用 Python 模型", "Python model is not enabled");
         return baselinePrediction(req, features, reason);
     }
 
@@ -213,6 +215,7 @@ public class PersistencePredictionService {
             WebClient.RequestHeadersSpec<?> request = pythonClient.post()
                     .uri("/predict")
                     .bodyValue(body);
+            request = request.header("X-Lang", LangContext.get());
             if (!pythonToken.isBlank()) {
                 request = request.header("X-ML-Internal-Token", pythonToken);
             }
@@ -252,16 +255,16 @@ public class PersistencePredictionService {
                         topFeatures,
                         features.isComplete(),
                         features.status(),
-                        features.isComplete() ? null : "部分特征缺失：" + features.metadata().get("missing"),
+                        features.isComplete() ? null : I18nText.of("部分特征缺失：", "Some features are missing: ") + features.metadata().get("missing"),
                         featureMeta,
                         true
                 );
             }
         } catch (Exception ex) {
             log.warn("Python推理调用失败，使用baseline: {}", ex.getMessage());
-            return baselinePrediction(req, features, "Python 推理服务不可用：" + ex.getMessage());
+            return baselinePrediction(req, features, I18nText.of("Python 推理服务不可用：", "Python inference service unavailable: ") + ex.getMessage());
         }
-        return baselinePrediction(req, features, "Python 返回了无效预测结果");
+        return baselinePrediction(req, features, I18nText.of("Python 返回了无效预测结果", "Python returned an invalid prediction"));
     }
 
     private FeatureContext buildFeatureContext(MatchPredictionRequest req) {
@@ -497,10 +500,11 @@ public class PersistencePredictionService {
         String label = homeProb >= drawProb && homeProb >= awayProb ? "HOME_WIN"
                 : awayProb >= homeProb ? "AWAY_WIN" : "DRAW";
 
-        String explanation = String.format(
-                "基于球队ELO、近期战绩、攻防表现与历史交锋综合评估：主胜%.1f%%，平局%.1f%%，客胜%.1f%%",
-                homeProb * 100, drawProb * 100, awayProb * 100
-        );
+        String explanation = LangContext.isEnglish()
+                ? String.format("Combined ELO, recent form, attack/defence and head-to-head: home win %.1f%%, draw %.1f%%, away win %.1f%%",
+                homeProb * 100, drawProb * 100, awayProb * 100)
+                : String.format("基于球队ELO、近期战绩、攻防表现与历史交锋综合评估：主胜%.1f%%，平局%.1f%%，客胜%.1f%%",
+                homeProb * 100, drawProb * 100, awayProb * 100);
 
         return new MatchPredictionResponse(
                 req.fixtureId(), label, homeProb, drawProb, awayProb,
@@ -535,7 +539,8 @@ public class PersistencePredictionService {
         metadata.put("modelKind", "UNAVAILABLE");
         metadata.put("qualityTier", "INSUFFICIENT_DATA");
         return new MatchPredictionResponse(req.fixtureId(), null, 0, 0, 0, MODEL_VERSION,
-                "数据不足，暂不生成预测。" + reason, List.of(), false, "UNAVAILABLE", reason, metadata, false);
+                I18nText.of("数据不足，暂不生成预测。", "Insufficient data; no prediction was generated. ") + reason,
+                List.of(), false, "UNAVAILABLE", reason, metadata, false);
     }
 
     private List<Map<String, Object>> dedupeRows(List<Map<String, Object>> rows, int limit) {
@@ -1007,13 +1012,13 @@ public class PersistencePredictionService {
         }
         String gateReason(MatchPredictionRequest req) {
             List<String> reasons = new ArrayList<>();
-            if (!supportedLeague(req)) reasons.add("联赛不在模型覆盖范围");
-            if (home.sampleSize < 1) reasons.add("主队没有可用历史样本");
-            else if (home.sampleSize < 3) reasons.add("主队历史样本有限(" + home.sampleSize + "/3)");
-            if (away.sampleSize < 1) reasons.add("客队没有可用历史样本");
-            else if (away.sampleSize < 3) reasons.add("客队历史样本有限(" + away.sampleSize + "/3)");
-            if (!home.missing.isEmpty() || !away.missing.isEmpty()) reasons.add("核心特征缺失");
-            return String.join("；", reasons);
+            if (!supportedLeague(req)) reasons.add(I18nText.of("联赛不在模型覆盖范围", "League is outside model coverage"));
+            if (home.sampleSize < 1) reasons.add(I18nText.of("主队没有可用历史样本", "No usable historical sample for the home team"));
+            else if (home.sampleSize < 3) reasons.add(I18nText.of("主队历史样本有限(" + home.sampleSize + "/3)", "Limited home historical sample (" + home.sampleSize + "/3)"));
+            if (away.sampleSize < 1) reasons.add(I18nText.of("客队没有可用历史样本", "No usable historical sample for the away team"));
+            else if (away.sampleSize < 3) reasons.add(I18nText.of("客队历史样本有限(" + away.sampleSize + "/3)", "Limited away historical sample (" + away.sampleSize + "/3)"));
+            if (!home.missing.isEmpty() || !away.missing.isEmpty()) reasons.add(I18nText.of("核心特征缺失", "Core features are missing"));
+            return String.join(I18nText.of("；", "; "), reasons);
         }
         private boolean supportedLeague(MatchPredictionRequest req) {
             if (req == null) return false;
@@ -1060,6 +1065,7 @@ public class PersistencePredictionService {
 
         Map<String, Object> toInferencePayload(MatchPredictionRequest req) {
             Map<String, Object> body = new HashMap<>();
+            body.put("lang", LangContext.get());
             body.put("fixture_id", req.fixtureId());
             body.put("home_team_id", req.homeTeamId());
             body.put("away_team_id", req.awayTeamId());

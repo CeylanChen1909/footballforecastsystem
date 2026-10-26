@@ -6,6 +6,7 @@ import com.chen.football.common.client.JuheFootballClient;
 import com.chen.football.common.dto.FetchResult;
 import com.chen.football.common.dto.MatchStatus;
 import com.chen.football.common.dto.NormalizedMatch;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.common.service.DistributedLockService;
 import com.chen.football.crawler.source.DataSourceManager;
 import com.chen.football.crawler.source.MatchSourceProvider;
@@ -974,7 +975,13 @@ public class MatchCrawlerService {
     public List<CrawlerMatch> getHeadToHead(String homeTeam, String awayTeam, int limit) {
         if (homeTeam == null || awayTeam == null || homeTeam.isBlank() || awayTeam.isBlank()) return Collections.emptyList();
         int safeLimit = Math.max(1, Math.min(limit, 50));
-        return visibleMatches(matchMapper.findHeadToHead(homeTeam.trim(), awayTeam.trim(), safeLimit));
+        // Production rows use the English canonical team names from the primary
+        // BBC feed; legacy rows may use Chinese.  Query the full alias set so
+        // Chinese, English and aliases all return the same fixtures.
+        return visibleMatches(matchMapper.findHeadToHead(
+                LabelCatalog.teamNameVariants(homeTeam),
+                LabelCatalog.teamNameVariants(awayTeam),
+                safeLimit));
     }
 
     /**

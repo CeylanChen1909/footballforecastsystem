@@ -38,11 +38,16 @@ public class AgentTeamResolver {
 
     /** Add canonical team fields without overwriting explicit UI context. */
     public List<String> enrich(Map<String, Object> context, String message) {
+        return enrich(context, message, AgentText.resolve(null));
+    }
+
+    public List<String> enrich(Map<String, Object> context, String message, String lang) {
         List<String> ambiguous = ambiguousCandidates(message);
         if (!ambiguous.isEmpty()) {
             context.put("teamAmbiguity", true);
             context.put("teamCandidates", ambiguous);
-            context.put("teamAmbiguityMessage", "检测到多个可能的球队，请先选择具体球队");
+            context.put("teamAmbiguityMessage", AgentText.translate(lang,
+                    "检测到多个可能的球队，请先选择具体球队"));
             return List.of();
         }
         List<String> resolved = resolve(message);

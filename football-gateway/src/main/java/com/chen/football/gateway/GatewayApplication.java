@@ -144,7 +144,7 @@ public class GatewayApplication {
                 .filter(origin -> !origin.isBlank())
                 .toList());
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "Accept-Language", "Origin", "X-Requested-With", "X-Lang"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         

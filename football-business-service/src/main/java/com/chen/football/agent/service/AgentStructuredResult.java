@@ -14,12 +14,16 @@ public record AgentStructuredResult(
         String rawContent
 ) {
     public static AgentStructuredResult fallback(String summary, String rawContent) {
+        return fallback(summary, rawContent, AgentText.resolve(null));
+    }
+
+    public static AgentStructuredResult fallback(String summary, String rawContent, String lang) {
         return new AgentStructuredResult(
                 summary,
                 0.3,
                 List.of(),
                 List.of(),
-                "建议补充更多信息后再做决策。",
+                AgentText.of(lang, "建议补充更多信息后再做决策。", "Add more information before making a decision."),
                 List.of(),
                 false,
                 rawContent

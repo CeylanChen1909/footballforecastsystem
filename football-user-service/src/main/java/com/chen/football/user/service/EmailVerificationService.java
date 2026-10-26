@@ -1,5 +1,6 @@
 package com.chen.football.user.service;
 
+import com.chen.football.common.i18n.I18nText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -154,6 +155,6 @@ public class EmailVerificationService {
         if (at <= 2) return "***" + (at > 0 ? email.substring(at) : "");
         return email.substring(0, 2) + "***" + email.substring(at);
     }
-    private Map<String, Object> fail(String message) { return Map.of("ok", false, "message", message); }
+    private Map<String, Object> fail(String message) { return Map.of("ok", false, "message", I18nText.translate(message)); }
     private record CodeEntry(String code, Instant expiresAt) { }
 }

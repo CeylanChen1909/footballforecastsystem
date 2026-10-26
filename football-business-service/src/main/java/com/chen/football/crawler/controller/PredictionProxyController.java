@@ -1,15 +1,19 @@
 package com.chen.football.crawler.controller;
 
+import com.chen.football.common.dto.ApiError;
 import com.chen.football.common.dto.ApiResponse;
 import com.chen.football.crawler.service.DeepSeekPredictionService;
 import com.chen.football.crawler.service.ExternalPredictionProxyService;
 import com.chen.football.common.util.AdminGuard;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.common.context.UserContext;
 import com.chen.football.agent.service.AgentRateLimitService;
 import com.chen.football.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,24 +43,19 @@ public class PredictionProxyController {
         if (!rateLimitService.allow(UserContext.getUserId())) throw new BusinessException("模型请求过于频繁，请稍后再试");
     }
 
+    /**
+     * Retired legacy endpoint.  It deliberately has no {@code @RequestParam}
+     * arguments: Spring resolves/binds method arguments before entering the
+     * method body, so keeping them here allowed bad or unusual encoding to fail
+     * (or enter the old blocking model path) before the 410 guard ran.  This
+     * handler now returns 410 before touching any query parameter, league
+     * normalization, database, Redis or model client.
+     */
     @GetMapping("/prediction")
-    public ApiResponse<Map<String, Object>> predict(@RequestParam(name = "fixtureId", required = false) Long fixtureId,
-                                                    @RequestParam(name = "homeTeam", required = false) String homeTeam,
-                                                    @RequestParam(name = "awayTeam", required = false) String awayTeam,
-                                                    @RequestParam(name = "leagueName", required = false) String leagueName) {
-        guardModelCall();
-        Map<String, Object> base = proxyService.predict(fixtureId, homeTeam, awayTeam, leagueName);
-        String prompt = String.format("请基于以下比赛给出足球预测JSON，只输出JSON对象，不要多余文本。要求字段：homeWinProb, drawProb, awayWinProb, resultLabel, tactical, basis, risk。比赛：fixtureId=%s, homeTeam=%s, awayTeam=%s, leagueName=%s。", fixtureId, homeTeam, awayTeam, leagueName);
-        Map<String, Object> ai = deepSeekPredictionService.analyzeJson(prompt);
-        Map<String, Object> merged = new LinkedHashMap<>(base);
-        merged.put("ai", ai);
-        merged.put("source", ai.getOrDefault("source", "proxy-heuristic-v2"));
-        Object content = ai.get("content");
-        if (content != null && !String.valueOf(content).isBlank()) {
-            merged.put("content", String.valueOf(content));
-            merged.put("summary", String.valueOf(content));
-        }
-        return ApiResponse.ok(merged);
+    public ResponseEntity<ApiResponse<ApiError>> predict() {
+        String message = I18nText.translate("旧版预测接口已下线，请使用比赛级预测快照");
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(new ApiResponse<>(false, message, new ApiError("41000", message, null)));
     }
 
     @GetMapping("/analysis")
@@ -70,6 +69,7 @@ public class PredictionProxyController {
                                                      @RequestParam(name = "resultLabel", required = false) String resultLabel,
                                                      @RequestParam(name = "explanation", required = false) String explanation) {
         guardModelCall();
+        leagueName = LabelCatalog.canonicalLeague(leagueName);
         String prompt = String.format("请基于以下足球比赛预测结果，输出一段简洁、专业、可直接展示给用户的中文补充分析，重点说明概率含义、比赛走势和风险提示，避免空话，不要输出 Markdown 表格。比赛：%s vs %s；联赛：%s；fixtureId：%s；主胜概率：%s；平局概率：%s；客胜概率：%s；结果标签：%s；本地解释：%s。请用 3~5 句话完成输出。",
                 homeTeam, awayTeam, leagueName, fixtureId, homeWinProb, drawProb, awayWinProb, resultLabel, explanation);
         Map<String, Object> ai = deepSeekPredictionService.analyzeJson(prompt);

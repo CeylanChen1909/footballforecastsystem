@@ -1,5 +1,7 @@
 package com.chen.football.common.dto;
 
+import com.chen.football.common.i18n.I18nText;
+
 import java.util.Map;
 
 public record FixtureDetailResponse(
@@ -9,6 +11,6 @@ public record FixtureDetailResponse(
         String error
 ) {
     public static FixtureDetailResponse empty(Long fixtureId, String error) {
-        return new FixtureDetailResponse(fixtureId, Map.of(), 0, error);
+        return new FixtureDetailResponse(fixtureId, Map.of(), 0, I18nText.translate(error));
     }
 }

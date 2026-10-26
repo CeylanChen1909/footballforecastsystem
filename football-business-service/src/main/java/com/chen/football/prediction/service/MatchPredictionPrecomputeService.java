@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chen.football.common.dto.MatchPredictionRequest;
 import com.chen.football.common.dto.MatchPredictionResponse;
 import com.chen.football.common.config.CrawlerProperties;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LabelCatalog;
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.crawler.entity.CrawlerMatch;
 import com.chen.football.crawler.mapper.CrawlerMatchMapper;
 import jakarta.annotation.PostConstruct;
@@ -285,9 +288,11 @@ public class MatchPredictionPrecomputeService {
             row.put("homeTeamLogo", stringValue(source.get("home_team_logo")));
             row.put("awayTeamId", stringValue(source.get("away_team_id")));
             row.put("awayTeamName", stringValue(source.get("away_team_name")));
+            row.put("awayTeamDisplayName", LabelCatalog.teamDisplay(stringValue(source.get("away_team_name"))));
             row.put("awayTeamLogo", stringValue(source.get("away_team_logo")));
             row.put("leagueId", stringValue(source.get("league_id")));
             row.put("leagueName", stringValue(source.get("league_name")));
+            row.put("leagueDisplayName", LabelCatalog.leagueDisplay(stringValue(source.get("league_name"))));
             row.put("matchTime", source.get("match_time"));
             row.put("resultLabel", stringValue(source.get("result_label")));
             row.put("homeWinProb", source.get("home_win_prob"));
@@ -298,7 +303,7 @@ public class MatchPredictionPrecomputeService {
             row.put("featureVersion", stringValue(source.get("feature_version")));
             row.put("topFeatures", readJsonList(source.get("top_features_json")));
             row.put("featureMeta", readJsonMap(source.get("feature_meta_json")));
-            row.put("explanation", stringValue(source.get("explanation")));
+            row.put("explanation", localizeExplanation(stringValue(source.get("explanation")), source));
             row.put("featureComplete", booleanValue(source.get("feature_complete")));
             row.put("featureStatus", stringValue(source.get("feature_status")));
             row.put("fallbackReason", stringValue(source.get("fallback_reason")));
@@ -384,6 +389,29 @@ public class MatchPredictionPrecomputeService {
     public record PredictionStatusResult(Map<Long, Map<String, Object>> items,
                                          String status,
                                          String message) {}
+
+    /**
+     * Prediction snapshots are shared globally.  If an older snapshot was
+     * generated in the other language, render a concise localized summary from
+     * the stored probabilities instead of leaking the mismatched language.
+     */
+    private String localizeExplanation(String explanation, Map<String, Object> source) {
+        if (explanation == null || explanation.isBlank()) return explanation;
+        boolean chinese = I18nText.containsChinese(explanation);
+        boolean wantChinese = LangContext.isChinese();
+        if (wantChinese == chinese) return explanation;
+        double home = percent(source.get("home_win_prob"));
+        double draw = percent(source.get("draw_prob"));
+        double away = percent(source.get("away_win_prob"));
+        if (wantChinese) {
+            return String.format(java.util.Locale.ROOT, "模型预测：主胜%.1f%%，平局%.1f%%，客胜%.1f%%", home, draw, away);
+        }
+        return String.format(java.util.Locale.ROOT, "Model prediction: home win %.1f%%, draw %.1f%%, away win %.1f%%", home, draw, away);
+    }
+
+    private double percent(Object value) {
+        return value instanceof Number number ? number.doubleValue() * 100.0 : 0.0;
+    }
 
     private String qualityTier(Map<String, Object> source) {
         String status = stringValue(source.get("status"));
@@ -503,12 +531,15 @@ public class MatchPredictionPrecomputeService {
             row.put("externalMatchId", stringValue(source.get("external_match_id")));
             row.put("homeTeamId", stringValue(source.get("home_team_id")));
             row.put("homeTeamName", stringValue(source.get("home_team_name")));
+            row.put("homeTeamDisplayName", LabelCatalog.teamDisplay(stringValue(source.get("home_team_name"))));
             row.put("homeTeamLogo", stringValue(source.get("home_team_logo")));
             row.put("awayTeamId", stringValue(source.get("away_team_id")));
             row.put("awayTeamName", stringValue(source.get("away_team_name")));
+            row.put("awayTeamDisplayName", LabelCatalog.teamDisplay(stringValue(source.get("away_team_name"))));
             row.put("awayTeamLogo", stringValue(source.get("away_team_logo")));
             row.put("leagueId", stringValue(source.get("league_id")));
             row.put("leagueName", stringValue(source.get("league_name")));
+            row.put("leagueDisplayName", LabelCatalog.leagueDisplay(stringValue(source.get("league_name"))));
             row.put("matchTime", source.get("match_time"));
             row.put("resultLabel", stringValue(source.get("result_label")));
             row.put("homeWinProb", source.get("home_win_prob"));
@@ -531,7 +562,7 @@ public class MatchPredictionPrecomputeService {
                 .orElse(null);
         return new PublicSnapshotResult(result, Map.of(
                 "status", "AVAILABLE", "statusText", "预测快照可用",
-                "message", result.isEmpty() ? "当前窗口暂无已生成预测" : "已找到 " + result.size() + " 条预测快照",
+                "message", result.isEmpty() ? "当前窗口暂无已生成预测" : "已返回 " + result.size() + " 条预测快照",
                 "lastSuccess", lastUpdated == null ? "" : lastUpdated.toString(),
                 "resultCount", result.size()));
     }

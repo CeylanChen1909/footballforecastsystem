@@ -2,6 +2,8 @@ package com.chen.football.crawler.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chen.football.common.dto.MatchStatus;
+import com.chen.football.common.i18n.I18nText;
+import com.chen.football.common.i18n.LangContext;
 import com.chen.football.common.service.RedisCacheService;
 import com.chen.football.crawler.entity.CrawlerMatch;
 import com.chen.football.crawler.mapper.CrawlerMatchMapper;
@@ -66,7 +68,7 @@ public class MatchRecommendationService {
         LocalDate date = LocalDate.now(BUSINESS_ZONE);
         String mode = requestedMode == null || requestedMode.isBlank() ? "focus" : requestedMode.trim().toLowerCase(Locale.ROOT);
         int limit = Math.max(1, Math.min(requestedLimit <= 0 ? 6 : requestedLimit, 10));
-        String cacheKey = "match-recommendations:" + ALGORITHM_VERSION + ":rolling:" + mode + ":" + limit;
+        String cacheKey = "match-recommendations:" + ALGORITHM_VERSION + ":rolling:" + LangContext.get() + ":" + mode + ":" + limit;
 
         RecommendationResult cached = redisCacheService.get(cacheKey, RecommendationResult.class);
         if (cached != null && cached.items != null) {
@@ -175,17 +177,17 @@ public class MatchRecommendationService {
             score += 40;
             tier = "LIVE";
             codes.add("LIVE_NOW");
-            texts.add("正在进行");
+            texts.add(I18nText.of("正在进行", "Live now"));
         } else if (isUpcoming(status, match, now)) {
             score += 28;
             tier = "UPCOMING";
             codes.add("UPCOMING");
-            texts.add("即将开始");
+            texts.add(I18nText.of("即将开始", "Starting soon"));
         } else {
             score += 8;
             tier = "RECENT";
             codes.add("RECENT_RESULT");
-            texts.add("近期赛果");
+            texts.add(I18nText.of("近期赛果", "Recent result"));
         }
 
         if (match.getMatchTime() != null) {
@@ -194,11 +196,11 @@ public class MatchRecommendationService {
             if (minutes >= 0 && minutes <= 120) {
                 score += 20;
                 codes.add("KICKOFF_SOON");
-                texts.add("2小时内开赛");
+                texts.add(I18nText.of("2小时内开赛", "Kick-off within 2 hours"));
             } else if (minutes > 0 && minutes <= 720) {
                 score += 12;
                 codes.add("KICKOFF_TODAY");
-                texts.add("今天开赛");
+                texts.add(I18nText.of("今天开赛", "Kick-off today"));
             } else if (absoluteMinutes <= 720) {
                 score += 6;
             }
@@ -208,14 +210,14 @@ public class MatchRecommendationService {
         score += leagueScore;
         if (leagueScore >= 12) {
             codes.add("TOP_LEAGUE");
-            texts.add("重点联赛");
+            texts.add(I18nText.of("重点联赛", "Top competition"));
         }
         if (match.getRound() != null && !match.getRound().isBlank()) {
             String round = match.getRound().toLowerCase(Locale.ROOT);
             if (round.contains("final") || round.contains("决赛") || round.contains("semi") || round.contains("半决赛")) {
                 score += 8;
                 codes.add("KEY_ROUND");
-                texts.add("关键轮次");
+                texts.add(I18nText.of("关键轮次", "Key round"));
             }
         }
         int followers = Math.max(
@@ -225,7 +227,7 @@ public class MatchRecommendationService {
         if (popularityScore > 0) {
             score += popularityScore;
             codes.add("POPULAR_TEAM");
-            texts.add("热门球队" + (followers > 0 ? " · " + followers + "人关注" : ""));
+            texts.add(I18nText.of("热门球队" + (followers > 0 ? " · " + followers + "人关注" : ""), "Popular team" + (followers > 0 ? " · " + followers + " followers" : "")));
         }
         if (match.getHomeScore() != null || match.getAwayScore() != null) score += 2;
         if (hasText(match.getHomeTeamLogo()) && hasText(match.getAwayTeamLogo())) score += 2;

@@ -5,6 +5,7 @@ import com.chen.football.common.dto.ApiResponse;
 import com.chen.football.common.dto.ErrorCode;
 import com.chen.football.common.exception.BusinessException;
 import com.chen.football.common.exception.UnauthorizedException;
+import com.chen.football.common.i18n.I18nText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -93,13 +94,13 @@ public class CommonGlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<ApiError>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         return error(HttpStatus.METHOD_NOT_ALLOWED, ErrorCode.BAD_REQUEST,
-                "请求方法不支持: " + e.getMethod());
+                I18nText.translate("请求方法不支持: " + e.getMethod()));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ApiResponse<ApiError>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorCode.BAD_REQUEST,
-                "不支持的 Content-Type: " + (e.getContentType() == null ? "unknown" : e.getContentType()));
+                I18nText.translate("不支持的 Content-Type: " + (e.getContentType() == null ? "unknown" : e.getContentType())));
     }
 
     @ExceptionHandler(Exception.class)
@@ -109,7 +110,7 @@ public class CommonGlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<ApiError>> error(HttpStatus status, ErrorCode code, String message) {
-        String text = (message == null || message.isBlank()) ? code.defaultMessage() : message;
+        String text = (message == null || message.isBlank()) ? code.defaultMessage() : I18nText.translate(message);
         return ResponseEntity.status(status).body(ApiResponse.error(ApiError.of(code.code(), text)));
     }
 }

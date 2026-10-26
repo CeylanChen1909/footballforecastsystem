@@ -3,6 +3,7 @@ package com.chen.football.crawler.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chen.football.common.client.JuheFootballClient;
 import com.chen.football.common.config.CrawlerProperties;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.crawler.entity.CrawlerStanding;
 import com.chen.football.crawler.entity.CrawlerTeam;
 import com.chen.football.crawler.http.CrawlerHttpClient;
@@ -451,6 +452,9 @@ public class StandingCrawlerService {
             List<CrawlerStanding> rows = getStandingsByLeagueName(leagueName, "");
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("leagueName", leagueName);
+            item.put("leagueDisplayName", LabelCatalog.leagueDisplay(leagueName));
+            item.put("leagueNameEn", LabelCatalog.leagueEnglish(leagueName));
+            item.put("leagueNameZh", LabelCatalog.leagueChinese(leagueName));
             item.put("rows", rows.size());
             LocalDateTime updatedAt = rows.stream().map(CrawlerStanding::getUpdatedAt)
                     .filter(java.util.Objects::nonNull).max(LocalDateTime::compareTo).orElse(null);
@@ -535,8 +539,11 @@ public class StandingCrawlerService {
 
     private String canonicalLeagueName(String value) {
         if (value == null || value.isBlank()) return "";
-        String key = value.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("[\\s_\\-]+", "");
-        return LEAGUE_ALIASES.getOrDefault(key, value.trim());
+        String trimmed = value.trim();
+        String catalogCanonical = LabelCatalog.canonicalLeague(trimmed);
+        if (!catalogCanonical.equals(trimmed)) return catalogCanonical;
+        String key = trimmed.toLowerCase(java.util.Locale.ROOT).replaceAll("[\\s_\\-]+", "");
+        return LEAGUE_ALIASES.getOrDefault(key, trimmed);
     }
 
     private String canonicalSeason(String value) {

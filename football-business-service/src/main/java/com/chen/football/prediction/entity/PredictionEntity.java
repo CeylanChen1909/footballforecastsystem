@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chen.football.common.i18n.LabelCatalog;
 
 import java.time.LocalDateTime;
 
@@ -102,4 +103,9 @@ public class PredictionEntity {
     
     public LocalDateTime getVerifiedAt() { return verifiedAt; }
     public void setVerifiedAt(LocalDateTime verifiedAt) { this.verifiedAt = verifiedAt; }
+
+    // Additive display-only fields for API consumers; persisted values are unchanged.
+    public String getLeagueDisplayName() { return LabelCatalog.leagueDisplay(leagueName); }
+    public String getHomeTeamDisplayName() { return LabelCatalog.teamDisplay(homeTeamName); }
+    public String getAwayTeamDisplayName() { return LabelCatalog.teamDisplay(awayTeamName); }
 }

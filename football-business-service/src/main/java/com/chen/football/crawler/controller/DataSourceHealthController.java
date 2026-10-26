@@ -1,6 +1,7 @@
 package com.chen.football.crawler.controller;
 
 import com.chen.football.common.dto.FetchResult;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.crawler.source.DataSourceManager;
 import com.chen.football.crawler.source.MatchSourceProvider;
 import com.chen.football.common.util.AdminGuard;
@@ -154,8 +155,11 @@ public class DataSourceHealthController {
                             Map<String, Object> s = new LinkedHashMap<>();
                             s.put("externalMatchId", m.externalMatchId());
                             s.put("league", m.leagueName());
+                            s.put("leagueDisplayName", LabelCatalog.leagueDisplay(m.leagueName()));
                             s.put("home", m.homeTeamName());
+                            s.put("homeDisplayName", LabelCatalog.teamDisplay(m.homeTeamName()));
                             s.put("away", m.awayTeamName());
+                            s.put("awayDisplayName", LabelCatalog.teamDisplay(m.awayTeamName()));
                             s.put("homeScore", m.homeScore());
                             s.put("awayScore", m.awayScore());
                             s.put("status", m.status());

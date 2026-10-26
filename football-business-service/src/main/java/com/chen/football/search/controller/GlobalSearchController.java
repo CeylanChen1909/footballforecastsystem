@@ -1,6 +1,7 @@
 package com.chen.football.search.controller;
 
 import com.chen.football.common.dto.ApiResponse;
+import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.crawler.entity.CrawlerMatch;
 import com.chen.football.crawler.entity.CrawlerTeam;
 import com.chen.football.crawler.mapper.CrawlerMatchMapper;
@@ -166,8 +167,11 @@ public class GlobalSearchController {
         if (!seen.add(key)) return;
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", teamId == null || teamId.isBlank() ? 0L : teamId);
-        row.put("name", teamName);
+        row.put("name", LabelCatalog.teamDisplay(teamName));
+        row.put("nameZh", LabelCatalog.teamChinese(teamName));
+        row.put("nameEn", LabelCatalog.teamEnglish(teamName));
         row.put("league", leagueName == null ? "" : leagueName);
+        row.put("leagueDisplayName", LabelCatalog.leagueDisplay(leagueName));
         row.put("logo", "");
         out.add(row);
     }
@@ -181,7 +185,9 @@ public class GlobalSearchController {
             if (league == null || league.isBlank()) continue;
             if (!seen.add(league)) continue;
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("name", league);
+            row.put("name", LabelCatalog.leagueDisplay(league));
+            row.put("nameZh", LabelCatalog.leagueChinese(league));
+            row.put("nameEn", LabelCatalog.leagueEnglish(league));
             row.put("matchCount", matches.stream().filter(m -> league.equals(m.getLeagueName())).count());
             leagues.add(row);
             if (leagues.size() >= limit) break;
@@ -201,9 +207,16 @@ public class GlobalSearchController {
         row.put("fixtureId", publicId);
         row.put("matchId", publicId);
         row.put("id", publicId);
-        row.put("homeTeamName", m.getHomeTeamName());
-        row.put("awayTeamName", m.getAwayTeamName());
+        row.put("homeTeamName", LabelCatalog.teamDisplay(m.getHomeTeamName()));
+        row.put("homeTeamNameRaw", m.getHomeTeamName());
+        row.put("homeTeamDisplayName", LabelCatalog.teamDisplay(m.getHomeTeamName()));
+        row.put("awayTeamName", LabelCatalog.teamDisplay(m.getAwayTeamName()));
+        row.put("awayTeamNameRaw", m.getAwayTeamName());
+        row.put("awayTeamDisplayName", LabelCatalog.teamDisplay(m.getAwayTeamName()));
         row.put("leagueName", m.getLeagueName());
+        row.put("leagueDisplayName", LabelCatalog.leagueDisplay(m.getLeagueName()));
+        row.put("leagueNameZh", LabelCatalog.leagueChinese(m.getLeagueName()));
+        row.put("leagueNameEn", LabelCatalog.leagueEnglish(m.getLeagueName()));
         row.put("matchTime", m.getMatchTime());
         return row;
     }
@@ -211,8 +224,11 @@ public class GlobalSearchController {
     private Map<String, Object> team(CrawlerTeam t) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", t.getId() == null ? 0L : t.getId());
-        row.put("name", t.getName() == null ? "" : t.getName());
+        row.put("name", LabelCatalog.teamDisplay(t.getName()));
+        row.put("nameZh", LabelCatalog.teamChinese(t.getName()));
+        row.put("nameEn", LabelCatalog.teamEnglish(t.getName()));
         row.put("league", t.getLeagueName() == null ? "" : t.getLeagueName());
+        row.put("leagueDisplayName", LabelCatalog.leagueDisplay(t.getLeagueName()));
         row.put("logo", t.getLogo() == null ? "" : t.getLogo());
         row.put("country", t.getCountry() == null ? "" : t.getCountry());
         return row;

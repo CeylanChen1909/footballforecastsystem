@@ -64,6 +64,11 @@ public class FootballAgentService {
     }
 
     public AgentAnalysisResponse analyze(AgentAnalysisRequest request) {
+        return analyze(request, AgentText.resolve(null));
+    }
+
+    public AgentAnalysisResponse analyze(AgentAnalysisRequest request, String lang) {
+        String language = AgentText.resolve(lang);
         String requestId = UUID.randomUUID().toString();
         Instant start = Instant.now();
         List<String> steps = new ArrayList<>();
@@ -85,10 +90,10 @@ public class FootballAgentService {
         // 预测结论、概率和解释不再接受客户端直接注入。Agent 必须按 fixtureId
         // 从服务端预测服务重新读取，避免修改 URL/context 后伪造事实。
         putIfNotNull(context, "prompt", request.prompt());
-        teamResolver.enrich(context, request.prompt());
+        teamResolver.enrich(context, request.prompt(), language);
 
         String intent = intentClassifier.classify(request.prompt() == null ? request.leagueName() : request.prompt()).get("intent").toString();
-        String cacheKey = buildCacheKey(request, intent);
+        String cacheKey = buildCacheKey(request, intent, language);
         AgentAnalysisResponse cached = responseCacheService.getAnalysis(cacheKey);
         if (cached != null) {
             Map<String, Object> cachedData = new LinkedHashMap<>(cached.data() == null ? Map.of() : cached.data());
@@ -106,30 +111,30 @@ public class FootballAgentService {
         }
 
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                request.fixtureId() != null || intent.equals("match-analysis"), "match_context");
+                language, request.fixtureId() != null || intent.equals("match-analysis"), "match_context");
         applyCanonicalMatchContext(context, toolOutputs.get("match_context"));
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                request.fixtureId() != null || intent.equals("match-analysis"), "prematch_data_context");
+                language, request.fixtureId() != null || intent.equals("match-analysis"), "prematch_data_context");
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                request.fixtureId() != null || intent.equals("match-analysis"), "prediction");
+                language, request.fixtureId() != null || intent.equals("match-analysis"), "prediction");
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                intent.equals("team-analysis") || intent.equals("team-roster") || intent.equals("match-analysis"), "team_context");
+                language, intent.equals("team-analysis") || intent.equals("team-roster") || intent.equals("match-analysis"), "team_context");
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                intent.equals("team-roster") || intent.equals("team-analysis"), "squad_context");
-        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, intent.equals("news-analysis"), "news_context");
+                language, intent.equals("team-roster") || intent.equals("team-analysis"), "squad_context");
+        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, language, intent.equals("news-analysis"), "news_context");
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                intent.equals("general-analysis") || intent.equals("schedule") || request.leagueName() != null, "crawler_summary");
-        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, true, "agent_summary");
+                language, intent.equals("general-analysis") || intent.equals("schedule") || request.leagueName() != null, "crawler_summary");
+        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, language, true, "agent_summary");
 
         Map<String, Object> heuristic = buildHeuristicSummary(context, toolOutputs, steps, skippedTools, intent, toolLatencies);
-        String userPrompt = buildPrompt(request, context, toolOutputs, steps, heuristic);
+        String userPrompt = buildPrompt(request, context, toolOutputs, steps, heuristic, language);
         Map<String, Object> ai = modelRouter.chatJson(userPrompt, request.provider(), request.model());
-        AgentStructuredResult structured = resultParser.parse(ai);
+        AgentStructuredResult structured = resultParser.parse(ai, language);
 
         Map<String, Object> data = new LinkedHashMap<>();
         AgentToolRun toolRun = new AgentToolRun(intent, 0.7, context, toolOutputs, steps, skippedTools, toolLatencies,
-                buildEvidence(context, toolOutputs, toolLatencies));
-        AgentAnswerValidator.Validation validation = answerValidator.validate(structured.summary(), toolRun);
+                buildEvidence(context, toolOutputs, toolLatencies, language));
+        AgentAnswerValidator.Validation validation = answerValidator.validate(structured.summary(), toolRun, language);
         data.put("intent", intent);
         data.put("context", context);
         data.put("toolOutputs", toolOutputs);
@@ -147,10 +152,10 @@ public class FootballAgentService {
         ));
         data.put("steps", steps);
         data.put("skippedTools", skippedTools);
-        data.put("facts", AgentEvidenceComposer.facts(toolRun));
-        data.put("unknowns", AgentEvidenceComposer.unknowns(toolRun));
+        data.put("facts", AgentEvidenceComposer.facts(toolRun, language));
+        data.put("unknowns", AgentEvidenceComposer.unknowns(toolRun, language));
         data.put("answerValidation", validation.metadata());
-        data.put("dataQuality", AgentEvidenceComposer.quality(toolRun));
+        data.put("dataQuality", AgentEvidenceComposer.quality(toolRun, language));
         data.put("circuitBreaker", circuitBreaker.snapshot());
         // Never echo the legacy client-supplied prediction fields back into
         // the analysis payload. They are intentionally ignored as facts and
@@ -177,6 +182,11 @@ public class FootballAgentService {
     }
 
     public List<Map<String, Object>> toolCapabilities() {
+        return toolCapabilities(AgentText.resolve(null));
+    }
+
+    public List<Map<String, Object>> toolCapabilities(String lang) {
+        String language = AgentText.resolve(lang);
         Map<String, String> descriptions = Map.of(
                 "agent_summary", "读取 Agent 与主数据源运行状态",
                 "crawler_summary", "查询今天及未来 7 天赛程",
@@ -190,7 +200,8 @@ public class FootballAgentService {
         return toolsByName.keySet().stream().map(name -> {
             Map<String, Object> capability = new LinkedHashMap<>();
             capability.put("name", name);
-            capability.put("description", descriptions.getOrDefault(name, "足球业务数据工具"));
+            capability.put("description", AgentText.translate(language,
+                    descriptions.getOrDefault(name, "足球业务数据工具")));
             capability.put("statusContract", List.of("AVAILABLE", "PARTIAL", "EMPTY", "STALE", "NOT_CONFIGURED", "QUOTA_LIMITED", "REQUEST_FAILED", "MISSING_INPUT"));
             return capability;
         }).toList();
@@ -205,6 +216,14 @@ public class FootballAgentService {
     public AgentToolRun executeChatTools(com.chen.football.agent.dto.AgentChatRequest request,
                                          Long userId,
                                          Consumer<Map<String, Object>> eventSink) {
+        return executeChatTools(request, userId, eventSink, AgentText.resolve(null));
+    }
+
+    public AgentToolRun executeChatTools(com.chen.football.agent.dto.AgentChatRequest request,
+                                         Long userId,
+                                         Consumer<Map<String, Object>> eventSink,
+                                         String lang) {
+        String language = AgentText.resolve(lang);
         String message = request == null || request.message() == null ? "" : request.message().trim();
         Map<String, Object> classified = intentClassifier.classify(message);
         String intent = String.valueOf(classified.getOrDefault("intent", "general"));
@@ -234,7 +253,7 @@ public class FootballAgentService {
         context.put("message", message);
         if (userId != null) context.put("userId", userId);
         if (!context.containsKey("limit")) context.put("limit", 8);
-        List<String> resolvedTeams = teamResolver.enrich(context, message);
+        List<String> resolvedTeams = teamResolver.enrich(context, message, language);
         boolean randomSelection = isRandomScheduleRequest(message)
                 && !hasAny(context, "fixtureId", "homeTeamName", "awayTeamName");
         context.put("randomSelection", randomSelection);
@@ -261,7 +280,7 @@ public class FootballAgentService {
         // the selected fixture is then fed back into all subsequent tools.
         if (randomSelection) {
             runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                    true, "crawler_summary", intent, eventSink);
+                    language, true, "crawler_summary", intent, eventSink);
             applySelectedMatchContext(context, toolOutputs.get("crawler_summary"));
             hasMatch = hasMatchContext(context);
             hasTeam = hasAny(context, "teamId", "teamName");
@@ -270,30 +289,30 @@ public class FootballAgentService {
         }
 
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                matchIntent, "match_context", intent, eventSink);
+                language, matchIntent, "match_context", intent, eventSink);
         applyCanonicalMatchContext(context, toolOutputs.get("match_context"));
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                hasMatch && (matchIntent || prematchDataIntent),
+                language, hasMatch && (matchIntent || prematchDataIntent),
                 "prematch_data_context", intent, eventSink);
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                hasAny(context, "fixtureId") && matchIntent,
+                language, hasAny(context, "fixtureId") && matchIntent,
                 "prediction", intent, eventSink);
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                teamIntent, "team_context", intent, eventSink);
+                language, teamIntent, "team_context", intent, eventSink);
         // A fixture-based question such as “这场比赛的首发” only gets its
         // team names after match_context canonicalizes the fixture.  Use those
         // names as a safe fallback instead of silently skipping the roster.
         boolean rosterTeamReady = rosterIntent && (hasTeam || hasAny(context, "teamName", "homeTeamName"));
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                rosterTeamReady, "squad_context", intent, eventSink);
+                language, rosterTeamReady, "squad_context", intent, eventSink);
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                newsIntent, "news_context", intent, eventSink);
+                language, newsIntent, "news_context", intent, eventSink);
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                scheduleIntent && !hasMatch && !randomSelection, "crawler_summary", intent, eventSink);
+                language, scheduleIntent && !hasMatch && !randomSelection, "crawler_summary", intent, eventSink);
         runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies,
-                true, "agent_summary", intent, eventSink);
+                language, true, "agent_summary", intent, eventSink);
 
-        List<Map<String, Object>> evidence = buildEvidence(context, toolOutputs, toolLatencies);
+        List<Map<String, Object>> evidence = buildEvidence(context, toolOutputs, toolLatencies, language);
         return new AgentToolRun(intent, confidence, context, toolOutputs, steps, skippedTools, toolLatencies, evidence);
     }
 
@@ -307,9 +326,10 @@ public class FootballAgentService {
                                            List<String> steps,
                                            List<String> skippedTools,
                                            Map<String, Long> toolLatencies,
+                                           String lang,
                                            boolean enabled,
                                            String toolName) {
-        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, enabled, toolName, null, null);
+        runToolWithCircuitBreaker(context, toolOutputs, steps, skippedTools, toolLatencies, lang, enabled, toolName, null, null);
     }
 
     private void runToolWithCircuitBreaker(Map<String, Object> context,
@@ -317,10 +337,12 @@ public class FootballAgentService {
                                            List<String> steps,
                                            List<String> skippedTools,
                                            Map<String, Long> toolLatencies,
+                                           String lang,
                                            boolean enabled,
                                            String toolName,
                                            String intent,
                                            Consumer<Map<String, Object>> eventSink) {
+        String language = AgentText.resolve(lang);
         if (!enabled || steps.size() >= MAX_TOOL_STEPS) {
             return;
         }
@@ -334,16 +356,22 @@ public class FootballAgentService {
             Map<String, Object> skipped = new LinkedHashMap<>();
             skipped.put("skipped", true);
             skipped.put("reason", "circuit-open");
-            Map<String, Object> normalizedSkipped = AgentToolResult.normalize(toolName, skipped);
+            Map<String, Object> normalizedSkipped = AgentToolResult.normalize(toolName, skipped, language);
             toolOutputs.put(toolName, normalizedSkipped);
             context.put(toolName, normalizedSkipped);
-            emitToolEvent(eventSink, "tool_result", Map.of("tool", toolName, "status", "skipped", "reason", "circuit-open"));
+            Map<String, Object> skippedEvent = new LinkedHashMap<>();
+            skippedEvent.put("tool", toolName);
+            skippedEvent.put("status", "skipped");
+            skippedEvent.put("reason", "circuit-open");
+            skippedEvent.put("dataStatus", "SKIPPED");
+            skippedEvent.put("dataStatusLabel", AgentText.statusLabel(language, "SKIPPED"));
+            emitToolEvent(eventSink, "tool_result", skippedEvent);
             return;
         }
         Instant toolStart = Instant.now();
         try {
-            Map<String, Object> result = executeWithTimeout(tool, context);
-            Map<String, Object> normalized = AgentToolResult.normalize(toolName, result);
+            Map<String, Object> result = executeWithTimeout(tool, context, language);
+            Map<String, Object> normalized = AgentToolResult.normalize(toolName, result, language);
             toolOutputs.put(toolName, normalized);
             context.put(toolName, normalized);
             circuitBreaker.recordSuccess(toolName);
@@ -352,7 +380,7 @@ public class FootballAgentService {
             Map<String, Object> error = new LinkedHashMap<>();
             error.put("error", e.getClass().getSimpleName());
             error.put("message", e.getMessage());
-            Map<String, Object> normalizedError = AgentToolResult.normalize(toolName, error);
+            Map<String, Object> normalizedError = AgentToolResult.normalize(toolName, error, language);
             toolOutputs.put(toolName, normalizedError);
             context.put(toolName, normalizedError);
         }
@@ -365,10 +393,12 @@ public class FootballAgentService {
         Map<String, Object> event = new LinkedHashMap<>();
         event.put("tool", toolName);
         event.put("status", failed ? "error" : "ok");
-        event.put("dataStatus", result.getOrDefault("status", failed ? "REQUEST_FAILED" : "AVAILABLE"));
+        Object dataStatus = result.getOrDefault("status", failed ? "REQUEST_FAILED" : "AVAILABLE");
+        event.put("dataStatus", dataStatus);
+        event.put("dataStatusLabel", AgentText.statusLabel(language, String.valueOf(dataStatus)));
         event.put("latencyMs", latency);
         event.put("summary", summarizeToolResult(result));
-        if (failed) event.put("message", result.get("message"));
+        if (failed) event.put("message", AgentText.translate(language, String.valueOf(result.get("message"))));
         emitToolEvent(eventSink, "tool_result", event);
     }
 
@@ -455,23 +485,16 @@ public class FootballAgentService {
 
     private List<Map<String, Object>> buildEvidence(Map<String, Object> context,
                                                      Map<String, Object> toolOutputs,
-                                                     Map<String, Long> toolLatencies) {
+                                                     Map<String, Long> toolLatencies,
+                                                     String lang) {
+        String language = AgentText.resolve(lang);
         List<Map<String, Object>> evidence = new ArrayList<>();
         String observedAt = Instant.now().toString();
-        Map<String, String> sourceLabels = Map.of(
-                "match_context", "本地赛程数据库",
-                "prediction", "赛前预测服务",
-                "team_context", "球队资料数据库",
-                "squad_context", "公开球队阵容源",
-                "news_context", "赛事资讯数据库",
-                "crawler_summary", "主爬虫赛程源",
-                "agent_summary", "Agent 运行状态"
-        );
         for (String tool : toolOutputs.keySet()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("tool", tool);
-            item.put("label", sourceLabels.getOrDefault(tool, tool));
-            item.put("source", sourceLabels.getOrDefault(tool, tool));
+            item.put("label", AgentText.sourceLabel(language, tool));
+            item.put("source", AgentText.sourceLabel(language, tool));
             item.put("observedAt", observedAt);
             item.put("latencyMs", toolLatencies.getOrDefault(tool, 0L));
             item.put("recordId", context.getOrDefault("fixtureId", context.getOrDefault("teamId", context.get("articleId"))));
@@ -586,8 +609,9 @@ public class FootballAgentService {
                                Map<String, Object> context,
                                Map<String, Object> toolOutputs,
                                List<String> steps,
-                               Map<String, Object> heuristic) {
-        return AgentPromptFactory.buildAnalysisPrompt(request.prompt(), context, toolOutputs, steps, heuristic);
+                               Map<String, Object> heuristic,
+                               String lang) {
+        return AgentPromptFactory.buildAnalysisPrompt(request.prompt(), context, toolOutputs, steps, heuristic, lang);
     }
 
     private Map<String, Object> requestSnapshot(AgentAnalysisRequest request) {
@@ -614,9 +638,10 @@ public class FootballAgentService {
         return structured.summary() != null && !structured.summary().isBlank();
     }
 
-    private String buildCacheKey(AgentAnalysisRequest request, String intent) {
+    private String buildCacheKey(AgentAnalysisRequest request, String intent, String lang) {
         return String.join(":",
                 "agent-analysis",
+                "lang", AgentText.resolve(lang),
                 intent == null ? "general" : intent,
                 String.valueOf(request.fixtureId()),
                 String.valueOf(request.homeTeamId()),
@@ -639,8 +664,18 @@ public class FootballAgentService {
         }
     }
 
-    private Map<String, Object> executeWithTimeout(AgentTool tool, Map<String, Object> context) {
-        java.util.concurrent.Future<Map<String, Object>> future = toolExecutor.submit(() -> tool.execute(context));
+    private Map<String, Object> executeWithTimeout(AgentTool tool, Map<String, Object> context, String lang) {
+        String language = AgentText.resolve(lang);
+        java.util.concurrent.Future<Map<String, Object>> future = toolExecutor.submit(() -> {
+            // The servlet request thread and its LangContext are gone here; use
+            // the language captured before submitting the tool task.
+            com.chen.football.common.i18n.LangContext.set(language);
+            try {
+                return tool.execute(context);
+            } finally {
+                com.chen.football.common.i18n.LangContext.clear();
+            }
+        });
         try {
             return future.get(TOOL_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (java.util.concurrent.TimeoutException e) {

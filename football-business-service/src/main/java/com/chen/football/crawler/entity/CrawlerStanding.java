@@ -3,6 +3,7 @@ package com.chen.football.crawler.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chen.football.common.i18n.LabelCatalog;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -75,4 +76,9 @@ public class CrawlerStanding {
 
     /** 更新时间 */
     private LocalDateTime updatedAt;
+
+    /** Localized display values; persisted fields keep their canonical values. */
+    public String getLeagueDisplayName() { return LabelCatalog.leagueDisplay(leagueName); }
+
+    public String getTeamDisplayName() { return LabelCatalog.teamDisplay(teamName); }
 }

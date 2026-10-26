@@ -17,6 +17,11 @@ import java.util.Map;
 public class AgentAnswerValidator {
 
     public Validation validate(String answer, AgentToolRun run) {
+        return validate(answer, run, AgentText.resolve(null));
+    }
+
+    public Validation validate(String answer, AgentToolRun run, String lang) {
+        String language = AgentText.resolve(lang);
         List<String> warnings = new ArrayList<>();
         String safeAnswer = answer == null ? "" : answer;
         if (run != null && "team-roster".equals(run.intent())) {
@@ -31,7 +36,7 @@ public class AgentAnswerValidator {
                         .anyMatch(safeAnswer::contains);
                 if (!containsKnownPlayer) {
                     warnings.add("roster-answer-missing-source-player");
-                    safeAnswer = deterministicRosterAnswer(squad, players);
+                    safeAnswer = deterministicRosterAnswer(squad, players, language);
                 }
             }
         }
@@ -39,7 +44,7 @@ public class AgentAnswerValidator {
         if (run != null && ("schedule".equals(run.intent()) || hasScheduleFacts) && asksForPredictionStatus(run.context())) {
             Map<String, Object> schedule = run.toolOutputs().get("crawler_summary") instanceof Map<?, ?> raw
                     ? cast(raw) : Map.of();
-            String correction = schedulePredictionCorrection(schedule, safeAnswer);
+            String correction = schedulePredictionCorrection(schedule, safeAnswer, language);
             if (!correction.isBlank()) {
                 safeAnswer = safeAnswer.trim();
                 safeAnswer = safeAnswer.isBlank() ? correction : safeAnswer + "\n\n" + correction;
@@ -58,7 +63,8 @@ public class AgentAnswerValidator {
         return message.matches("(?s).*(预测|生成|快照|状态|prediction|generated|snapshot|status).*");
     }
 
-    private String schedulePredictionCorrection(Map<String, Object> schedule, String answer) {
+    private String schedulePredictionCorrection(Map<String, Object> schedule, String answer, String lang) {
+        boolean english = AgentText.isEnglish(lang);
         if (schedule == null || schedule.isEmpty()) return "";
         Object summaryValue = schedule.get("predictionSummary");
         if (!(summaryValue instanceof Map<?, ?> rawSummary)) return "";
@@ -74,21 +80,42 @@ public class AgentAnswerValidator {
                 .filter(sentence -> !sentence.isBlank())
                 .anyMatch(sentence -> sentence.matches("(?s).*(所有|全部|均|都).*预测.*(未生成|没有|无).*")
                         || sentence.matches("(?s).*(所有|全部|均|都).*(未生成|没有|无).*预测.*"));
-        boolean hasStatusLine = answer != null && answer.matches("(?s).*(已生成|预测不可用|生成中|尚未生成|状态查询失败).*");
+        boolean hasStatusLine = answer != null && (english
+                ? answer.matches("(?s).*(generated|prediction unavailable|generating|not generated yet|status query failed).*")
+                : answer.matches("(?s).*(已生成|预测不可用|生成中|尚未生成|状态查询失败).*"));
         if (!broadFalseClaim && hasStatusLine) return "";
         List<String> parts = new ArrayList<>();
-        if (ready > 0) parts.add("已生成 " + ready + " 场");
-        if (unavailable > 0) parts.add("预测不可用 " + unavailable + " 场");
-        if (pending > 0) parts.add("生成中 " + pending + " 场");
-        if (failed > 0) parts.add("生成失败 " + failed + " 场");
-        if (notGenerated > 0) parts.add("尚未生成 " + notGenerated + " 场");
-        if (notRead > 0) parts.add("状态查询失败 " + notRead + " 场");
+        if (english) {
+            if (ready > 0) parts.add(ready + " generated");
+            if (unavailable > 0) parts.add(unavailable + " prediction unavailable");
+            if (pending > 0) parts.add(pending + " generating");
+            if (failed > 0) parts.add(failed + " generation failed");
+            if (notGenerated > 0) parts.add(notGenerated + " not generated yet");
+            if (notRead > 0) parts.add(notRead + " status query failed");
+        } else {
+            if (ready > 0) parts.add("已生成 " + ready + " 场");
+            if (unavailable > 0) parts.add("预测不可用 " + unavailable + " 场");
+            if (pending > 0) parts.add("生成中 " + pending + " 场");
+            if (failed > 0) parts.add("生成失败 " + failed + " 场");
+            if (notGenerated > 0) parts.add("尚未生成 " + notGenerated + " 场");
+            if (notRead > 0) parts.add("状态查询失败 " + notRead + " 场");
+        }
         if (parts.isEmpty()) return "";
-        StringBuilder correction = new StringBuilder("服务端预测状态核验：").append(String.join("；", parts)).append("。");
-        if (broadFalseClaim) correction.append("不能将这批比赛统一标记为‘预测未生成’，请以每场记录的 predictionStatus 为准。");
+        StringBuilder correction = new StringBuilder(AgentText.of(lang,
+                "服务端预测状态核验：", "Server prediction status check: "))
+                .append(String.join(english ? "; " : "；", parts))
+                .append(english ? "." : "。");
+        if (broadFalseClaim) {
+            correction.append(AgentText.of(lang,
+                    "不能将这批比赛统一标记为‘预测未生成’，请以每场记录的 predictionStatus 为准。",
+                    "These matches must not all be labelled as \"prediction not generated\"; use each match's predictionStatus."));
+        }
         if ("NEXT_24_HOURS".equals(String.valueOf(schedule.get("windowType")))) {
             String zone = String.valueOf(schedule.getOrDefault("timeZone", "Asia/Shanghai"));
-            correction.append("本次‘接下来24小时’窗口按 ").append(zone).append(" 计算。");
+            correction.append(AgentText.of(lang,
+                    "本次‘接下来24小时’窗口按 ", "This \"next 24 hours\" window is calculated in "))
+                    .append(zone)
+                    .append(AgentText.of(lang, " 计算。", "."));
         }
         return correction.toString();
     }
@@ -111,17 +138,30 @@ public class AgentAnswerValidator {
         return list.stream().filter(item -> item instanceof Map<?, ?>).map(item -> cast((Map<?, ?>) item)).toList();
     }
 
-    private String deterministicRosterAnswer(Map<String, Object> squad, List<Map<String, Object>> players) {
-        String team = String.valueOf(squad.getOrDefault("teamName", "该球队"));
-        StringBuilder answer = new StringBuilder("根据公开球队阵容源，").append(team)
-                .append("当前可核验到 ").append(squad.getOrDefault("playerCount", players.size())).append(" 名球员：\n");
+    private String deterministicRosterAnswer(Map<String, Object> squad, List<Map<String, Object>> players, String lang) {
+        boolean english = AgentText.isEnglish(lang);
+        String team = AgentText.teamName(lang, String.valueOf(squad.getOrDefault("teamName", AgentText.of(lang, "该球队", "this team"))));
+        StringBuilder answer = new StringBuilder(AgentText.of(lang, "根据公开球队阵容源，", "According to the public squad source, "))
+                .append(team)
+                .append(AgentText.of(lang, "当前可核验到 ", " currently has "))
+                .append(squad.getOrDefault("playerCount", players.size()))
+                .append(AgentText.of(lang, " 名球员：\n", " verifiable players:\n"));
         for (Map<String, Object> player : players) {
-            answer.append("- ").append(player.getOrDefault("name", "未知球员"));
-            if (player.get("position") != null) answer.append("（").append(player.get("position")).append("）");
-            if (player.get("number") != null && !String.valueOf(player.get("number")).isBlank()) answer.append(" #").append(player.get("number"));
+            answer.append("- ").append(AgentText.translate(lang,
+                    String.valueOf(player.getOrDefault("name", AgentText.of(lang, "未知球员", "Unknown player")))));
+            if (player.get("position") != null) {
+                answer.append(english ? " (" : "（").append(player.get("position")).append(english ? ")" : "）");
+            }
+            if (player.get("number") != null && !String.valueOf(player.get("number")).isBlank()) {
+                answer.append(" #").append(player.get("number"));
+            }
             answer.append('\n');
         }
-        if (Boolean.TRUE.equals(squad.get("truncated"))) answer.append("\n以上为返回的部分名单，不能视为完整注册名单。");
+        if (Boolean.TRUE.equals(squad.get("truncated"))) {
+            answer.append(AgentText.of(lang,
+                    "\n以上为返回的部分名单，不能视为完整注册名单。",
+                    "\nThe list above is partial and must not be treated as the full registered squad."));
+        }
         return answer.toString().trim();
     }
 
