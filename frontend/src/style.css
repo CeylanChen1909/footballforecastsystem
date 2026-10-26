@@ -1,23 +1,23 @@
 :root {
   color-scheme: light;
   /* ChenFootball interface tokens: quiet workspace + one deliberate accent. */
-  --ff-bg: #f7f8f7;
-  --ff-bg-alt: #f1f4f2;
+  --ff-bg: #f5f6f4;
+  --ff-bg-alt: #eff2ee;
   --ff-surface: #ffffff;
   --ff-surface-strong: #ffffff;
-  --ff-surface-soft: #fbfcfb;
-  --ff-surface-quiet: #f3f6f4;
+  --ff-surface-soft: #fafbf9;
+  --ff-surface-quiet: #f3f6f2;
   --ff-surface-elevated: #ffffff;
-  --ff-border: #dfe5e1;
-  --ff-border-strong: #c4cec7;
-  --ff-text: #344139;
-  --ff-text-strong: #202a24;
-  --ff-text-muted: #69766e;
-  --ff-text-faint: #9aa69f;
-  --ff-primary: #126b50;
-  --ff-primary-hover: #0d5c44;
-  --ff-primary-active: #094936;
-  --ff-primary-soft: #e6f1eb;
+  --ff-border: #e5e9e4;
+  --ff-border-strong: #d2dad3;
+  --ff-text: #33413a;
+  --ff-text-strong: #17211c;
+  --ff-text-muted: #64716a;
+  --ff-text-faint: #97a29b;
+  --ff-primary: #10694e;
+  --ff-primary-hover: #0c5a42;
+  --ff-primary-active: #084a36;
+  --ff-primary-soft: #e9f3ee;
   --ff-accent: #126b50;
   --ff-accent-2: #0d5c44;
   --ff-success: #237a53;
@@ -39,14 +39,14 @@
   --ff-space-5: 20px;
   --ff-space-6: 24px;
   --ff-space-7: 32px;
-  --ff-radius-sm: 4px;
-  --ff-radius-md: 6px;
-  --ff-radius-lg: 8px;
-  --ff-radius-xl: 10px;
-  --ff-shadow-sm: 0 1px 2px rgba(31, 40, 34, 0.035);
-  --ff-shadow-md: 0 2px 5px rgba(31, 40, 34, 0.055);
-  --ff-shadow-lg: 0 5px 14px rgba(31, 40, 34, 0.08);
-  --ff-shadow-hover: 0 2px 7px rgba(31, 40, 34, 0.07);
+  --ff-radius-sm: 6px;
+  --ff-radius-md: 8px;
+  --ff-radius-lg: 12px;
+  --ff-radius-xl: 16px;
+  --ff-shadow-sm: 0 1px 2px rgba(17, 32, 24, 0.05), 0 1px 1px rgba(17, 32, 24, 0.03);
+  --ff-shadow-md: 0 4px 12px rgba(17, 32, 24, 0.07), 0 1px 3px rgba(17, 32, 24, 0.04);
+  --ff-shadow-lg: 0 12px 32px rgba(17, 32, 24, 0.1), 0 2px 6px rgba(17, 32, 24, 0.05);
+  --ff-shadow-hover: 0 6px 18px rgba(17, 32, 24, 0.08);
   --ff-gradient-primary: var(--ff-primary);
   --ff-gradient-soft: var(--ff-surface);
   --ff-gradient-page: var(--ff-bg);
@@ -585,3 +585,115 @@ button:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* ============================================================
+   r14 visual pass
+   Typography, surfaces and the Element Plus theme. The dependency
+   ships its own `:root { --el-color-primary: #409eff }`, so the
+   overrides below use `:root:root` to win on specificity instead of
+   relying on stylesheet order (that is where the blue buttons came
+   from).
+   ============================================================ */
+:root {
+  --ff-sans: "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --ff-numeric-font: var(--ff-sans);
+}
+
+html, body, #app {
+  font-family: var(--ff-sans);
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+body {
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  background: var(--ff-bg);
+  color: var(--ff-text);
+}
+
+.ff-data-value,
+.ff-num {
+  font-family: var(--ff-numeric-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+
+::selection { background: rgba(16, 105, 78, 0.16); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(23, 33, 28, 0.16); border: 3px solid transparent; background-clip: content-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(23, 33, 28, 0.28); background-clip: content-box; }
+
+/* ---- Element Plus theme ---- */
+:root:root {
+  --el-color-primary: #10694e;
+  --el-color-primary-light-3: #4a9276;
+  --el-color-primary-light-5: #7bb09b;
+  --el-color-primary-light-7: #b3d1c3;
+  --el-color-primary-light-8: #cfe3d9;
+  --el-color-primary-light-9: #e9f3ee;
+  --el-color-primary-dark-2: #0c5a42;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f5f6f4;
+  --el-bg-color-overlay: #ffffff;
+  --el-fill-color-blank: #ffffff;
+  --el-fill-color-light: #f6f8f5;
+  --el-fill-color-lighter: #eef2ee;
+  --el-fill-color-extra-light: #fafbf9;
+  --el-border-color: #dfe5df;
+  --el-border-color-light: #e5e9e4;
+  --el-border-color-lighter: #eef1ed;
+  --el-border-color-extra-light: #f4f6f3;
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-text-color-primary: #17211c;
+  --el-text-color-regular: #33413a;
+  --el-text-color-secondary: #64716a;
+  --el-text-color-placeholder: #97a29b;
+  --el-font-size-base: 13px;
+  --el-box-shadow: 0 12px 32px rgba(17, 32, 24, 0.1), 0 2px 6px rgba(17, 32, 24, 0.05);
+  --el-box-shadow-light: 0 4px 12px rgba(17, 32, 24, 0.07);
+}
+
+.el-button {
+  --el-button-border-radius: 8px;
+  --el-font-size-base: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.el-button--small { height: 30px; padding: 0 12px; }
+.el-button--default { height: 34px; padding: 0 14px; }
+.el-button--primary { font-weight: 650; box-shadow: 0 1px 2px rgba(8, 74, 54, 0.18); }
+.el-button.is-text:not(.is-disabled):hover { background: var(--ff-surface-quiet); }
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  border-radius: 8px;
+  background: var(--ff-surface);
+  box-shadow: 0 0 0 1px var(--ff-border) inset;
+  min-height: 34px;
+}
+.el-input__wrapper:hover,
+.el-select__wrapper:hover { box-shadow: 0 0 0 1px var(--ff-border-strong) inset; }
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus { box-shadow: 0 0 0 1px var(--ff-primary) inset, 0 0 0 3px rgba(16, 105, 78, 0.12); }
+
+.el-dialog {
+  border-radius: 16px;
+  border: 0;
+  box-shadow: 0 24px 64px rgba(17, 32, 24, 0.18), 0 4px 12px rgba(17, 32, 24, 0.08);
+}
+.el-dialog__header { border-bottom: 1px solid var(--ff-border); }
+.el-tag {
+  --el-tag-border-radius: 6px;
+  font-weight: 600;
+  border: 0;
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text-muted);
+}
+.el-dropdown-menu { padding: 6px; border-radius: 12px; }
+.el-dropdown-menu__item { border-radius: 7px; font-size: 13px; padding: 8px 12px; }
+.el-popper.is-light { border-radius: 12px; border-color: var(--ff-border); }

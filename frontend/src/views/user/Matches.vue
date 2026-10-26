@@ -23,7 +23,8 @@
             <el-icon><ArrowLeft /></el-icon>
           </button>
           <button v-for="item in dateRail" :key="item.date" type="button" class="date-rail-item" :class="{ active: item.date === (selectedDate || todayDate) }" :disabled="loading" @click="selectRailDate(item.date)">
-            <span>{{ item.label }}</span><strong>{{ item.day }}</strong><small>{{ item.weekday }} · {{ countsReady ? t('matches.matchCount', { count: item.count }) : "…" }}</small>
+            <span>{{ item.label }}</span><strong>{{ item.day }}</strong>
+            <small class="rail-meta">{{ item.weekday }}<template v-if="countsReady"> · {{ item.count }}<span class="rail-unit"> {{ t('matches.matchCountUnit') }}</span></template><template v-else> · …</template></small>
           </button>
           <button type="button" class="date-rail-arrow" :disabled="loading" :aria-label="t('matches.nextDay')" :title="t('matches.nextDay')" @click="shiftDate(1)">
             <el-icon><ArrowRight /></el-icon>
@@ -64,7 +65,7 @@
                   <div v-for="lg in group.leagueGroups" :key="lg.name" class="league-group">
                     <div class="league-group-header">
                       <span class="league-name">{{ leagueLabel(lg.name, lg.displayName) }}</span>
-
+                      <span class="league-count">{{ t('matches.matchCount', { count: lg.items.length }) }}</span>
                     </div>
                     <div class="matches-grid">
                       <MatchCard
@@ -1709,4 +1710,276 @@ onBeforeUnmount(() => {
   }
 }
 
+/* ============================================================
+   r14 visual pass — matches page
+   One centred column, a single date-rail control, a toolbar that
+   reads as a toolbar, and a flat list panel whose rows carry the
+   hierarchy (league strip > row > hairline).
+   ============================================================ */
+
+/* Narrower than the viewport on purpose: a fixture row reads best when the
+   two team columns stay close to the score. Specificity note — the page shell
+   sets `.matches-page .el-main { max-width:100% }`, so this needs the same
+   three class-level weights to win. */
+.matches-page .main-content {
+  width: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 28px 64px;
+}
+
+/* ---- date rail: one control instead of seven loose cards ---- */
+.date-rail {
+  gap: 6px;
+  padding: 10px;
+  margin: 0 0 16px;
+  border: 1px solid var(--ff-border);
+  border-radius: 14px;
+  background: var(--ff-surface);
+  box-shadow: var(--ff-shadow-sm);
+}
+.date-rail-arrow {
+  flex: 0 0 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ff-text-faint);
+}
+.date-rail-arrow:hover:not(:disabled),
+.date-rail-arrow:focus-visible {
+  border-color: transparent;
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text-strong);
+}
+.date-rail-item {
+  padding: 10px 14px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ff-text);
+}
+.date-rail-item:hover {
+  border-color: transparent;
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text-strong);
+}
+.date-rail-item.active {
+  border-color: transparent;
+  background: linear-gradient(180deg, #13795a 0%, #0f6048 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(12, 90, 66, 0.22);
+}
+.date-rail-item span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.62;
+}
+.date-rail-item strong {
+  margin: 6px 0 7px;
+  font-family: var(--ff-sans);
+  font-size: 23px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.date-rail-item small {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.58;
+}
+.date-rail-item.active span,
+.date-rail-item.active small { opacity: 0.84; }
+/* The unit word wraps onto a second line in narrow rail cells; hide it there
+   and keep the bare count, which reads fine next to the weekday. */
+.date-rail-item .rail-unit,
+.date-rail-item .rail-meta { display: inline; }
+.date-rail-item small.rail-meta { white-space: nowrap; }
+@media (max-width: 860px) {
+  .date-rail-item .rail-unit { display: none; }
+}
+
+/* ---- panel + toolbar ---- */
+.matches-workspace { display: block; }
+/* PageSection's `.page-section.is-compact` padding has to be out-weighted so
+   the league strips and rows run edge to edge inside the rounded panel. */
+.matches-workspace .match-list-panel {
+  padding: 0;
+  border: 1px solid var(--ff-border);
+  border-radius: 14px;
+  background: var(--ff-surface);
+  box-shadow: var(--ff-shadow-sm);
+  overflow: hidden;
+}
+.matches-workspace .match-list-panel:hover { border-color: var(--ff-border); }
+.match-list-panel :deep(.section-head) {
+  margin: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ff-border);
+  background: var(--ff-surface);
+  gap: 10px;
+}
+.match-list-panel :deep(.section-actions) { width: 100%; }
+
+.match-list-actions { gap: 8px; width: 100%; }
+.native-filter-select,
+.native-filter-input,
+.filter-chip,
+.filters-more {
+  height: 34px;
+  min-height: 34px;
+  border: 1px solid var(--ff-border);
+  border-radius: 8px;
+  background: var(--ff-surface);
+  color: var(--ff-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+.native-filter-select:hover,
+.native-filter-input:hover,
+.filter-chip:hover,
+.filters-more:hover {
+  border-color: var(--ff-border-strong);
+  background: var(--ff-surface);
+  color: var(--ff-text-strong);
+}
+.native-filter-select:focus,
+.native-filter-input:focus {
+  outline: none;
+  border-color: var(--ff-primary);
+  box-shadow: 0 0 0 3px rgba(16, 105, 78, 0.12);
+}
+.league-filter { width: 176px; padding: 0 28px 0 12px; }
+.team-filter,
+.match-list-actions .team-filter {
+  width: 200px;
+  padding: 0 12px 0 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2397a29b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.6-3.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px 50%;
+  background-size: 14px 14px;
+}
+.filter-chip { padding: 0 12px; }
+.filter-chip[aria-pressed='true'],
+.filter-chip.active {
+  border-color: transparent;
+  background: var(--ff-primary-soft);
+  color: var(--ff-primary);
+  font-weight: 600;
+}
+.filter-chip .el-icon { font-size: 13px; }
+.match-count-tag {
+  margin-left: auto;
+  padding: 0;
+  gap: 5px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ff-text-faint);
+  box-shadow: none;
+}
+.match-count-num {
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ff-text-strong);
+}
+.match-count-unit { font-size: 12px; color: var(--ff-text-faint); }
+
+@media (min-width: 769px) {
+  .filters-more { display: none; }
+}
+
+/* ---- list ---- */
+.date-group-list { gap: 0; }
+.date-group,
+.date-group:hover {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.league-group { margin: 0; }
+.league-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 18px;
+  background: var(--ff-surface-soft);
+  border-top: 1px solid var(--ff-border);
+  border-bottom: 1px solid var(--ff-border);
+}
+.league-group:first-child .league-group-header { border-top: 0; }
+.league-group-header::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--ff-primary);
+}
+.league-group-header::after { display: none; }
+.league-group-header .league-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ff-text-strong);
+}
+.league-group-header .league-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ff-text-faint);
+}
+.matches-grid { display: block; }
+
+/* ---- onboarding hint: quiet, one line, aligned with the column ---- */
+.matches-onboarding {
+  width: 100%;
+  max-width: 1160px;
+  margin: 16px auto 0;
+  padding: 10px 14px;
+  gap: 12px;
+  border: 1px solid var(--ff-border);
+  border-radius: 12px;
+  background: var(--ff-surface);
+  color: var(--ff-text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: var(--ff-shadow-sm);
+}
+.matches-onboarding-copy { margin: 0; }
+.matches-onboarding-dismiss {
+  flex: none;
+  margin-left: auto;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(16, 105, 78, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ff-primary);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.matches-onboarding-dismiss:hover { background: #fff; }
+
+@media (max-width: 860px) {
+  .main-content { padding: 14px 12px 44px; }
+  .date-rail { padding: 8px; gap: 6px; border-radius: 12px; }
+  .date-rail-item { flex: 0 0 auto; min-width: 92px; padding: 9px 12px 10px; }
+  .date-rail-item strong { font-size: 20px; }
+  .match-list-panel :deep(.section-head) { padding: 10px 12px; }
+  .match-list-actions .team-filter { flex: 1 1 auto; width: auto; min-width: 0; }
+  .league-filter { flex: 0 0 auto; width: 148px; }
+  .match-count-tag { margin-left: 0; }
+  .matches-onboarding { margin: 12px 12px 0; padding: 10px 12px; font-size: 12px; }
+  .league-group-header { padding: 8px 14px; }
+  .league-group-header .league-count { font-size: 10.5px; }
+}
 </style>

@@ -809,4 +809,100 @@ onBeforeUnmount(() => {
   outline: 2px solid var(--ff-primary);
   outline-offset: 2px;
 }
+/* ============================================================
+   r14 visual pass — header
+   A lighter bar: brand mark, pill navigation, segmented language
+   control and quiet icon actions. The active tab is a tinted pill
+   instead of a full-width underline.
+   ============================================================ */
+.app-top-nav {
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid rgba(229, 233, 228, 0.9);
+}
+
+.brand-icon.football-brand {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.brand-title {
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.sport-menu { gap: 4px; }
+.sport-menu-item {
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px;
+  border: 0 !important;
+  border-radius: 9px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ff-text-muted);
+}
+.sport-menu-item .el-icon { font-size: 15px; opacity: 0.8; }
+.sport-menu-item:hover {
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text-strong);
+}
+.sport-menu-item.is-active {
+  background: var(--ff-primary-soft);
+  color: var(--ff-primary) !important;
+  border: 0 !important;
+  box-shadow: none;
+}
+.sport-menu-item.is-active .el-icon { opacity: 1; }
+
+/* Language: a segmented control — the raised white pill marks the
+   active locale without adding a second brand-coloured block. */
+.lang-switch {
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ff-surface-quiet);
+}
+.lang-option {
+  min-width: 34px;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ff-text-muted);
+}
+.lang-option:hover { color: var(--ff-text-strong); }
+.lang-option.is-active {
+  background: var(--ff-surface);
+  color: var(--ff-text-strong);
+  box-shadow: 0 1px 2px rgba(17, 32, 24, 0.14);
+}
+
+.global-search-btn,
+.mobile-menu-toggle {
+  color: var(--ff-text-muted);
+  border-radius: 9px;
+}
+.global-search-btn:hover,
+.mobile-menu-toggle:hover {
+  background: var(--ff-surface-quiet);
+  color: var(--ff-text-strong);
+}
+.nav-account-trigger { padding: 2px 4px; border-radius: 999px; }
+.nav-avatar { font-size: 13px; font-weight: 650; }
+
+@media (min-width: 769px) {
+  .app-top-nav { min-height: 60px; padding: 0 24px; }
+}
+@media (max-width: 768px) {
+  .app-top-nav { background: rgba(255, 255, 255, 0.94); }
+  .sport-menu-item { height: 36px; line-height: 36px; border-radius: 9px; }
+  .nav-menu-wrap .sport-menu-item.is-active { background: var(--ff-primary-soft); }
+}
 </style>

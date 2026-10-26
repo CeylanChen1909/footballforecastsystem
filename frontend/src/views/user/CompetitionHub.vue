@@ -701,4 +701,15 @@ watch(locale, () => loadLeagueData())
   }
   .standings-skeleton-row em:nth-child(n+5) { display: none; }
 }
+
+/* r14 visual pass — keep the two columns stable and stop the clubs toolbar
+   from clipping its own search field. */
+.hub-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; }
+.club-search { width: 150px; min-width: 0; max-width: 100%; flex: 0 1 150px; }
+.club-grid { border-radius: 10px; }
+.club-card { min-height: 48px; padding: 6px 10px; }
+.club-card img, .club-logo-placeholder { width: 26px; height: 26px; }
+.club-name { font-size: 13px; font-weight: 600; }
+.zone-label { font-size: 9.5px; padding: 2px 6px; }
+@media (max-width: 980px) { .hub-grid { grid-template-columns: 1fr; } }
 </style>

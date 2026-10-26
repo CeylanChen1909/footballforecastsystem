@@ -205,4 +205,14 @@ const { t } = useI18n()
   .brief-cols { grid-template-columns: 1fr; gap: 18px; }
   .trust-facts > div { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* r14 visual pass — the about page reads as a document; give it an editorial
+   lead and a consistent type scale with the rest of the product. */
+.legal-main { max-width: 880px; padding: 40px 24px 72px; }
+.one-liner { max-width: 30em; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.32; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.hero-cta { min-height: 40px; border-radius: 9px; }
+.legal-main h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.012em; color: var(--ff-text-strong); }
+.legal-main p:not(.one-liner), .legal-main li { font-size: 13.5px; line-height: 1.72; }
+.legal-main .one-liner { max-width: 30em; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.32; }
 </style>
