@@ -1,13 +1,13 @@
 <template>
-  <aside v-if="visible" class="consent-banner" role="region" aria-live="polite" aria-label="隐私提示">
+  <aside v-if="visible" class="consent-banner" role="region" aria-live="polite" :aria-label="t('components.consent.ariaLabel')">
     <div>
-      <strong>让产品变得更好</strong>
-      <p>我们只记录匿名的页面与功能使用情况，用来改进比赛、预测和助手体验。不会收集密码或聊天正文。</p>
+      <strong>{{ t('components.consent.title') }}</strong>
+      <p>{{ t('components.consent.body') }}</p>
     </div>
     <div class="consent-actions">
-      <router-link to="/privacy" class="consent-link" @click="visible = false">隐私说明</router-link>
-      <button type="button" class="consent-secondary" @click="choose('essential')">仅必要功能</button>
-      <button type="button" class="consent-primary" @click="choose('granted')">允许匿名统计</button>
+      <router-link to="/privacy" class="consent-link" @click="visible = false">{{ t('components.consent.privacy') }}</router-link>
+      <button type="button" class="consent-secondary" @click="choose('essential')">{{ t('components.consent.essential') }}</button>
+      <button type="button" class="consent-primary" @click="choose('granted')">{{ t('components.consent.granted') }}</button>
     </div>
   </aside>
 </template>
@@ -15,6 +15,9 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { getAnalyticsConsent, setAnalyticsConsent } from '../../utils/privacyConsent'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 
 const visible = ref(false)
 const sync = () => { visible.value = !getAnalyticsConsent() }

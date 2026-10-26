@@ -1,7 +1,7 @@
 <template>
   <div class="profile-page ff-page-shell">
     <el-container class="profile-layout">
-      <AppTopNav title="ChenFootball" subtitle="个人中心" :brand-icon="Football" active-path="" />
+      <AppTopNav title="ChenFootball" :subtitle="t('account.profile.subtitle')" :brand-icon="Football" active-path="" />
       <el-main id="app-main" class="profile-main" tabindex="-1">
         <div v-if="profileLoading" class="profile-loading ff-panel"><el-skeleton :rows="8" animated /></div>
 
@@ -10,122 +10,125 @@
           <div class="identity-main">
             <div class="avatar-editor">
               <el-avatar :size="76" :src="avatarSrc || undefined" class="identity-avatar" @error="avatarLoadFailed = true">{{ avatarInitial }}</el-avatar>
-              <button type="button" class="avatar-edit-button" aria-label="修改头像" title="修改头像" :disabled="avatarSaving" @click="openAvatarPicker"><el-icon><Camera /></el-icon></button>
+              <button type="button" class="avatar-edit-button" :aria-label="t('account.profile.changeAvatar')" :title="t('account.profile.changeAvatar')" :disabled="avatarSaving" @click="openAvatarPicker"><el-icon><Camera /></el-icon></button>
               <input ref="avatarInput" class="avatar-input" type="file" accept="image/png,image/jpeg,image/webp" @change="onAvatarSelected" />
             </div>
             <div class="identity-copy">
-              <span class="section-kicker">账户资料</span>
+              <span class="section-kicker">{{ t('account.profile.accountDetails') }}</span>
               <h2 id="identity-title">{{ displayName }}</h2>
-              <p class="identity-email">{{ profileIdentity.email || '历史账号，暂未绑定邮箱' }}</p>
+              <p class="identity-email">{{ profileIdentity.email || t('account.profile.legacyNoEmail') }}</p>
               <div class="identity-meta">
-                <el-tag :type="emailVerified ? 'success' : 'warning'" effect="plain" round size="small">{{ emailVerified ? '邮箱已验证' : '邮箱未验证' }}</el-tag>
-                <span v-if="profileIdentity.createdAt">加入于 {{ formatDateOnly(profileIdentity.createdAt) }}</span>
-                <span v-if="profileIdentity.role && profileIdentity.role !== 'USER'">管理员入口已启用</span>
+                <el-tag :type="emailVerified ? 'success' : 'warning'" effect="plain" round size="small">{{ emailVerified ? t('account.profile.emailVerified') : t('account.profile.emailUnverified') }}</el-tag>
+                <span v-if="profileIdentity.createdAt">{{ t('account.profile.joinedAt', { date: formatDateOnly(profileIdentity.createdAt) }) }}</span>
+                <span v-if="profileIdentity.role && profileIdentity.role !== 'USER'">{{ t('account.profile.adminEnabled') }}</span>
               </div>
             </div>
           </div>
-          <div class="identity-actions"><el-button type="primary" plain @click="goMatches"><el-icon><Football /></el-icon>浏览比赛</el-button><el-button plain @click="openProfileEditor">编辑资料</el-button><el-button plain @click="switchTab('favorites')">查看收藏</el-button><el-button plain @click="switchTab('security')">账户安全</el-button></div>
+          <div class="identity-actions"><el-button type="primary" plain @click="goMatches"><el-icon><Football /></el-icon>{{ t('account.profile.browseMatches') }}</el-button><el-button plain @click="openProfileEditor">{{ t('account.profile.editProfile') }}</el-button><el-button plain @click="switchTab('favorites')">{{ t('account.profile.viewFavorites') }}</el-button><el-button plain @click="switchTab('security')">{{ t('account.profile.accountSecurity') }}</el-button></div>
         </section>
 
-        <section v-if="publicStats" class="benchmark-strip model-performance ff-panel" aria-label="模型表现">
-          <div><span class="section-kicker">模型表现</span><strong>近 {{ publicStats.windowDays || 7 }} 日模型准确率</strong><span>基于全站已验证比赛，仅用于评估模型，不代表个人能力。{{ statsUpdatedText }}</span><div class="benchmark-meta"><span>已验证 {{ publicStats.evaluated ?? 0 }} 场</span><span v-if="publicStats.baselineAccuracy != null">基线 {{ publicStats.baselineAccuracy }}%</span><span v-if="publicStats.balancedAccuracy != null">平衡准确率 {{ publicStats.balancedAccuracy }}%</span></div></div>
-          <div class="benchmark-value"><strong>{{ publicAccuracy }}</strong><small>全站参考</small></div>
+        <section v-if="publicStats" class="benchmark-strip model-performance ff-panel" :aria-label="t('account.profile.modelPerformance')">
+          <div><span class="section-kicker">{{ t('account.profile.modelPerformance') }}</span><strong>{{ t('account.profile.modelAccuracyWindow', { days: publicStats.windowDays || 7 }) }}</strong><span>{{ t('account.profile.modelAccuracyNote') }}{{ statsUpdatedText }}</span><div class="benchmark-meta"><span>{{ t('account.profile.verifiedMatches', { count: publicStats.evaluated ?? 0 }) }}</span><span v-if="publicStats.baselineAccuracy != null">{{ t('account.profile.baselineAccuracy', { value: publicStats.baselineAccuracy }) }}</span><span v-if="publicStats.balancedAccuracy != null">{{ t('account.profile.balancedAccuracy', { value: publicStats.balancedAccuracy }) }}</span></div></div>
+          <div class="benchmark-value"><strong>{{ publicAccuracy }}</strong><small>{{ t('account.profile.siteReference') }}</small></div>
         </section>
 
-        <section ref="workspaceRef" class="workspace-panel ff-panel" aria-label="个人中心工作区">
-          <nav class="workspace-tabs" aria-label="个人中心导航">
+        <section ref="workspaceRef" class="workspace-panel ff-panel" :aria-label="t('account.profile.workspaceAria')">
+          <nav class="workspace-tabs" :aria-label="t('account.profile.navAria')">
             <button v-for="tab in tabs" :id="`profile-tab-${tab.key}`" :key="tab.key" type="button" :class="{ active: activeTab === tab.key }" :aria-selected="activeTab === tab.key" :aria-controls="`profile-panel-${tab.key}`" :tabindex="activeTab === tab.key ? 0 : -1" role="tab" @click="switchTab(tab.key)" @keydown.left.prevent="moveProfileTab(-1)" @keydown.right.prevent="moveProfileTab(1)" @keydown.home.prevent="moveProfileTab('first')" @keydown.end.prevent="moveProfileTab('last')"><el-icon><component :is="tab.icon" /></el-icon><span>{{ tab.label }}</span><em v-if="tab.count !== undefined">{{ tab.count }}</em></button>
           </nav>
 
           <div v-if="activeTab === 'overview'" id="profile-panel-overview" class="workspace-content" role="tabpanel">
             <div class="overview-grid">
               <section class="overview-card">
-                <div class="content-heading"><div><span class="section-kicker">关注内容</span><h2>关注概览</h2></div><el-button link type="primary" @click="switchTab('favorites')">管理收藏</el-button></div>
-                <div class="overview-summary"><strong>{{ favorites.length + matchFavorites.length }}</strong><span>项关注内容</span><small>球队 {{ favorites.length }} · 比赛 {{ matchFavorites.length }}</small></div>
+                <div class="content-heading"><div><span class="section-kicker">{{ t('account.profile.followingKicker') }}</span><h2>{{ t('account.profile.overviewTitle') }}</h2></div><el-button link type="primary" @click="switchTab('favorites')">{{ t('account.profile.manageFavorites') }}</el-button></div>
+                <div class="overview-summary"><strong>{{ favorites.length + matchFavorites.length }}</strong><span>{{ t('account.profile.followCountLabel') }}</span><small>{{ t('account.profile.followBreakdown', { teams: favorites.length, matches: matchFavorites.length }) }}</small></div>
                 <div v-if="favorites.length || matchFavorites.length" class="mini-follow-list">
-                  <div v-for="item in overviewFavorites" :key="item.key" class="mini-follow-item"><span class="mini-icon">{{ item.initial }}</span><div><strong>{{ item.title }}</strong><small>{{ item.subtitle }}</small></div><el-button text type="primary" @click="item.action">查看</el-button></div>
+                  <div v-for="item in overviewFavorites" :key="item.key" class="mini-follow-item"><span class="mini-icon">{{ item.initial }}</span><div><strong>{{ item.title }}</strong><small>{{ item.subtitle }}</small></div><el-button text type="primary" @click="item.action">{{ t('account.common.view') }}</el-button></div>
                 </div>
-                <PageState v-else title="还没有关注内容" description="从比赛页收藏球队或比赛，建立你的赛前清单。" action-text="去发现比赛" @action="goMatches" />
+                <PageState v-else :title="t('account.profile.noFollowingTitle')" :description="t('account.profile.noFollowingDesc')" :action-text="t('account.profile.discoverMatches')" @action="goMatches" />
               </section>
               <section class="overview-card">
-                <div class="content-heading"><div><span class="section-kicker">最近记录</span><h2>最近预测</h2></div><el-button link type="primary" @click="switchTab('history')">查看全部</el-button></div>
+                <div class="content-heading"><div><span class="section-kicker">{{ t('account.profile.recentKicker') }}</span><h2>{{ t('account.profile.recentPredictions') }}</h2></div><el-button link type="primary" @click="switchTab('history')">{{ t('account.profile.viewAll') }}</el-button></div>
                 <div v-if="history.length" class="recent-predictions">
-                  <div v-for="item in history.slice(0, 3)" :key="item.id" class="recent-prediction" @click="goPrediction(item)"><div><strong>{{ item.homeTeamName || '球队A' }} <b>VS</b> {{ item.awayTeamName || '球队B' }}</strong><small>{{ item.leagueName || '未分类联赛' }} · {{ formatDate(item.createdAt) }}</small></div><el-tag :type="resultTagType(item.resultLabel)" size="small">{{ resultLabel(item.resultLabel) }}</el-tag></div>
+                  <div v-for="item in history.slice(0, 3)" :key="item.id" class="recent-prediction" @click="goPrediction(item)"><div><strong>{{ teamLabel(item, 'home') || t('account.profile.teamA') }} <b>VS</b> {{ teamLabel(item, 'away') || t('account.profile.teamB') }}</strong><small>{{ leagueLabel(item) || t('account.profile.uncategorizedLeague') }} · {{ formatDate(item.createdAt) }}</small></div><el-tag :type="resultTagType(item.resultLabel)" size="small">{{ resultLabel(item.resultLabel) }}</el-tag></div>
                 </div>
-                <PageState v-else title="暂无预测记录" description="选择一场比赛，查看模型分析和概率分布。" action-text="去看比赛" @action="goMatches" />
+                <PageState v-else :title="t('account.profile.noPredictionsTitle')" :description="t('account.profile.noPredictionsDesc')" :action-text="t('account.profile.goToMatches')" @action="goMatches" />
               </section>
             </div>
           </div>
 
           <div v-else-if="activeTab === 'favorites'" id="profile-panel-favorites" class="workspace-content" role="tabpanel">
-            <div class="content-heading workspace-title-row"><div><span class="section-kicker">关注内容</span><h2>我的收藏</h2><p>关注的内容会优先出现在比赛页，方便你持续跟踪。</p></div><el-button type="primary" plain @click="goMatches">发现更多</el-button></div>
-            <el-tabs v-model="favoriteTab" class="favorite-tabs"><el-tab-pane :label="`球队 ${favorites.length}`" name="teams" /><el-tab-pane :label="`比赛 ${matchFavorites.length}`" name="matches" /></el-tabs>
-            <div class="library-toolbar"><el-input v-model="favoriteKeyword" size="small" clearable placeholder="搜索球队、联赛或比赛" aria-label="搜索收藏" /><el-select v-model="favoriteSort" size="small" aria-label="收藏排序"><el-option label="最近收藏" value="recent" /><el-option label="按名称" value="name" /></el-select><el-select v-if="favoriteTab === 'matches'" v-model="favoriteMatchFilter" size="small" aria-label="比赛状态筛选"><el-option label="全部状态" value="all" /><el-option label="未开始" value="upcoming" /><el-option label="已结束" value="finished" /><el-option label="待同步" value="unknown" /></el-select></div>
-            <PageState v-if="favoriteTab === 'teams' && favoritesLoading" type="loading" title="正在加载收藏球队…" :size="40" />
-            <PageState v-else-if="favoriteTab === 'teams' && favoritesError" type="error" title="收藏球队加载失败" :description="favoritesError" action-text="重试" @action="loadFavorites" />
-            <PageState v-else-if="favoriteTab === 'teams' && !favorites.length" title="暂无收藏球队" description="从比赛或球队阵容页关注一支球队。" action-text="浏览球队" @action="goMatches" />
-            <PageState v-else-if="favoriteTab === 'teams' && !filteredFavorites.length" title="没有符合条件的球队" description="换一个关键词或调整排序后再试。" action-text="清除筛选" @action="favoriteKeyword = ''; favoriteSort = 'recent'" />
-            <div v-else-if="favoriteTab === 'teams'" class="library-list"><article v-for="fav in filteredFavorites" :key="fav.id" class="library-item"><div class="library-avatar">{{ teamInitial(fav.teamName) }}</div><div class="library-copy"><strong>{{ fav.teamName || '未命名球队' }}</strong><small>{{ fav.leagueName || '联赛待同步' }} · 收藏于 {{ formatDate(fav.createdAt) }}</small></div><div class="library-actions"><el-button size="small" type="primary" plain @click="goTeam(fav.teamId, fav.teamName, fav.leagueName, fav.logo)">查看球队</el-button><el-button size="small" text type="danger" @click="removeFav(fav)">取消关注</el-button></div></article></div>
-            <PageState v-if="favoriteTab === 'matches' && matchFavoritesLoading" type="loading" title="正在加载收藏比赛…" :size="40" />
-            <PageState v-else-if="favoriteTab === 'matches' && matchFavoritesError" type="error" title="收藏比赛加载失败" :description="matchFavoritesError" action-text="重试" @action="loadMatchFavorites" />
-            <PageState v-else-if="favoriteTab === 'matches' && !matchFavorites.length" title="暂无收藏比赛" description="在比赛卡片中收藏一场你想持续关注的比赛。" action-text="浏览赛程" @action="goMatches" />
-            <PageState v-else-if="favoriteTab === 'matches' && !filteredMatchFavorites.length" title="没有符合条件的比赛" description="换一个关键词、状态筛选，或去比赛页发现新赛程。" action-text="清除筛选" @action="favoriteKeyword = ''; favoriteMatchFilter = 'all'; favoriteSort = 'recent'" />
-            <div v-else-if="favoriteTab === 'matches'" class="library-list"><article v-for="fav in filteredMatchFavorites" :key="fav.id" class="library-item match-library-item"><div class="library-avatar match-avatar">VS</div><div class="library-copy"><strong>{{ fav.homeTeamName || '未知主队' }} <b>VS</b> {{ fav.awayTeamName || '未知客队' }}</strong><small>{{ fav.leagueName || '联赛待同步' }} · {{ formatMatchTime(fav.matchTime) }}</small></div><div class="library-status"><el-tag size="small" effect="plain" :type="favoriteMatchState(fav).type">{{ favoriteMatchState(fav).label }}</el-tag></div><div class="library-actions"><el-button size="small" type="primary" plain @click="goPrediction(fav)">查看分析</el-button><el-button size="small" text type="danger" @click="removeMatchFav(fav)">取消关注</el-button></div></article></div>
+            <div class="content-heading workspace-title-row"><div><span class="section-kicker">{{ t('account.profile.followingKicker') }}</span><h2>{{ t('account.profile.myFavorites') }}</h2><p>{{ t('account.profile.favoritesDesc') }}</p></div><el-button type="primary" plain @click="goMatches">{{ t('account.profile.discoverMore') }}</el-button></div>
+            <el-tabs v-model="favoriteTab" class="favorite-tabs"><el-tab-pane :label="t('account.profile.teamsTab', { count: favorites.length })" name="teams" /><el-tab-pane :label="t('account.profile.matchesTab', { count: matchFavorites.length })" name="matches" /></el-tabs>
+            <div class="library-toolbar"><el-input v-model="favoriteKeyword" size="small" clearable :placeholder="t('account.profile.searchFavoritesPlaceholder')" :aria-label="t('account.profile.searchFavoritesAria')" /><el-select v-model="favoriteSort" size="small" :aria-label="t('account.profile.favoriteSortAria')"><el-option :label="t('account.profile.recentFavorite')" value="recent" /><el-option :label="t('account.profile.sortByName')" value="name" /></el-select><el-select v-if="favoriteTab === 'matches'" v-model="favoriteMatchFilter" size="small" :aria-label="t('account.profile.matchStatusFilterAria')"><el-option :label="t('account.profile.allStatuses')" value="all" /><el-option :label="t('account.profile.statusUpcoming')" value="upcoming" /><el-option :label="t('account.profile.statusFinished')" value="finished" /><el-option :label="t('account.profile.statusUnknown')" value="unknown" /></el-select></div>
+            <PageState v-if="favoriteTab === 'teams' && favoritesLoading" type="loading" :title="t('account.profile.loadingFavoriteTeams')" :size="40" />
+            <PageState v-else-if="favoriteTab === 'teams' && favoritesError" type="error" :title="t('account.profile.favoriteTeamsFailed')" :description="favoritesError" :action-text="t('account.common.retry')" @action="loadFavorites" />
+            <PageState v-else-if="favoriteTab === 'teams' && !favorites.length" :title="t('account.profile.noFavoriteTeamsTitle')" :description="t('account.profile.noFavoriteTeamsDesc')" :action-text="t('account.profile.browseTeams')" @action="goMatches" />
+            <PageState v-else-if="favoriteTab === 'teams' && !filteredFavorites.length" :title="t('account.profile.noMatchingTeams')" :description="t('account.profile.noMatchingTeamsDesc')" :action-text="t('account.profile.clearFilters')" @action="favoriteKeyword = ''; favoriteSort = 'recent'" />
+            <div v-else-if="favoriteTab === 'teams'" class="library-list"><article v-for="fav in filteredFavorites" :key="fav.id" class="library-item"><div class="library-avatar">{{ teamInitial(teamLabel(fav)) }}</div><div class="library-copy"><strong>{{ teamLabel(fav) || t('account.profile.unnamedTeam') }}</strong><small>{{ leagueLabel(fav) || t('account.profile.leaguePending') }} · {{ t('account.profile.favoritedAt', { date: formatDate(fav.createdAt) }) }}</small></div><div class="library-actions"><el-button size="small" type="primary" plain @click="goTeam(fav.teamId, fav.teamName, fav.leagueName, fav.logo)">{{ t('account.profile.viewTeam') }}</el-button><el-button size="small" text type="danger" @click="removeFav(fav)">{{ t('account.profile.unfollow') }}</el-button></div></article></div>
+            <PageState v-if="favoriteTab === 'matches' && matchFavoritesLoading" type="loading" :title="t('account.profile.loadingFavoriteMatches')" :size="40" />
+            <PageState v-else-if="favoriteTab === 'matches' && matchFavoritesError" type="error" :title="t('account.profile.favoriteMatchesFailed')" :description="matchFavoritesError" :action-text="t('account.common.retry')" @action="loadMatchFavorites" />
+            <PageState v-else-if="favoriteTab === 'matches' && !matchFavorites.length" :title="t('account.profile.noFavoriteMatchesTitle')" :description="t('account.profile.noFavoriteMatchesDesc')" :action-text="t('account.profile.browseFixtures')" @action="goMatches" />
+            <PageState v-else-if="favoriteTab === 'matches' && !filteredMatchFavorites.length" :title="t('account.profile.noMatchingMatches')" :description="t('account.profile.noMatchingMatchesDesc')" :action-text="t('account.profile.clearFilters')" @action="favoriteKeyword = ''; favoriteMatchFilter = 'all'; favoriteSort = 'recent'" />
+            <div v-else-if="favoriteTab === 'matches'" class="library-list"><article v-for="fav in filteredMatchFavorites" :key="fav.id" class="library-item match-library-item"><div class="library-avatar match-avatar">VS</div><div class="library-copy"><strong>{{ teamLabel(fav, 'home') || t('account.profile.unknownHomeTeam') }} <b>VS</b> {{ teamLabel(fav, 'away') || t('account.profile.unknownAwayTeam') }}</strong><small>{{ leagueLabel(fav) || t('account.profile.leaguePending') }} · {{ formatMatchTime(fav.matchTime) }}</small></div><div class="library-status"><el-tag size="small" effect="plain" :type="favoriteMatchState(fav).type">{{ favoriteMatchState(fav).label }}</el-tag></div><div class="library-actions"><el-button size="small" type="primary" plain @click="goPrediction(fav)">{{ t('account.profile.viewAnalysis') }}</el-button><el-button size="small" text type="danger" @click="removeMatchFav(fav)">{{ t('account.profile.unfollow') }}</el-button></div></article></div>
           </div>
 
           <div v-else-if="activeTab === 'history'" id="profile-panel-history" class="workspace-content" role="tabpanel">
-            <div class="content-heading workspace-title-row"><div><span class="section-kicker">预测记录</span><h2>预测记录</h2><p>查看模型结论、概率分布和最终核验结果。</p></div><div class="history-total">共 {{ personalStats?.total ?? history.length }} 场 · 待验证 {{ personalStats?.pending ?? '—' }} 场</div></div>
-            <div class="history-toolbar"><el-input v-model="historyKeyword" class="history-search" size="small" clearable placeholder="搜索球队或联赛" aria-label="搜索预测记录" /><el-radio-group v-model="historyStatus" size="small" aria-label="预测核验状态"><el-radio-button label="all">全部</el-radio-button><el-radio-button label="correct">命中</el-radio-button><el-radio-button label="wrong">未命中</el-radio-button><el-radio-button label="pending">待验证</el-radio-button></el-radio-group><el-select v-model="historyOutcome" size="small" aria-label="预测结果筛选"><el-option label="全部结果" value="all" /><el-option label="主胜" value="HOME_WIN" /><el-option label="平局" value="DRAW" /><el-option label="客胜" value="AWAY_WIN" /></el-select><el-select v-model="historyDateRange" size="small" aria-label="预测时间范围"><el-option label="全部时间" value="all" /><el-option label="近7天" value="7d" /><el-option label="近30天" value="30d" /></el-select></div>
-            <PageState v-if="historyLoading && !history.length" type="loading" title="正在加载预测记录…" :size="40" />
-            <PageState v-else-if="historyError && !history.length" type="error" title="预测记录加载失败" :description="historyError" action-text="重试" @action="() => loadHistoryPage(true)" />
-            <PageState v-else-if="!filteredHistory.length" title="没有符合条件的记录" description="调整筛选条件，或先去比赛页完成一次预测。" action-text="去看比赛" @action="goMatches" />
+            <div class="content-heading workspace-title-row"><div><span class="section-kicker">{{ t('account.profile.historyKicker') }}</span><h2>{{ t('account.profile.historyTitle') }}</h2><p>{{ t('account.profile.historyDesc') }}</p></div><div class="history-total">{{ t('account.profile.historyTotal', { total: personalStats?.total ?? history.length, pending: personalStats?.pending ?? '—' }) }}</div></div>
+            <div class="history-toolbar"><el-input v-model="historyKeyword" class="history-search" size="small" clearable :placeholder="t('account.profile.searchHistoryPlaceholder')" :aria-label="t('account.profile.searchHistoryAria')" /><el-radio-group v-model="historyStatus" size="small" :aria-label="t('account.profile.verificationStatusAria')"><el-radio-button label="all">{{ t('account.profile.filterAll') }}</el-radio-button><el-radio-button label="correct">{{ t('account.profile.filterCorrect') }}</el-radio-button><el-radio-button label="wrong">{{ t('account.profile.filterWrong') }}</el-radio-button><el-radio-button label="pending">{{ t('account.profile.filterPending') }}</el-radio-button></el-radio-group><el-select v-model="historyOutcome" size="small" :aria-label="t('account.profile.outcomeFilterAria')"><el-option :label="t('account.profile.allOutcomes')" value="all" /><el-option :label="t('account.profile.homeWin')" value="HOME_WIN" /><el-option :label="t('account.profile.draw')" value="DRAW" /><el-option :label="t('account.profile.awayWin')" value="AWAY_WIN" /></el-select><el-select v-model="historyDateRange" size="small" :aria-label="t('account.profile.dateRangeAria')"><el-option :label="t('account.profile.allTime')" value="all" /><el-option :label="t('account.profile.last7Days')" value="7d" /><el-option :label="t('account.profile.last30Days')" value="30d" /></el-select></div>
+            <PageState v-if="historyLoading && !history.length" type="loading" :title="t('account.profile.loadingHistory')" :size="40" />
+            <PageState v-else-if="historyError && !history.length" type="error" :title="t('account.profile.historyFailed')" :description="historyError" :action-text="t('account.common.retry')" @action="() => loadHistoryPage(true)" />
+            <PageState v-else-if="!filteredHistory.length" :title="t('account.profile.noMatchingHistory')" :description="t('account.profile.noMatchingHistoryDesc')" :action-text="t('account.profile.goToMatches')" @action="goMatches" />
             <div v-else class="history-list">
-              <article v-for="item in filteredHistory" :key="item.id" class="history-item" tabindex="0" role="button" @click="goPrediction(item)" @keyup.enter="goPrediction(item)"><div class="history-main"><div class="history-date">{{ formatDate(item.createdAt) }}</div><strong>{{ item.homeTeamName || '球队A' }} <b>VS</b> {{ item.awayTeamName || '球队B' }}</strong><small>{{ item.leagueName || '未分类联赛' }}</small></div><div class="history-result"><el-tag :type="resultTagType(item.resultLabel)" size="small">{{ resultLabel(item.resultLabel) }}</el-tag><span :class="['verification-status', verificationClass(item)]">{{ verificationLabel(item) }}</span></div><div class="history-probability"><div class="prob-stack" :title="`主 ${pct(item.homeWinProb)} · 平 ${pct(item.drawProb)} · 客 ${pct(item.awayWinProb)}`"><span class="seg seg-home" :style="{ width: pct(item.homeWinProb) }"></span><span class="seg seg-draw" :style="{ width: pct(item.drawProb) }"></span><span class="seg seg-away" :style="{ width: pct(item.awayWinProb) }"></span></div><div class="prob-nums"><span class="c-home">主 {{ pct(item.homeWinProb) }}</span><span class="c-draw">平 {{ pct(item.drawProb) }}</span><span class="c-away">客 {{ pct(item.awayWinProb) }}</span></div></div><el-button class="history-view" text type="primary" @click.stop="goPrediction(item)">查看</el-button></article>
+              <article v-for="item in filteredHistory" :key="item.id" class="history-item" tabindex="0" role="button" @click="goPrediction(item)" @keyup.enter="goPrediction(item)"><div class="history-main"><div class="history-date">{{ formatDate(item.createdAt) }}</div><strong>{{ teamLabel(item, 'home') || t('account.profile.teamA') }} <b>VS</b> {{ teamLabel(item, 'away') || t('account.profile.teamB') }}</strong><small>{{ leagueLabel(item) || t('account.profile.uncategorizedLeague') }}</small></div><div class="history-result"><el-tag :type="resultTagType(item.resultLabel)" size="small">{{ resultLabel(item.resultLabel) }}</el-tag><span :class="['verification-status', verificationClass(item)]">{{ verificationLabel(item) }}</span></div><div class="history-probability"><div class="prob-stack" :title="t('account.profile.probabilityTooltip', { home: pct(item.homeWinProb), draw: pct(item.drawProb), away: pct(item.awayWinProb) })"><span class="seg seg-home" :style="{ width: pct(item.homeWinProb) }"></span><span class="seg seg-draw" :style="{ width: pct(item.drawProb) }"></span><span class="seg seg-away" :style="{ width: pct(item.awayWinProb) }"></span></div><div class="prob-nums"><span class="c-home">{{ t('account.profile.homeShort') }} {{ pct(item.homeWinProb) }}</span><span class="c-draw">{{ t('account.profile.drawShort') }} {{ pct(item.drawProb) }}</span><span class="c-away">{{ t('account.profile.awayShort') }} {{ pct(item.awayWinProb) }}</span></div></div><el-button class="history-view" text type="primary" @click.stop="goPrediction(item)">{{ t('account.common.view') }}</el-button></article>
             </div>
-            <div v-if="history.length && !historyError" class="history-footer"><el-button v-if="historyHasMore" :loading="historyLoading" plain @click="loadHistoryPage(false)">加载更多</el-button><span v-else>已显示全部 {{ history.length }} 条记录</span></div>
+            <div v-if="history.length && !historyError" class="history-footer"><el-button v-if="historyHasMore" :loading="historyLoading" plain @click="loadHistoryPage(false)">{{ t('account.profile.loadMore') }}</el-button><span v-else>{{ t('account.profile.allRecordsShown', { count: history.length }) }}</span></div>
           </div>
 
           <div v-else id="profile-panel-security" class="workspace-content security-content" role="tabpanel">
-            <div class="content-heading workspace-title-row"><div><span class="section-kicker">账户与安全</span><h2>账户安全</h2><p>管理登录账号、提醒偏好、通知记录和设备会话。</p></div></div>
+            <div class="content-heading workspace-title-row"><div><span class="section-kicker">{{ t('account.profile.securityKicker') }}</span><h2>{{ t('account.profile.securityTitle') }}</h2><p>{{ t('account.profile.securityDesc') }}</p></div></div>
             <div class="security-grid">
-              <section class="security-card"><div class="security-card-heading"><h3>登录账号</h3><el-button link type="primary" @click="openProfileEditor">编辑资料</el-button></div><div class="account-row"><span>邮箱</span><strong>{{ profileIdentity.email || '历史账号未绑定邮箱' }}</strong><el-tag v-if="profileIdentity.email" :type="emailVerified ? 'success' : 'warning'" size="small" effect="plain">{{ emailVerified ? '已验证' : '未验证' }}</el-tag></div><div class="account-row"><span>昵称</span><strong>{{ displayName }}</strong></div><el-alert v-if="!profileIdentity.email" type="info" :closable="false" show-icon title="这是历史账号，邮箱注册账号可使用找回密码功能。" /></section>
-              <section class="security-card"><h3>提醒偏好</h3><p class="security-help">比赛页的开赛提醒使用浏览器站内通知；邮箱和手机号目前只保存为偏好，后台提醒任务启用后才会发送。</p><el-alert type="info" :closable="false" show-icon title="当前状态：站内提醒可用，邮件/短信提醒未启用" /><el-form label-position="top" class="security-form"><el-form-item label="提醒邮箱"><el-input v-model="accountProfile.email" type="email" placeholder="例如 user@example.com" /></el-form-item><el-form-item label="提醒手机号"><el-input v-model="accountProfile.phone" placeholder="例如 13800000000" /></el-form-item><el-checkbox v-model="accountProfile.matchRemindersEnabled">接收关注比赛提醒</el-checkbox><el-button class="form-submit" plain :loading="profileSaving" @click="saveAccountProfile">保存提醒偏好</el-button></el-form></section>
-              <section class="security-card notification-card"><div class="security-card-heading"><h3>通知记录 <el-badge v-if="notificationUnread" :value="notificationUnread" class="inline-badge" /></h3><el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">全部已读</el-button></div><PageState v-if="notificationLoading" type="loading" title="正在加载通知…" :size="30" /><PageState v-else-if="!notifications.length" title="暂无通知" description="比赛提醒、数据同步和账号安全通知会显示在这里。" /><div v-else class="profile-notification-list"><button v-for="item in notifications.slice(0, 6)" :key="item.id" type="button" class="profile-notification-item" :class="{ 'is-unread': !item.read_at }" @click="markNotification(item)"><span class="notification-dot"></span><span><strong>{{ item.title }}</strong><small>{{ item.body || '暂无详细内容' }} · {{ notificationTime(item.created_at) }}</small></span></button></div></section>
-              <section class="security-card session-card"><div class="security-card-heading"><h3>登录设备</h3><span class="security-count">{{ sessions.length }} 个会话</span></div><PageState v-if="sessionsLoading" type="loading" title="正在读取登录设备…" :size="30" /><PageState v-else-if="!sessions.length" title="暂无会话信息" description="当前设备会话将在刷新后显示。" /><div v-else class="session-list"><div v-for="(session, index) in sessions" :key="`${session.label}-${index}`" class="session-item"><div><strong>{{ session.label }}</strong><small>刷新令牌剩余 {{ formatSessionExpiry(session.expiresInSeconds) }}</small></div><el-tag v-if="session.current" size="small" type="success" effect="plain">当前</el-tag></div></div></section>
-              <section class="security-card"><h3>修改密码</h3><el-form label-position="top" class="security-form"><el-form-item label="当前密码"><el-input v-model="passwordForm.currentPassword" type="password" show-password /></el-form-item><el-form-item label="新密码"><el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="至少 8 位，建议包含字母和数字" /></el-form-item><el-form-item label="确认新密码"><el-input v-model="passwordForm.confirmPassword" type="password" show-password /></el-form-item><el-button type="primary" class="form-submit" :loading="passwordSaving" @click="changePassword">更新密码</el-button></el-form></section>
-              <section class="security-card danger-card"><h3>危险操作</h3><p class="security-help">退出其他设备会让其他浏览器重新登录。注销账号会立即停用当前账号且不可在此处恢复。</p><div class="danger-actions"><el-button plain @click="revokeAllSessions">退出其他设备</el-button><el-button type="danger" plain @click="disableAccount">注销账号</el-button></div></section>
+              <section class="security-card"><div class="security-card-heading"><h3>{{ t('account.profile.loginAccount') }}</h3><el-button link type="primary" @click="openProfileEditor">{{ t('account.profile.editProfile') }}</el-button></div><div class="account-row"><span>{{ t('account.common.email') }}</span><strong>{{ profileIdentity.email || t('account.profile.noEmailBound') }}</strong><el-tag v-if="profileIdentity.email" :type="emailVerified ? 'success' : 'warning'" size="small" effect="plain">{{ emailVerified ? t('account.profile.verified') : t('account.profile.unverified') }}</el-tag></div><div class="account-row"><span>{{ t('account.common.nickname') }}</span><strong>{{ displayName }}</strong></div><el-alert v-if="!profileIdentity.email" type="info" :closable="false" show-icon :title="t('account.profile.legacyAlert')" /></section>
+              <section class="security-card"><h3>{{ t('account.profile.reminderPrefs') }}</h3><p class="security-help">{{ t('account.profile.reminderHelp') }}</p><el-alert type="info" :closable="false" show-icon :title="t('account.profile.reminderStatusAlert')" /><el-form label-position="top" class="security-form"><el-form-item :label="t('account.profile.reminderEmail')"><el-input v-model="accountProfile.email" type="email" :placeholder="t('account.profile.reminderEmailPlaceholder')" /></el-form-item><el-form-item :label="t('account.profile.reminderPhone')"><el-input v-model="accountProfile.phone" :placeholder="t('account.profile.reminderPhonePlaceholder')" /></el-form-item><el-checkbox v-model="accountProfile.matchRemindersEnabled">{{ t('account.profile.matchReminderCheckbox') }}</el-checkbox><el-button class="form-submit" plain :loading="profileSaving" @click="saveAccountProfile">{{ t('account.profile.saveReminderPrefs') }}</el-button></el-form></section>
+              <section class="security-card notification-card"><div class="security-card-heading"><h3>{{ t('account.profile.notificationHistory') }} <el-badge v-if="notificationUnread" :value="notificationUnread" class="inline-badge" /></h3><el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">{{ t('account.profile.markAllRead') }}</el-button></div><PageState v-if="notificationLoading" type="loading" :title="t('account.profile.loadingNotifications')" :size="30" /><PageState v-else-if="!notifications.length" :title="t('account.profile.noNotificationsTitle')" :description="t('account.profile.noNotificationsDesc')" /><div v-else class="profile-notification-list"><button v-for="item in notifications.slice(0, 6)" :key="item.id" type="button" class="profile-notification-item" :class="{ 'is-unread': !item.read_at }" @click="markNotification(item)"><span class="notification-dot"></span><span><strong>{{ item.title }}</strong><small>{{ item.body || t('account.profile.noDetails') }} · {{ notificationTime(item.created_at) }}</small></span></button></div></section>
+              <section class="security-card session-card"><div class="security-card-heading"><h3>{{ t('account.profile.loginDevices') }}</h3><span class="security-count">{{ t('account.profile.sessionCount', { count: sessions.length }) }}</span></div><PageState v-if="sessionsLoading" type="loading" :title="t('account.profile.loadingSessions')" :size="30" /><PageState v-else-if="!sessions.length" :title="t('account.profile.noSessionsTitle')" :description="t('account.profile.noSessionsDesc')" /><div v-else class="session-list"><div v-for="(session, index) in sessions" :key="`${session.label}-${index}`" class="session-item"><div><strong>{{ session.label }}</strong><small>{{ t('account.profile.refreshTokenRemaining', { value: formatSessionExpiry(session.expiresInSeconds) }) }}</small></div><el-tag v-if="session.current" size="small" type="success" effect="plain">{{ t('account.profile.current') }}</el-tag></div></div></section>
+              <section class="security-card"><h3>{{ t('account.profile.changePassword') }}</h3><el-form label-position="top" class="security-form"><el-form-item :label="t('account.profile.currentPassword')"><el-input v-model="passwordForm.currentPassword" type="password" show-password /></el-form-item><el-form-item :label="t('account.profile.newPassword')"><el-input v-model="passwordForm.newPassword" type="password" show-password :placeholder="t('account.profile.newPasswordPlaceholder')" /></el-form-item><el-form-item :label="t('account.profile.confirmNewPassword')"><el-input v-model="passwordForm.confirmPassword" type="password" show-password /></el-form-item><el-button type="primary" class="form-submit" :loading="passwordSaving" @click="changePassword">{{ t('account.profile.updatePassword') }}</el-button></el-form></section>
+              <section class="security-card danger-card"><h3>{{ t('account.profile.dangerZone') }}</h3><p class="security-help">{{ t('account.profile.dangerHelp') }}</p><div class="danger-actions"><el-button plain @click="revokeAllSessions">{{ t('account.profile.revokeOthers') }}</el-button><el-button type="danger" plain @click="disableAccount">{{ t('account.profile.disableAccount') }}</el-button></div></section>
             </div>
           </div>
         </section>
         </template>
       </el-main>
     </el-container>
-    <el-dialog v-model="profileDialogVisible" title="编辑个人资料" width="min(440px, 92vw)">
+    <el-dialog v-model="profileDialogVisible" :title="t('account.profile.editDialogTitle')" width="min(440px, 92vw)">
       <el-form label-position="top" @submit.prevent="saveProfile">
-      <el-form-item label="昵称"><el-input v-model="profileForm.nickname" maxlength="32" show-word-limit autofocus placeholder="请输入展示昵称" @keyup.enter="saveProfile" /><small class="form-hint">每月最多修改一次；昵称不能与他人重复，也不能包含违规词。</small></el-form-item>
-        <el-form-item label="登录邮箱"><el-input :model-value="profileIdentity.email || '历史账号未绑定邮箱'" disabled /><small class="form-hint">登录邮箱是账号标识，如需修改需要重新完成邮箱验证。</small></el-form-item>
+      <el-form-item :label="t('account.common.nickname')"><el-input v-model="profileForm.nickname" maxlength="32" show-word-limit autofocus :placeholder="t('account.profile.nicknamePlaceholder')" @keyup.enter="saveProfile" /><small class="form-hint">{{ t('account.profile.nicknameHint') }}</small></el-form-item>
+        <el-form-item :label="t('account.profile.loginEmail')"><el-input :model-value="profileIdentity.email || t('account.profile.noEmailBound')" disabled /><small class="form-hint">{{ t('account.profile.loginEmailHint') }}</small></el-form-item>
       </el-form>
-      <template #footer><el-button @click="profileDialogVisible = false">取消</el-button><el-button type="primary" :loading="profileSaving" @click="saveProfile">保存</el-button></template>
+      <template #footer><el-button @click="profileDialogVisible = false">{{ t('account.common.cancel') }}</el-button><el-button type="primary" :loading="profileSaving" @click="saveProfile">{{ t('account.common.save') }}</el-button></template>
     </el-dialog>
       <AppFooter />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { predictionApi, favoriteApi, userApi } from '../../api'
 import { authStorage } from '../../utils/authStorage'
+import { displayLeagueName, displayTeamName } from '../../utils/teamNames'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import PageState from '../../components/layout/PageState.vue'
 import { Camera, ChatLineSquare, Collection, Football, Lock, User } from '@element-plus/icons-vue'
+import { useI18n } from '../../i18n'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const { t, locale } = useI18n()
 const profileLoading = ref(true)
 const activeTab = ref('overview')
 const workspaceRef = ref(null)
@@ -168,40 +171,50 @@ const sessionsLoading = ref(false)
 const statsLoadedAt = ref(null)
 
 const tabs = computed(() => [
-  { key: 'overview', label: '概览', icon: User },
-  { key: 'favorites', label: '收藏', icon: Collection, count: favorites.value.length + matchFavorites.value.length },
-  { key: 'history', label: '预测记录', icon: ChatLineSquare, count: personalStats.value?.total },
-  { key: 'security', label: '账户安全', icon: Lock, count: notificationUnread.value || undefined },
+  { key: 'overview', label: t('account.profile.tabOverview'), icon: User },
+  { key: 'favorites', label: t('account.profile.tabFavorites'), icon: Collection, count: favorites.value.length + matchFavorites.value.length },
+  { key: 'history', label: t('account.profile.tabHistory'), icon: ChatLineSquare, count: personalStats.value?.total },
+  { key: 'security', label: t('account.profile.tabSecurity'), icon: Lock, count: notificationUnread.value || undefined },
 ])
-const displayName = computed(() => profileIdentity.nickname || profileIdentity.username || userStore.username || '球迷')
+const displayName = computed(() => profileIdentity.nickname || profileIdentity.username || userStore.username || t('account.profile.fanFallback'))
 const avatarInitial = computed(() => displayName.value.slice(0, 1).toUpperCase())
 const avatarSrc = computed(() => avatarLoadFailed.value ? '' : profileIdentity.avatarData)
 const emailVerified = computed(() => Boolean(profileIdentity.email && profileIdentity.emailVerified))
 const publicAccuracy = computed(() => publicStats.value?.accuracy != null ? `${publicStats.value.accuracy}%` : '—')
-const statsUpdatedText = computed(() => statsLoadedAt.value ? `本次读取于 ${statsLoadedAt.value.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : '正在读取数据')
+const statsUpdatedText = computed(() => statsLoadedAt.value
+  ? t('account.profile.statsUpdatedAt', { time: statsLoadedAt.value.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) })
+  : t('account.profile.statsLoading'))
+const teamLabel = (item, side = '') => displayTeamName(
+  item?.[`${side}TeamName`] || item?.teamName || item?.name || '',
+  item?.[`${side}TeamDisplayName`] || item?.[`${side}TeamDisplay`] || item?.teamDisplayName || item?.displayName || item?.nameEn || ''
+)
+const leagueLabel = item => displayLeagueName(
+  item?.leagueName || item?.league?.name || '',
+  item?.leagueDisplay || item?.leagueDisplayName || item?.league?.leagueDisplay || item?.league?.displayName || ''
+)
 const filteredFavorites = computed(() => {
   const keyword = favoriteKeyword.value.trim().toLowerCase()
-  const rows = favorites.value.filter(item => !keyword || `${item.teamName || ''} ${item.leagueName || ''}`.toLowerCase().includes(keyword))
-  return [...rows].sort((a, b) => favoriteSort.value === 'name' ? String(a.teamName || '').localeCompare(String(b.teamName || ''), 'zh-CN') : new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+  const rows = favorites.value.filter(item => !keyword || `${teamLabel(item)} ${leagueLabel(item)}`.toLowerCase().includes(keyword))
+  return [...rows].sort((a, b) => favoriteSort.value === 'name' ? String(teamLabel(a)).localeCompare(String(teamLabel(b)), 'zh-CN') : new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 })
 const filteredMatchFavorites = computed(() => {
   const keyword = favoriteKeyword.value.trim().toLowerCase()
   const rows = matchFavorites.value.filter(item => {
-    const textMatch = !keyword || `${item.homeTeamName || ''} ${item.awayTeamName || ''} ${item.leagueName || ''}`.toLowerCase().includes(keyword)
+    const textMatch = !keyword || `${teamLabel(item, 'home')} ${teamLabel(item, 'away')} ${leagueLabel(item)}`.toLowerCase().includes(keyword)
     const state = favoriteMatchState(item)
     return textMatch && (favoriteMatchFilter.value === 'all' || state.key === favoriteMatchFilter.value)
   })
-  return [...rows].sort((a, b) => favoriteSort.value === 'name' ? String(a.homeTeamName || '').localeCompare(String(b.homeTeamName || ''), 'zh-CN') : new Date(a.matchTime || a.createdAt || 0) - new Date(b.matchTime || b.createdAt || 0))
+  return [...rows].sort((a, b) => favoriteSort.value === 'name' ? String(teamLabel(a, 'home')).localeCompare(String(teamLabel(b, 'home')), 'zh-CN') : new Date(a.matchTime || a.createdAt || 0) - new Date(b.matchTime || b.createdAt || 0))
 })
 const overviewFavorites = computed(() => [
-  ...favorites.value.slice(0, 2).map(item => ({ key: `team-${item.id}`, initial: teamInitial(item.teamName), title: item.teamName || '未命名球队', subtitle: '关注球队', action: () => goTeam(item.teamId, item.teamName, item.leagueName, item.logo) })),
-  ...matchFavorites.value.slice(0, 2).map(item => ({ key: `match-${item.id}`, initial: 'VS', title: `${item.homeTeamName || '主队'} VS ${item.awayTeamName || '客队'}`, subtitle: '关注比赛', action: () => goPrediction(item) }))
+  ...favorites.value.slice(0, 2).map(item => ({ key: `team-${item.id}`, initial: teamInitial(teamLabel(item)), title: teamLabel(item) || t('account.profile.unnamedTeam'), subtitle: t('account.profile.watchTeam'), action: () => goTeam(item.teamId, item.teamName, item.leagueName, item.logo) })),
+  ...matchFavorites.value.slice(0, 2).map(item => ({ key: `match-${item.id}`, initial: 'VS', title: `${teamLabel(item, 'home') || t('account.profile.teamFallbackHome')} VS ${teamLabel(item, 'away') || t('account.profile.teamFallbackAway')}`, subtitle: t('account.profile.watchMatch'), action: () => goPrediction(item) }))
 ].slice(0, 3))
 const filteredHistory = computed(() => history.value.filter(item => {
   const correct = Number(item.isCorrect) === 1; const wrong = Number(item.isCorrect) === 0
   const statusMatch = historyStatus.value === 'all' || (historyStatus.value === 'correct' && correct) || (historyStatus.value === 'wrong' && wrong) || (historyStatus.value === 'pending' && !correct && !wrong)
   const keyword = historyKeyword.value.trim().toLowerCase()
-  const textMatch = !keyword || `${item.homeTeamName || ''} ${item.awayTeamName || ''} ${item.leagueName || ''}`.toLowerCase().includes(keyword)
+  const textMatch = !keyword || `${teamLabel(item, 'home')} ${teamLabel(item, 'away')} ${leagueLabel(item)}`.toLowerCase().includes(keyword)
   const date = new Date(item.createdAt || 0).getTime()
   const rangeDays = historyDateRange.value === '7d' ? 7 : historyDateRange.value === '30d' ? 30 : null
   const dateMatch = !rangeDays || (Number.isFinite(date) && date >= Date.now() - rangeDays * 86400000)
@@ -226,14 +239,14 @@ const loadHistoryPage = async (reset = false) => {
     const result = unwrap(await predictionApi.getHistoryPage(reset ? '' : historyCursor.value, 20)); const items = Array.isArray(result?.items) ? result.items.map(normalizeHistoryItem) : []
     history.value = reset ? items : [...history.value, ...items]; historyCursor.value = result?.nextCursor || ''; historyHasMore.value = Boolean(result?.hasMore)
   } catch (error) {
-    historyError.value = error?.message || '请稍后重试'
+    historyError.value = error?.message || t('account.profile.loadRetryLater')
     if (reset) { try { const fallback = unwrap(await predictionApi.getHistory(50)); history.value = Array.isArray(fallback) ? fallback.map(normalizeHistoryItem) : []; historyHasMore.value = false; historyError.value = '' } catch { history.value = [] } }
   } finally { historyLoading.value = false }
 }
 const loadPredictionStats = async () => { try { personalStats.value = unwrap(await predictionApi.getStatistics()) } catch { personalStats.value = null } }
 const loadPublicStats = async () => { try { publicStats.value = unwrap(await predictionApi.getPerformance(7)) } catch { publicStats.value = null } }
-const loadFavorites = async () => { favoritesLoading.value = true; favoritesError.value = ''; try { const result = unwrap(await favoriteApi.list()); favorites.value = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : []) } catch (error) { favoritesError.value = error?.message || '请稍后重试'; favorites.value = [] } finally { favoritesLoading.value = false } }
-const loadMatchFavorites = async () => { matchFavoritesLoading.value = true; matchFavoritesError.value = ''; try { const result = unwrap(await favoriteApi.listMatches()); matchFavorites.value = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : []) } catch (error) { matchFavoritesError.value = error?.message || '请稍后重试'; matchFavorites.value = [] } finally { matchFavoritesLoading.value = false } }
+const loadFavorites = async () => { favoritesLoading.value = true; favoritesError.value = ''; try { const result = unwrap(await favoriteApi.list()); favorites.value = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : []) } catch (error) { favoritesError.value = error?.message || t('account.profile.loadRetryLater'); favorites.value = [] } finally { favoritesLoading.value = false } }
+const loadMatchFavorites = async () => { matchFavoritesLoading.value = true; matchFavoritesError.value = ''; try { const result = unwrap(await favoriteApi.listMatches()); matchFavorites.value = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : []) } catch (error) { matchFavoritesError.value = error?.message || t('account.profile.loadRetryLater'); matchFavorites.value = [] } finally { matchFavoritesLoading.value = false } }
 const loadAccountProfile = async () => { try { const result = unwrap(await userApi.getPreferences()); const raw = result?.preferences || result || '{}'; const saved = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); accountProfile.email = saved.email || ''; accountProfile.phone = saved.phone || ''; accountProfile.matchRemindersEnabled = Boolean(saved.matchRemindersEnabled) } catch { /* preferences are optional */ } }
 const loadNotifications = async () => {
   notificationLoading.value = true
@@ -260,7 +273,7 @@ const goTeam = (teamId, teamName, leagueName, logo) => {
 const getPublicMatchId = item => item?.matchId || item?.fixture?.id || item?.fixtureId || item?.externalMatchId || (item?.teams || item?.fixture ? item?.id : null)
 const goPrediction = item => {
   const fixtureId = getPublicMatchId(item)
-  if (!fixtureId) { ElMessage.warning('这条记录缺少比赛标识，暂时无法打开'); return }
+  if (!fixtureId) { ElMessage.warning(t('account.profile.missingMatchId')); return }
   router.push({
     path: `/prediction/${fixtureId}`,
     query: {
@@ -293,25 +306,25 @@ const onAvatarSelected = event => {
   event.target.value = ''
   if (!file) return
   const allowed = ['image/png', 'image/jpeg', 'image/webp']
-  if (!allowed.includes(file.type)) { ElMessage.warning('仅支持 PNG、JPG、JPEG 或 WebP 图片'); return }
-  if (file.size > 512 * 1024) { ElMessage.warning('头像不能超过 512KB'); return }
+  if (!allowed.includes(file.type)) { ElMessage.warning(t('account.profile.avatarTypeWarning')); return }
+  if (file.size > 512 * 1024) { ElMessage.warning(t('account.profile.avatarSizeWarning')); return }
   const reader = new FileReader()
-  reader.onerror = () => ElMessage.error('头像读取失败，请重试')
+  reader.onerror = () => ElMessage.error(t('account.profile.avatarReadError'))
   reader.onload = async () => {
     const avatarData = String(reader.result || '')
     avatarSaving.value = true
     try {
       const result = unwrap(await userApi.updateAvatar(avatarData))
-      if (result?.ok === false) throw new Error(result.message || '头像更新失败')
+      if (result?.ok === false) throw new Error(result.message || t('account.profile.avatarUpdateFailed'))
       profileIdentity.avatarData = avatarData
       userStore.avatarData = avatarData
       avatarLoadFailed.value = false
-      ElMessage.success('头像已更新')
-    } catch (error) { ElMessage.error(error?.message || '头像更新失败') } finally { avatarSaving.value = false }
+      ElMessage.success(t('account.profile.avatarUpdated'))
+    } catch (error) { ElMessage.error(error?.message || t('account.profile.avatarUpdateFailed')) } finally { avatarSaving.value = false }
   }
   reader.readAsDataURL(file)
 }
-const teamInitial = name => (name || '队').slice(0, 1).toUpperCase()
+const teamInitial = name => (name || t('account.profile.teamFallbackShort')).slice(0, 1).toUpperCase()
 const parseBusinessDate = value => {
   if (!value) return null
   const text = String(value).trim().replace(' ', 'T')
@@ -319,32 +332,32 @@ const parseBusinessDate = value => {
   const date = new Date(normalized)
   return Number.isNaN(date.getTime()) ? null : date
 }
-const formatDate = value => { const date = parseBusinessDate(value); return date ? date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '时间未知' }
-const formatDateOnly = value => { const date = parseBusinessDate(value); return date ? date.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: 'long', day: 'numeric' }) : '' }
+const formatDate = value => { const date = parseBusinessDate(value); return date ? date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : t('account.profile.unknownTime') }
+const formatDateOnly = value => { const date = parseBusinessDate(value); return date ? date.toLocaleDateString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: 'long', day: 'numeric' }) : '' }
 const normalizedProb = value => { const number = Number(value); if (!Number.isFinite(number)) return 0; const ratio = number > 1 ? number / 100 : number; return Math.max(0, Math.min(1, ratio)) }
 const pct = value => `${Math.round(normalizedProb(value) * 100)}%`
-const resultLabel = label => ({ HOME_WIN: '预测主胜', DRAW: '预测平局', AWAY_WIN: '预测客胜' }[label] || '未知结果')
+const resultLabel = label => ({ HOME_WIN: t('account.profile.predictedHomeWin'), DRAW: t('account.profile.predictedDraw'), AWAY_WIN: t('account.profile.predictedAwayWin') }[label] || t('account.profile.unknownResult'))
 const resultTagType = label => ({ HOME_WIN: 'success', DRAW: 'info', AWAY_WIN: 'warning' }[label] || 'info')
 const favoriteMatchState = item => {
   const time = parseBusinessDate(item.matchTime)?.getTime() ?? NaN
-  if (!Number.isFinite(time)) return { key: 'unknown', label: '赛程待同步', type: 'info' }
-  if (time < Date.now()) return { key: 'finished', label: '已结束', type: 'info' }
-  return { key: 'upcoming', label: '未开始', type: 'success' }
+  if (!Number.isFinite(time)) return { key: 'unknown', label: t('account.profile.matchPending'), type: 'info' }
+  if (time < Date.now()) return { key: 'finished', label: t('account.profile.matchFinished'), type: 'info' }
+  return { key: 'upcoming', label: t('account.profile.matchUpcoming'), type: 'success' }
 }
-const formatMatchTime = value => { const date = parseBusinessDate(value); return date ? date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '开赛时间待同步' }
-const formatSessionExpiry = seconds => { const value = Number(seconds); if (!Number.isFinite(value) || value <= 0) return '即将过期'; if (value >= 86400) return `${Math.ceil(value / 86400)} 天`; if (value >= 3600) return `${Math.ceil(value / 3600)} 小时`; return `${Math.ceil(value / 60)} 分钟` }
-const verificationLabel = item => Number(item.isCorrect) === 1 ? '已命中' : Number(item.isCorrect) === 0 ? '未命中' : '待验证'
+const formatMatchTime = value => { const date = parseBusinessDate(value); return date ? date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit' }) : t('account.profile.kickoffPending') }
+const formatSessionExpiry = seconds => { const value = Number(seconds); if (!Number.isFinite(value) || value <= 0) return t('account.profile.expiringSoon'); if (value >= 86400) return t('account.profile.days', { count: Math.ceil(value / 86400) }); if (value >= 3600) return t('account.profile.hours', { count: Math.ceil(value / 3600) }); return t('account.profile.minutes', { count: Math.ceil(value / 60) }) }
+const verificationLabel = item => Number(item.isCorrect) === 1 ? t('account.profile.hit') : Number(item.isCorrect) === 0 ? t('account.profile.miss') : t('account.profile.pendingVerification')
 const verificationClass = item => Number(item.isCorrect) === 1 ? 'is-correct' : Number(item.isCorrect) === 0 ? 'is-wrong' : 'is-pending'
-const notificationTime = value => value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+const notificationTime = value => value ? new Date(value).toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const markAllNotifications = async () => { await userApi.readAllNotifications().catch(() => {}); notifications.value.forEach(item => { item.read_at = item.read_at || new Date().toISOString() }); notificationUnread.value = 0 }
 const markNotification = async item => { if (!item.read_at) { await userApi.readNotification(item.id).catch(() => {}); item.read_at = new Date().toISOString(); notificationUnread.value = Math.max(0, notificationUnread.value - 1) } }
-const removeFav = async fav => { try { await ElMessageBox.confirm(`确定取消关注“${fav.teamName || '这支球队'}”吗？`, '取消关注', { type: 'warning' }); await favoriteApi.remove(fav.teamId); ElMessage.success('已取消关注'); await loadFavorites() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || '取消关注失败') } }
-const removeMatchFav = async fav => { try { await ElMessageBox.confirm('确定取消关注这场比赛吗？', '取消关注', { type: 'warning' }); await favoriteApi.removeMatch(getPublicMatchId(fav)); ElMessage.success('已取消关注'); await loadMatchFavorites() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || '取消关注失败') } }
-const saveProfile = async () => { const nickname = profileForm.nickname.trim(); if (!nickname || nickname.length > 32) { ElMessage.warning('昵称不能为空且不能超过32个字符'); return }; profileSaving.value = true; try { const result = unwrap(await userApi.updateProfile({ nickname })); if (result?.ok === false) throw new Error(result.message || '保存失败'); profileIdentity.nickname = result?.nickname || nickname; profileIdentity.nicknameUpdatedAt = result?.nicknameUpdatedAt || profileIdentity.nicknameUpdatedAt; profileForm.nickname = profileIdentity.nickname; userStore.username = profileIdentity.nickname; authStorage.set('football_user', JSON.stringify({ username: profileIdentity.nickname, userId: userStore.userId, role: userStore.role })); profileDialogVisible.value = false; ElMessage.success(result?.message || '个人资料已更新') } catch (error) { ElMessage.error(error?.message || '保存失败') } finally { profileSaving.value = false } }
-const saveAccountProfile = async () => { profileSaving.value = true; try { await userApi.updatePreferences({ ...accountProfile }); ElMessage.success('提醒设置已保存') } catch (error) { ElMessage.error(error?.message || '保存失败') } finally { profileSaving.value = false } }
-const revokeAllSessions = async () => { try { await ElMessageBox.confirm('这会让其他浏览器和设备重新登录，确定继续吗？', '退出其他设备', { type: 'warning' }); await userApi.revokeAllSessions(userStore.refreshToken); ElMessage.success('已退出其他设备'); await loadSessions() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || '操作失败') } }
-const changePassword = async () => { if (passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword) { ElMessage.warning('请确认新密码至少 8 位且两次输入一致'); return }; passwordSaving.value = true; try { const result = unwrap(await userApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword)); if (result?.ok === false) throw new Error(result.message || '密码更新失败'); ElMessage.success('密码已更新，请重新登录'); userStore.logout(); router.replace('/matches') } catch (error) { ElMessage.error(error?.message || '密码更新失败') } finally { passwordSaving.value = false } }
-const disableAccount = async () => { try { await ElMessageBox.confirm('注销后账号将被停用，收藏和预测历史也会停止展示，确定继续吗？', '确认注销', { type: 'warning', confirmButtonText: '确认注销', cancelButtonText: '取消' }); const result = unwrap(await userApi.disableAccount()); if (result?.ok === false) throw new Error(result.message || '注销失败'); ElMessage.success('账号已注销'); userStore.logout(); router.replace('/matches') } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || '注销失败') } }
+const removeFav = async fav => { try { await ElMessageBox.confirm(t('account.profile.unfollowConfirm', { name: fav.teamName || t('account.profile.thisTeam') }), t('account.profile.unfollowTitle'), { type: 'warning' }); await favoriteApi.remove(fav.teamId); ElMessage.success(t('account.profile.unfollowed')); await loadFavorites() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || t('account.profile.unfollowFailed')) } }
+const removeMatchFav = async fav => { try { await ElMessageBox.confirm(t('account.profile.unfollowMatchConfirm'), t('account.profile.unfollowTitle'), { type: 'warning' }); await favoriteApi.removeMatch(getPublicMatchId(fav)); ElMessage.success(t('account.profile.unfollowed')); await loadMatchFavorites() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || t('account.profile.unfollowFailed')) } }
+const saveProfile = async () => { const nickname = profileForm.nickname.trim(); if (!nickname || nickname.length > 32) { ElMessage.warning(t('account.profile.nicknameInvalid')); return }; profileSaving.value = true; try { const result = unwrap(await userApi.updateProfile({ nickname })); if (result?.ok === false) throw new Error(result.message || t('account.profile.saveFailed')); profileIdentity.nickname = result?.nickname || nickname; profileIdentity.nicknameUpdatedAt = result?.nicknameUpdatedAt || profileIdentity.nicknameUpdatedAt; profileForm.nickname = profileIdentity.nickname; userStore.username = profileIdentity.nickname; authStorage.set('football_user', JSON.stringify({ username: profileIdentity.nickname, userId: userStore.userId, role: userStore.role })); profileDialogVisible.value = false; ElMessage.success(result?.message || t('account.profile.profileSaved')) } catch (error) { ElMessage.error(error?.message || t('account.profile.saveFailed')) } finally { profileSaving.value = false } }
+const saveAccountProfile = async () => { profileSaving.value = true; try { await userApi.updatePreferences({ ...accountProfile }); ElMessage.success(t('account.profile.reminderSaved')) } catch (error) { ElMessage.error(error?.message || t('account.profile.saveFailed')) } finally { profileSaving.value = false } }
+const revokeAllSessions = async () => { try { await ElMessageBox.confirm(t('account.profile.revokeConfirm'), t('account.profile.revokeTitle'), { type: 'warning' }); await userApi.revokeAllSessions(userStore.refreshToken); ElMessage.success(t('account.profile.revoked')); await loadSessions() } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || t('account.profile.operationFailed')) } }
+const changePassword = async () => { if (passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword) { ElMessage.warning(t('account.profile.passwordInvalid')); return }; passwordSaving.value = true; try { const result = unwrap(await userApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword)); if (result?.ok === false) throw new Error(result.message || t('account.profile.passwordUpdateFailed')); ElMessage.success(t('account.profile.passwordUpdated')); userStore.logout(); router.replace('/matches') } catch (error) { ElMessage.error(error?.message || t('account.profile.passwordUpdateFailed')) } finally { passwordSaving.value = false } }
+const disableAccount = async () => { try { await ElMessageBox.confirm(t('account.profile.disableConfirm'), t('account.profile.disableTitle'), { type: 'warning', confirmButtonText: t('account.profile.confirmDisable'), cancelButtonText: t('account.common.cancel') }); const result = unwrap(await userApi.disableAccount()); if (result?.ok === false) throw new Error(result.message || t('account.profile.disableFailed')); ElMessage.success(t('account.profile.disabled')); userStore.logout(); router.replace('/matches') } catch (error) { if (error !== 'cancel') ElMessage.error(error?.message || t('account.profile.disableFailed')) } }
 const onHistoryKeydown = event => {
   if ((event.key !== ' ' && event.code !== 'Space') || !event.target?.closest?.('.history-item')) return
   event.preventDefault()
@@ -352,6 +365,17 @@ const onHistoryKeydown = event => {
 }
 
 onMounted(async () => { document.addEventListener('keydown', onHistoryKeydown); if (!userStore.token) { router.replace('/matches'); return }; const requestedTab = String(route.query.tab || ''); if (['overview', 'favorites', 'history', 'security'].includes(requestedTab)) activeTab.value = requestedTab; await Promise.allSettled([loadIdentity(), loadHistoryPage(true), loadPredictionStats(), loadPublicStats(), loadFavorites(), loadMatchFavorites(), loadAccountProfile(), loadNotifications(), loadSessions()]); statsLoadedAt.value = new Date(); profileLoading.value = false })
+watch(locale, async () => {
+  if (!userStore.token) return
+  await Promise.allSettled([
+    loadHistoryPage(true),
+    loadPublicStats(),
+    loadFavorites(),
+    loadMatchFavorites(),
+    loadNotifications(),
+    loadSessions()
+  ])
+})
 onBeforeUnmount(() => document.removeEventListener('keydown', onHistoryKeydown))
 </script>
 

@@ -3,46 +3,46 @@
     <AppTopNav title="ChenFootball" subtitle="" :brand-icon="ChatLineSquare" active-path="/agent" />
 
     <main id="app-main" class="agent-main" tabindex="-1">
-      <section v-if="!userStore.token" class="agent-teaser ff-panel" aria-label="助手登录引导">
+      <section v-if="!userStore.token" class="agent-teaser ff-panel" :aria-label="t('agent.teaser.aria')">
         <div class="agent-teaser-intro">
           <span class="launcher-mark"><el-icon :size="22"><ChatLineSquare /></el-icon></span>
           <div>
-            <h1>登录后使用赛程助手</h1>
-            <p>用自然语言查询赛程、球队状态与预测依据。先给结论，再说明数据与不确定性。</p>
+            <h1>{{ t('agent.teaser.title') }}</h1>
+            <p>{{ t('agent.teaser.body') }}</p>
           </div>
         </div>
-        <div class="agent-teaser-examples" aria-label="示例问题">
+        <div class="agent-teaser-examples" :aria-label="t('agent.teaser.examplesAria')">
           <button v-for="task in teaserPrompts" :key="task.label" type="button" class="agent-teaser-card" @click="promptLogin">
             <strong>{{ task.label }}</strong>
             <small>{{ task.description }}</small>
           </button>
         </div>
-        <el-button type="primary" size="large" @click="promptLogin">登录后开始提问</el-button>
-        <p class="agent-teaser-note">浏览公开赛程与预测无需登录；助手会话需要账号以便保存历史。</p>
+        <el-button type="primary" size="large" @click="promptLogin">{{ t('agent.teaser.cta') }}</el-button>
+        <p class="agent-teaser-note">{{ t('agent.teaser.note') }}</p>
       </section>
 
       <section v-else class="agent-shell">
         <header class="agent-toolbar">
           <div class="toolbar-leading">
-            <el-button class="toolbar-icon" text :icon="ChatLineSquare" :aria-label="sessionDrawerVisible ? '关闭会话列表' : '打开会话列表'" @click="sessionDrawerVisible = !sessionDrawerVisible" />
+            <el-button class="toolbar-icon" text :icon="ChatLineSquare" :aria-label="sessionDrawerVisible ? t('agent.toolbar.closeSessions') : t('agent.toolbar.openSessions')" @click="sessionDrawerVisible = !sessionDrawerVisible" />
             <div class="toolbar-title">
               <strong>{{ currentSessionTitle }}</strong>
-              <span v-if="matchContext" class="toolbar-context">{{ matchContext.homeName }} vs {{ matchContext.awayName }}</span>
+              <span v-if="matchContext" class="toolbar-context">{{ contextHomeName }} vs {{ contextAwayName }}</span>
               <span v-else class="toolbar-context">{{ healthLabel }}<span v-if="latestAssistant && latestAssistant.lastRunMeta"> · {{ latestAssistant.lastRunMeta }}</span></span>
             </div>
           </div>
           <div class="toolbar-actions">
             <span class="service-state" :class="`is-${healthState}`"><i></i>{{ healthLabel }}</span>
             <el-tag v-if="currentIntent" class="intent-tag" effect="plain" type="info">{{ intentLabel }}</el-tag>
-            <el-button class="new-session-button" size="small" type="primary" :icon="Plus" @click="startNewSession">新会话</el-button>
+            <el-button class="new-session-button" size="small" type="primary" :icon="Plus" @click="startNewSession">{{ t('agent.toolbar.newSession') }}</el-button>
             <el-dropdown trigger="click" @command="handleConversationCommand">
-              <el-button class="more-button" text aria-label="更多操作">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+              <el-button class="more-button" text :aria-label="t('agent.toolbar.moreAria')">{{ t('agent.toolbar.more') }}<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="evidence" :icon="Connection">数据依据</el-dropdown-item>
-                  <el-dropdown-item command="export" :icon="Download" :disabled="!messages.length">导出会话</el-dropdown-item>
-                  <el-dropdown-item command="share" :icon="Share" :disabled="!messages.length">分享摘要</el-dropdown-item>
-                  <el-dropdown-item divided command="clear" :icon="Delete" :disabled="!messages.length || sending">清空本轮</el-dropdown-item>
+                  <el-dropdown-item command="evidence" :icon="Connection">{{ t('agent.toolbar.evidence') }}</el-dropdown-item>
+                  <el-dropdown-item command="export" :icon="Download" :disabled="!messages.length">{{ t('agent.toolbar.export') }}</el-dropdown-item>
+                  <el-dropdown-item command="share" :icon="Share" :disabled="!messages.length">{{ t('agent.toolbar.share') }}</el-dropdown-item>
+                  <el-dropdown-item divided command="clear" :icon="Delete" :disabled="!messages.length || sending">{{ t('agent.toolbar.clear') }}</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -50,93 +50,93 @@
         </header>
 
         <div class="agent-layout" :class="{ 'has-session-drawer': sessionDrawerVisible }">
-          <aside v-if="sessionDrawerVisible" class="session-drawer ff-panel" aria-label="会话列表">
+          <aside v-if="sessionDrawerVisible" class="session-drawer ff-panel" :aria-label="t('agent.sessions.aria')">
             <div class="drawer-heading">
-              <div><span class="drawer-eyebrow">会话</span><strong>继续你的分析</strong></div>
-              <el-button text :icon="Close" aria-label="关闭会话列表" @click="sessionDrawerVisible = false" />
+              <div><span class="drawer-eyebrow">{{ t('agent.sessions.eyebrow') }}</span><strong>{{ t('agent.sessions.continue') }}</strong></div>
+              <el-button text :icon="Close" :aria-label="t('agent.toolbar.closeSessions')" @click="sessionDrawerVisible = false" />
             </div>
-            <el-input v-model="sessionKeyword" class="session-search" clearable size="small" :prefix-icon="Search" placeholder="搜索会话" />
-            <div class="session-filters" role="tablist" aria-label="会话筛选">
+            <el-input v-model="sessionKeyword" class="session-search" clearable size="small" :prefix-icon="Search" :placeholder="t('agent.sessions.searchPlaceholder')" />
+            <div class="session-filters" role="tablist" :aria-label="t('agent.sessions.filtersAria')">
               <button v-for="filter in sessionFilters" :key="filter.value" type="button" :class="{ active: sessionFilter === filter.value }" @click="sessionFilter = filter.value">{{ filter.label }}</button>
             </div>
             <div class="session-list">
               <div v-for="session in visibleSessions" :key="session.id" class="session-item" :class="{ active: session.id === sessionId }" role="button" tabindex="0" @click="selectSession(session.id)" @keydown.enter="selectSession(session.id)" @keydown.space.prevent="selectSession(session.id)">
-                <div class="session-item-top"><span class="session-title">{{ session.title || '未命名会话' }}</span><span class="session-state" :class="`is-${sessionState(session)}`">{{ sessionStateLabel(session) }}</span></div>
-                <span class="session-preview">{{ session.preview || '开始一次新的足球对话' }}</span>
-                <div class="session-item-meta"><span v-if="session.hasMatchContext">比赛上下文</span><time>{{ formatRelativeTime(session.updatedAt) }}</time></div>
+                <div class="session-item-top"><span class="session-title">{{ session.title || t('agent.common.untitledSession') }}</span><span class="session-state" :class="`is-${sessionState(session)}`">{{ sessionStateLabel(session) }}</span></div>
+                <span class="session-preview">{{ session.preview || t('agent.sessions.historyPreview') }}</span>
+                <div class="session-item-meta"><span v-if="session.hasMatchContext">{{ t('agent.sessions.matchContext') }}</span><time>{{ formatRelativeTime(session.updatedAt) }}</time></div>
                 <span class="session-item-actions">
-                  <el-button text size="small" :icon="Edit" aria-label="重命名会话" @click.stop="renameSession(session)" />
-                  <el-button text size="small" :icon="Delete" aria-label="删除会话" @click.stop="deleteSession(session)" />
+                  <el-button text size="small" :icon="Edit" :aria-label="t('agent.sessions.renameAria')" @click.stop="renameSession(session)" />
+                  <el-button text size="small" :icon="Delete" :aria-label="t('agent.sessions.deleteAria')" @click.stop="deleteSession(session)" />
                 </span>
               </div>
-              <div v-if="!visibleSessions.length" class="session-empty"><el-icon :size="22"><ChatLineSquare /></el-icon><span>没有匹配的会话</span><small>换个关键词或开始新会话</small></div>
+              <div v-if="!visibleSessions.length" class="session-empty"><el-icon :size="22"><ChatLineSquare /></el-icon><span>{{ t('agent.sessions.empty') }}</span><small>{{ t('agent.sessions.emptyHint') }}</small></div>
             </div>
           </aside>
 
           <section class="conversation-panel ff-panel">
             <div v-if="matchContext" class="match-context-strip">
               <div class="context-mark"><el-icon><Trophy /></el-icon></div>
-              <div class="context-copy"><span>当前比赛</span><strong>{{ matchContext.homeName }} <em>vs</em> {{ matchContext.awayName }}</strong><small>{{ matchContext.leagueName || '联赛待定' }}<span v-if="matchContext.matchTime"> · {{ formatMatchTime(matchContext.matchTime) }}</span></small></div>
-              <el-button text size="small" :disabled="sending" @click="useMatchPrompt">开始分析</el-button>
+              <div class="context-copy"><span>{{ t('agent.conversation.currentMatch') }}</span><strong>{{ contextHomeName }} <em>vs</em> {{ contextAwayName }}</strong><small>{{ contextLeagueName || t('agent.common.leagueTbd') }}<span v-if="matchContext.matchTime"> · {{ formatMatchTime(matchContext.matchTime) }}</span></small></div>
+              <el-button text size="small" :disabled="sending" @click="useMatchPrompt">{{ t('agent.conversation.startAnalysis') }}</el-button>
             </div>
 
             <div ref="messageList" class="message-list" aria-live="polite" @scroll="handleMessageScroll">
               <div v-if="!messages.length" class="task-launcher">
-                <div class="task-launcher-intro"><span class="launcher-mark"><el-icon :size="20"><ChatLineSquare /></el-icon></span><div><h1>问一场比赛，或让助手帮你查清一件事</h1><p>先给结论，再说明数据依据与不确定性。</p></div></div>
+                <div class="task-launcher-intro"><span class="launcher-mark"><el-icon :size="20"><ChatLineSquare /></el-icon></span><div><h1>{{ t('agent.conversation.launcherTitle') }}</h1><p>{{ t('agent.conversation.launcherBody') }}</p></div></div>
                 <div class="task-launcher-list">
-                  <button v-for="task in taskPrompts" :key="task.label" type="button" :disabled="sending" @click="sendMessage(task.prompt)"><span><strong>{{ task.label }}</strong><small>{{ task.description || '读取相关比赛数据并给出可执行结论' }}</small></span><el-icon><ArrowDown /></el-icon></button>
+                  <button v-for="task in taskPrompts" :key="task.label" type="button" :disabled="sending" @click="sendMessage(task.prompt)"><span><strong>{{ task.label }}</strong><small>{{ task.description || t('agent.conversation.taskFallback') }}</small></span><el-icon><ArrowDown /></el-icon></button>
                 </div>
               </div>
 
               <article v-for="(message, index) in messages" :key="message.id || `${message.role}-${index}`" class="message-row" :class="`is-${message.role}`">
                 <div class="message-avatar" aria-hidden="true"><el-icon v-if="message.role === 'assistant'"><ChatLineSquare /></el-icon><span v-else>{{ userInitial }}</span></div>
                 <div class="message-bubble">
-                  <div class="message-meta"><strong>{{ message.role === 'assistant' ? '助手' : '你' }}</strong><span v-if="message.pending">{{ runPhase || '正在分析' }}</span><span v-else-if="message.role === 'assistant' && message.intentLabel" class="message-intent">{{ message.intentLabel }}</span></div>
+                  <div class="message-meta"><strong>{{ message.role === 'assistant' ? t('agent.common.assistant') : t('agent.common.you') }}</strong><span v-if="message.pending">{{ runPhaseLabel || t('agent.common.analyzing') }}</span><span v-else-if="message.role === 'assistant' && message.intent" class="message-intent">{{ intentLabelFor(message.intent) }}</span></div>
                   <div v-if="message.content && message.role === 'assistant'" class="message-content markdown-body" v-html="renderMessageMarkdown(message.content)"></div>
                   <p v-else-if="message.content" class="message-content">{{ message.content }}</p>
                   <div v-if="message.pending" class="typing-indicator"><i></i><i></i><i></i></div>
                   <div v-if="message.role === 'assistant' && !message.pending && (message.dataQuality || message.evidence?.length || message.toolEvents?.length || message.unknowns?.length)" class="answer-meta">
                     <span class="quality-badge" :class="`is-${qualityMeta(message).tone}`"><i></i>{{ qualityMeta(message).label }}</span>
-                    <span v-if="message.evidence?.length || message.toolEvents?.length">{{ evidenceCount(message) }} 个数据来源</span>
-                    <span v-if="message.dataFreshness || lastDataFreshness">更新于 {{ formatEvidenceTime(message.dataFreshness || lastDataFreshness) }}</span>
-                    <button type="button" class="evidence-link" @click="openEvidence(message)">查看依据</button>
+                    <span v-if="message.evidence?.length || message.toolEvents?.length">{{ t('agent.common.sourcesCount', { count: evidenceCount(message) }) }}</span>
+                    <span v-if="message.dataFreshness || lastDataFreshness">{{ t('agent.common.updatedAt', { time: formatEvidenceTime(message.dataFreshness || lastDataFreshness) }) }}</span>
+                    <button type="button" class="evidence-link" @click="openEvidence(message)">{{ t('agent.conversation.evidenceLink') }}</button>
                   </div>
-                  <div v-if="message.unknowns?.length" class="uncertainty-note"><el-icon><InfoFilled /></el-icon><span>{{ message.unknowns.length }} 项数据尚无法核验</span></div>
+                  <div v-if="message.unknowns?.length" class="uncertainty-note"><el-icon><InfoFilled /></el-icon><span>{{ t('agent.common.unknownCount', { count: message.unknowns.length }) }}</span></div>
                   <div v-if="message.artifacts?.length" class="message-artifacts">
                     <div v-for="artifact in message.artifacts" :key="`${message.id}-${artifact.type}`" class="artifact-card" :class="`artifact-${artifact.type}`">
-                      <div v-if="artifact.type === 'match'" class="artifact-match"><span class="artifact-label">比赛</span><strong>{{ artifact.homeTeamName }} <em>vs</em> {{ artifact.awayTeamName }}</strong><small>{{ artifact.leagueName || '联赛待定' }}<span v-if="artifact.matchTime"> · {{ formatMatchTime(artifact.matchTime) }}</span></small></div>
-                      <div v-else-if="artifact.type === 'prediction'" class="artifact-prediction"><span class="artifact-label">统一预测</span><strong>{{ artifact.predictionAvailable === false ? '暂不可预测' : (artifact.resultLabel || '暂无结果') }}</strong><div class="artifact-probs"><span>主 {{ formatProbability(artifact.homeWinProb) }}</span><span>平 {{ formatProbability(artifact.drawProb) }}</span><span>客 {{ formatProbability(artifact.awayWinProb) }}</span></div><small v-if="artifact.featureStatus">{{ artifact.featureStatus }}</small></div>
-                      <div v-else-if="artifact.type === 'squad'" class="artifact-squad"><span class="artifact-label">球队阵容</span><strong>{{ artifact.teamName || '球队' }} · {{ artifact.playerCount || 0 }} 人</strong><small v-if="artifact.status && artifact.status !== 'AVAILABLE'">{{ artifact.message || evidenceStatusLabel(artifact.status.toLowerCase()) }}</small><small v-else>可核验名单已读取</small></div>
-                      <div v-else-if="artifact.type === 'schedule'" class="artifact-schedule"><span class="artifact-label">赛程</span><strong>{{ artifact.total || 0 }} 场可用比赛<span v-if="artifact.truncated"> · 已截断</span></strong><small>{{ artifact.windowType === 'NEXT_24_HOURS' ? '接下来24小时' : (artifact.leagueName || '主爬虫源') }}<span v-if="artifact.predictionSummary"> · {{ formatPredictionSummary(artifact.predictionSummary) }}</span></small></div>
-                      <div v-else class="artifact-team"><span class="artifact-label">球队资料</span><strong>{{ artifact.teamName || '球队' }}</strong><small>近况 {{ artifact.recentMatchCount || 0 }} 场</small></div>
+                      <div v-if="artifact.type === 'match'" class="artifact-match"><span class="artifact-label">{{ t('agent.artifact.match') }}</span><strong>{{ artifactHomeName(artifact) }} <em>vs</em> {{ artifactAwayName(artifact) }}</strong><small>{{ artifactLeagueName(artifact) || t('agent.common.leagueTbd') }}<span v-if="artifact.matchTime"> · {{ formatMatchTime(artifact.matchTime) }}</span></small></div>
+                      <div v-else-if="artifact.type === 'prediction'" class="artifact-prediction"><span class="artifact-label">{{ t('agent.artifact.prediction') }}</span><strong>{{ artifact.predictionAvailable === false ? t('agent.artifact.predictionUnavailable') : (artifact.resultLabel || t('agent.artifact.noResult')) }}</strong><div class="artifact-probs"><span>{{ t('agent.common.probHome', { value: formatProbability(artifact.homeWinProb) }) }}</span><span>{{ t('agent.common.probDraw', { value: formatProbability(artifact.drawProb) }) }}</span><span>{{ t('agent.common.probAway', { value: formatProbability(artifact.awayWinProb) }) }}</span></div><small v-if="artifact.featureStatus">{{ artifact.featureStatus }}</small></div>
+                      <div v-else-if="artifact.type === 'squad'" class="artifact-squad"><span class="artifact-label">{{ t('agent.artifact.squad') }}</span><strong>{{ artifactTeamName(artifact) || t('agent.common.team') }} · {{ t('agent.common.peopleCount', { count: artifact.playerCount || 0 }) }}</strong><small v-if="artifact.status && artifact.status !== 'AVAILABLE'">{{ artifact.message || evidenceStatusLabel(artifact.status.toLowerCase()) }}</small><small v-else>{{ t('agent.artifact.squadRead') }}</small></div>
+                      <div v-else-if="artifact.type === 'schedule'" class="artifact-schedule"><span class="artifact-label">{{ t('agent.artifact.schedule') }}</span><strong>{{ t('agent.common.matchesCount', { count: artifact.total || 0 }) }}<span v-if="artifact.truncated">{{ t('agent.artifact.scheduleTruncated') }}</span></strong><small>{{ artifact.windowType === 'NEXT_24_HOURS' ? t('agent.artifact.next24h') : (artifactLeagueName(artifact) || t('agent.artifact.mainCrawler')) }}<span v-if="artifact.predictionSummary"> · {{ formatPredictionSummary(artifact.predictionSummary) }}</span></small></div>
+                      <div v-else class="artifact-team"><span class="artifact-label">{{ t('agent.artifact.team') }}</span><strong>{{ artifactTeamName(artifact) || t('agent.common.team') }}</strong><small>{{ t('agent.common.recentMatches', { count: artifact.recentMatchCount || 0 }) }}</small></div>
                     </div>
                   </div>
                   <div v-if="message.actions?.length" class="message-actions"><el-button v-for="action in message.actions" :key="`${message.id}-${action.type}`" size="small" type="primary" plain @click="runAgentAction(action)">{{ action.label }}</el-button></div>
-                  <div v-if="message.role === 'assistant' && !message.pending && message.content" class="message-feedback"><el-button text size="small" :icon="CopyDocument" @click="copyText(message.content)">复制</el-button><el-dropdown trigger="click" @command="command => handleMessageCommand(command, message, index)"><el-button text size="small">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="regenerate" :icon="Refresh">重新生成</el-dropdown-item><el-dropdown-item command="helpful">回答有帮助</el-dropdown-item><el-dropdown-item command="not-helpful">需要改进</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
+                  <div v-if="message.role === 'assistant' && !message.pending && message.content" class="message-feedback"><el-button text size="small" :icon="CopyDocument" @click="copyText(message.content)">{{ t('agent.feedback.copy') }}</el-button><el-dropdown trigger="click" @command="command => handleMessageCommand(command, message, index)"><el-button text size="small">{{ t('agent.feedback.more') }}<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button><template #dropdown><el-dropdown-menu><el-dropdown-item command="regenerate" :icon="Refresh">{{ t('agent.feedback.regenerate') }}</el-dropdown-item><el-dropdown-item command="helpful">{{ t('agent.feedback.helpful') }}</el-dropdown-item><el-dropdown-item command="not-helpful">{{ t('agent.feedback.notHelpful') }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown></div>
                 </div>
               </article>
-              <button v-if="newContentAvailable" class="new-content-button" type="button" @click="scrollToBottom(true)">有新内容，跳到最新</button>
+              <button v-if="newContentAvailable" class="new-content-button" type="button" @click="scrollToBottom(true)">{{ t('agent.conversation.newContent') }}</button>
             </div>
 
-            <div v-if="sending" class="run-strip" aria-live="polite"><div class="run-strip-label">本轮分析</div><div class="run-steps"><span v-for="(step, index) in runSteps" :key="step.key" :class="runStepClass(index)"><i></i>{{ step.label }}</span></div></div>
+            <div v-if="sending" class="run-strip" aria-live="polite"><div class="run-strip-label">{{ t('agent.runStrip.label') }}</div><div class="run-steps"><span v-for="(step, index) in runSteps" :key="step.key" :class="runStepClass(index)"><i></i>{{ step.label }}</span></div></div>
             <form class="composer" @submit.prevent="sendMessage()">
-              <div class="composer-scope"><span class="scope-dot"></span><span v-if="matchContext">围绕当前比赛提问</span><span v-else>可查询赛程、球队、阵容与预测依据</span><span class="composer-hint">Enter 发送 · Shift + Enter 换行</span></div>
-              <el-input v-model="composerText" type="textarea" :rows="3" resize="none" maxlength="2000" show-word-limit placeholder="例如：比较阿森纳和巴萨最近五场状态，说明数据时间和不确定性" :disabled="sending" @keydown.enter.exact.prevent="sendMessage()" @keydown.enter.shift.stop />
-              <div class="composer-actions"><span class="composer-status" :class="{ active: sending }"><span class="status-dot"></span>{{ sending ? (runPhase || '正在分析') : '准备就绪' }}</span><div><el-button v-if="sending" type="warning" plain :icon="Close" @click.prevent="cancelRequest">停止</el-button><el-button v-else type="primary" native-type="submit" :icon="Promotion" :disabled="!composerText.trim()">发送</el-button></div></div>
+              <div class="composer-scope"><span class="scope-dot"></span><span v-if="matchContext">{{ t('agent.conversation.scopeMatch') }}</span><span v-else>{{ t('agent.conversation.scopeGeneral') }}</span><span class="composer-hint">{{ t('agent.conversation.composerHint') }}</span></div>
+              <el-input v-model="composerText" type="textarea" :rows="3" resize="none" maxlength="2000" show-word-limit :placeholder="t('agent.conversation.placeholder')" :disabled="sending" @keydown.enter.exact.prevent="sendMessage()" @keydown.enter.shift.stop />
+              <div class="composer-actions"><span class="composer-status" :class="{ active: sending }"><span class="status-dot"></span>{{ sending ? (runPhaseLabel || t('agent.common.analyzing')) : t('agent.common.ready') }}</span><div><el-button v-if="sending" type="warning" plain :icon="Close" @click.prevent="cancelRequest">{{ t('agent.conversation.stop') }}</el-button><el-button v-else type="primary" native-type="submit" :icon="Promotion" :disabled="!composerText.trim()">{{ t('agent.conversation.send') }}</el-button></div></div>
             </form>
           </section>
 
-          <aside v-if="evidenceDrawerVisible" class="evidence-drawer ff-panel" aria-label="数据依据">
-            <div class="drawer-heading"><div><span class="drawer-eyebrow">证据</span><strong>数据依据</strong></div><el-button text :icon="Close" aria-label="关闭数据依据" @click="evidenceDrawerVisible = false" /></div>
+          <aside v-if="evidenceDrawerVisible" class="evidence-drawer ff-panel" :aria-label="t('agent.evidence.aria')">
+            <div class="drawer-heading"><div><span class="drawer-eyebrow">{{ t('agent.evidence.eyebrow') }}</span><strong>{{ t('agent.evidence.title') }}</strong></div><el-button text :icon="Close" :aria-label="t('agent.evidence.closeAria')" @click="evidenceDrawerVisible = false" /></div>
             <div v-if="selectedEvidenceMessage" class="evidence-content">
-              <div class="evidence-summary"><span class="quality-badge" :class="`is-${qualityMeta(selectedEvidenceMessage).tone}`"><i></i>{{ qualityMeta(selectedEvidenceMessage).label }}</span><strong>{{ evidenceCount(selectedEvidenceMessage) }} 个来源</strong><small v-if="selectedEvidenceMessage.dataFreshness || lastDataFreshness">更新于 {{ formatEvidenceTime(selectedEvidenceMessage.dataFreshness || lastDataFreshness) }}</small></div>
-              <section v-if="selectedEvidenceMessage.evidence?.length" class="evidence-section"><h3>读取结果</h3><div class="evidence-source" v-for="source in selectedEvidenceMessage.evidence" :key="`${selectedEvidenceMessage.id}-${source.tool || source.source}`"><span class="source-status" :class="`is-${evidenceTagType(source.status)}`"></span><div><strong>{{ source.label || source.source || toolLabel(source.tool) }}</strong><small>{{ evidenceStatusLabel(source.status) }}<span v-if="source.sourceUpdatedAt"> · 更新 {{ formatEvidenceTime(source.sourceUpdatedAt) }}</span><span v-else-if="source.observedAt"> · 读取 {{ formatEvidenceTime(source.observedAt) }}</span></small></div></div></section>
-              <section v-if="selectedEvidenceMessage.facts?.length" class="evidence-section"><h3>已核验</h3><div class="fact-list"><span v-for="fact in selectedEvidenceMessage.facts" :key="`${selectedEvidenceMessage.id}-${fact.tool}`">{{ fact.label || fact.tool }} · {{ fact.recordCount ?? 0 }} 条</span></div></section>
-              <section v-if="selectedEvidenceMessage.unknowns?.length" class="evidence-section"><h3>尚未核验</h3><div class="fact-list is-warning"><span v-for="unknown in selectedEvidenceMessage.unknowns" :key="`${selectedEvidenceMessage.id}-${unknown.tool}`">{{ unknown.label || unknown.tool }} · {{ unknown.message || evidenceStatusLabel(unknown.status) }}</span></div></section>
-              <section v-if="selectedEvidenceMessage.toolEvents?.length" class="evidence-section"><h3>读取过程</h3><div v-for="(trace, traceIndex) in selectedEvidenceMessage.toolEvents" :key="`${selectedEvidenceMessage.id}-${trace.eventId || traceIndex}`" class="tool-trace-row"><span class="trace-dot" :class="`is-${trace.status || 'running'}`"></span><span>{{ trace.type === 'tool_start' ? `读取 ${toolLabel(trace.tool)}` : `${toolLabel(trace.tool)}${trace.status === 'error' ? '失败' : '完成'}` }}</span><small v-if="trace.latencyMs">{{ trace.latencyMs }}ms</small></div></section>
+              <div class="evidence-summary"><span class="quality-badge" :class="`is-${qualityMeta(selectedEvidenceMessage).tone}`"><i></i>{{ qualityMeta(selectedEvidenceMessage).label }}</span><strong>{{ t('agent.common.sourceCount', { count: evidenceCount(selectedEvidenceMessage) }) }}</strong><small v-if="selectedEvidenceMessage.dataFreshness || lastDataFreshness">{{ t('agent.common.updatedAt', { time: formatEvidenceTime(selectedEvidenceMessage.dataFreshness || lastDataFreshness) }) }}</small></div>
+              <section v-if="selectedEvidenceMessage.evidence?.length" class="evidence-section"><h3>{{ t('agent.evidence.results') }}</h3><div class="evidence-source" v-for="source in selectedEvidenceMessage.evidence" :key="`${selectedEvidenceMessage.id}-${source.tool || source.source}`"><span class="source-status" :class="`is-${evidenceTagType(source.status)}`"></span><div><strong>{{ source.label || source.source || toolLabel(source.tool) }}</strong><small>{{ evidenceStatusLabel(source.status) }}<span v-if="source.sourceUpdatedAt">{{ t('agent.common.updatedAtSuffix', { time: formatEvidenceTime(source.sourceUpdatedAt) }) }}</span><span v-else-if="source.observedAt">{{ t('agent.common.readAtSuffix', { time: formatEvidenceTime(source.observedAt) }) }}</span></small></div></div></section>
+              <section v-if="selectedEvidenceMessage.facts?.length" class="evidence-section"><h3>{{ t('agent.evidence.verified') }}</h3><div class="fact-list"><span v-for="fact in selectedEvidenceMessage.facts" :key="`${selectedEvidenceMessage.id}-${fact.tool}`">{{ fact.label || fact.tool }} · {{ t('agent.common.recordsCount', { count: fact.recordCount ?? 0 }) }}</span></div></section>
+              <section v-if="selectedEvidenceMessage.unknowns?.length" class="evidence-section"><h3>{{ t('agent.evidence.unverified') }}</h3><div class="fact-list is-warning"><span v-for="unknown in selectedEvidenceMessage.unknowns" :key="`${selectedEvidenceMessage.id}-${unknown.tool}`">{{ unknown.label || unknown.tool }} · {{ unknown.message || evidenceStatusLabel(unknown.status) }}</span></div></section>
+              <section v-if="selectedEvidenceMessage.toolEvents?.length" class="evidence-section"><h3>{{ t('agent.evidence.process') }}</h3><div v-for="(trace, traceIndex) in selectedEvidenceMessage.toolEvents" :key="`${selectedEvidenceMessage.id}-${trace.eventId || traceIndex}`" class="tool-trace-row"><span class="trace-dot" :class="`is-${trace.status || 'running'}`"></span><span>{{ trace.type === 'tool_start' ? t('agent.evidence.traceRead', { tool: toolLabel(trace.tool) }) : t(trace.status === 'error' ? 'agent.evidence.traceFailed' : 'agent.evidence.traceCompleted', { tool: toolLabel(trace.tool) }) }}</span><small v-if="trace.latencyMs">{{ trace.latencyMs }}ms</small></div></section>
             </div>
-            <div v-else class="drawer-empty"><el-icon><Connection /></el-icon><p>完成一次分析后，这里会显示数据来源、更新时间和缺失项。</p></div>
-            <div class="evidence-note"><el-icon><InfoFilled /></el-icon><p>助手会区分已读取的数据与模型推断；没有读取到的数据会明确标注。模型通道由站点统一配置，用户不能在此切换。</p></div>
+            <div v-else class="drawer-empty"><el-icon><Connection /></el-icon><p>{{ t('agent.evidence.empty') }}</p></div>
+            <div class="evidence-note"><el-icon><InfoFilled /></el-icon><p>{{ t('agent.evidence.note') }}</p></div>
           </aside>
         </div>
       </section>
@@ -146,7 +146,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
@@ -155,10 +155,13 @@ import { authStorage } from '../../utils/authStorage'
 import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import { renderMarkdown } from '../../utils/markdown'
+import { displayLeagueName, displayTeamName } from '../../utils/teamNames'
+import { useI18n } from '../../i18n'
 import { ArrowDown, ChatLineSquare, Close, Connection, CopyDocument, Delete, Download, Edit, InfoFilled, Plus, Promotion, Refresh, Search, Share, Trophy } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+const { t, locale } = useI18n()
 
 const STORAGE_KEY = 'football_agent_sessions_v1'
 const sessions = ref([])
@@ -173,7 +176,10 @@ const tools = ref([])
 const currentIntent = ref('')
 const lastLatency = ref(null)
 const lastRoute = ref(null)
-const runPhase = ref('')
+// Structured phase state (`{ key, tool, status }`) so the visible label can be
+// re-translated when the locale changes instead of freezing at assignment time.
+const runPhase = ref(null)
+const runPhaseKey = () => typeof runPhase.value === 'string' ? runPhase.value : (runPhase.value?.key || '')
 // Desktop keeps the session switcher visible as part of the workspace grid;
 // on narrow screens it becomes an on-demand drawer opened by the toolbar icon.
 const sessionDrawerVisible = ref(typeof window === 'undefined' ? true : window.innerWidth > 900)
@@ -185,51 +191,53 @@ const lastDataFreshness = ref('')
 const activeStreamId = ref('')
 let abortController = null
 
-const taskPrompts = [
-  { label: '生成今日简报', description: '列出重点比赛，并标记数据时间与不确定性', prompt: '请生成今日赛程简报：只列出有可靠数据的重点比赛，并说明数据时间和不确定性。' },
-  { label: '比较两队状态', description: '用近 5 场真实赛程做攻防与走势对比', prompt: '请比较我指定的两支球队近5场状态，优先读取真实赛程数据，缺数据就明确说明。' },
-  { label: '解释一场预测', description: '说明模型依据、缺失项与主要风险', prompt: '请解释这场比赛的统一预测结论：引用实际读取到的特征、数据来源和风险，不要重复概率。' },
-  { label: '整理关注比赛', description: '按开赛时间整理接下来 24 小时的比赛', prompt: '请帮我整理关注比赛：按开赛时间列出接下来24小时的比赛，并标记预测是否已生成。' }
-]
+const taskPrompts = computed(() => [
+  // Both the display copy and the request value follow the active locale, so
+  // an English UI sends an English prompt and the model answers in English.
+  { label: t('agent.task.briefLabel'), description: t('agent.task.briefDescription'), prompt: t('agent.task.briefPrompt') },
+  { label: t('agent.task.compareLabel'), description: t('agent.task.compareDescription'), prompt: t('agent.task.comparePrompt') },
+  { label: t('agent.task.explainLabel'), description: t('agent.task.explainDescription'), prompt: t('agent.task.explainPrompt') },
+  { label: t('agent.task.watchlistLabel'), description: t('agent.task.watchlistDescription'), prompt: t('agent.task.watchlistPrompt') }
+])
 const userStore = useUserStore()
-const teaserPrompts = taskPrompts.slice(0, 2)
+const teaserPrompts = computed(() => taskPrompts.value.slice(0, 2))
 const promptLogin = () => userStore.openAuthDialog('/agent')
 
-const runSteps = [
-  { key: 'understand', label: '理解' },
-  { key: 'retrieve', label: '读取' },
-  { key: 'validate', label: '校验' },
-  { key: 'answer', label: '输出' }
-]
-const sessionFilters = [
-  { value: 'all', label: '全部' },
-  { value: 'today', label: '今天' },
-  { value: 'match', label: '有比赛' },
-  { value: 'unfinished', label: '待处理' }
-]
+const runSteps = computed(() => [
+  { key: 'understand', label: t('agent.runStep.understand') },
+  { key: 'retrieve', label: t('agent.runStep.retrieve') },
+  { key: 'validate', label: t('agent.runStep.validate') },
+  { key: 'answer', label: t('agent.runStep.answer') }
+])
+const sessionFilters = computed(() => [
+  { value: 'all', label: t('agent.sessions.filter.all') },
+  { value: 'today', label: t('agent.sessions.filter.today') },
+  { value: 'match', label: t('agent.sessions.filter.match') },
+  { value: 'unfinished', label: t('agent.sessions.filter.unfinished') }
+])
 const toolLabels = {
-  agent_summary: '助手状态',
-  crawler_summary: '赛程数据',
-  match_context: '比赛上下文',
-  news_context: '新闻资讯',
-  prediction: '预测模型',
-  team_context: '球队资料',
-  squad_context: '球队阵容'
+  agent_summary: 'agent.tool.agentSummary',
+  crawler_summary: 'agent.tool.crawlerSummary',
+  match_context: 'agent.tool.matchContext',
+  news_context: 'agent.tool.newsContext',
+  prediction: 'agent.tool.prediction',
+  team_context: 'agent.tool.teamContext',
+  squad_context: 'agent.tool.squadContext'
 }
 const routeLabel = computed(() => {
   if (!lastRoute.value) return ''
   const provider = providerLabel(lastRoute.value.provider)
   const model = lastRoute.value.model ? ` · ${lastRoute.value.model}` : ''
-  const fallback = lastRoute.value.fallbackFrom ? ' · 已故障切换' : ''
+  const fallback = lastRoute.value.fallbackFrom ? t('agent.common.failoverSuffix') : ''
   return `${provider}${model}${fallback}`
 })
 
 const userInitial = computed(() => {
   try {
     const user = JSON.parse(authStorage.get('football_user') || '{}')
-    return String(user.username || '我').slice(0, 1).toUpperCase()
+    return String(user.username || t('agent.common.me')).slice(0, 1).toUpperCase()
   } catch {
-    return '我'
+    return t('agent.common.me')
   }
 })
 const currentSession = computed(() => sessions.value.find(item => item.id === sessionId.value))
@@ -244,24 +252,31 @@ const visibleSessions = computed(() => {
     return true
   })
 })
-const currentSessionTitle = computed(() => currentSession.value?.title || '新会话')
-const healthLabel = computed(() => ({ checking: '连接检测中', ready: '助手在线', degraded: '助手部分降级', error: '暂时离线' }[healthState.value] || '状态未知'))
+const currentSessionTitle = computed(() => currentSession.value?.title || t('agent.common.newSession'))
+const healthLabel = computed(() => ({
+  checking: t('agent.health.checking'),
+  ready: t('agent.health.ready'),
+  degraded: t('agent.health.degraded'),
+  error: t('agent.health.offline')
+}[healthState.value] || t('agent.health.unknown')))
 const toolCount = computed(() => tools.value.length)
 const latestAssistant = computed(() => [...messages.value].reverse().find(item => item.role === 'assistant' && !item.pending) || null)
 const providerHealthSummary = ref('')
 const providerHealth = ref([])
 const globalModelLabel = ref('')
-const providerLabel = provider => ({ deepseek: 'DeepSeek', openrouter: 'OpenRouter', scnet: 'SCNet' }[provider] || provider || '模型通道')
-const intentLabel = computed(() => ({
-  schedule: '赛程查询',
-  'match-analysis': '比赛分析',
-  'team-roster': '球队阵容',
-  'team-analysis': '球队分析',
-  'news-analysis': '资讯分析',
-  prediction: '预测解释',
-  'small-talk': '闲聊',
-  general: '综合问答'
-}[currentIntent.value] || currentIntent.value))
+const providerLabel = provider => ({ deepseek: 'DeepSeek', openrouter: 'OpenRouter', scnet: 'SCNet' }[provider] || provider || t('agent.common.modelProvider'))
+const intentLabels = {
+  schedule: 'agent.intent.schedule',
+  'match-analysis': 'agent.intent.matchAnalysis',
+  'team-roster': 'agent.intent.teamRoster',
+  'team-analysis': 'agent.intent.teamAnalysis',
+  'news-analysis': 'agent.intent.newsAnalysis',
+  prediction: 'agent.intent.prediction',
+  'small-talk': 'agent.intent.smallTalk',
+  general: 'agent.intent.general'
+}
+const intentLabelFor = value => value ? (intentLabels[value] ? t(intentLabels[value]) : value) : ''
+const intentLabel = computed(() => intentLabelFor(currentIntent.value))
 
 const queryValue = (value, fallback = '') => Array.isArray(value) ? String(value[0] || fallback) : String(value || fallback)
 const matchContext = computed(() => {
@@ -274,13 +289,23 @@ const matchContext = computed(() => {
   if (!fixtureId && !homeName && !awayName) return null
   return {
     fixtureId,
-    homeName: homeName || '主队',
-    awayName: awayName || '客队',
+    homeName: homeName || t('agent.common.homeTeam'),
+    awayName: awayName || t('agent.common.awayTeam'),
+    homeDisplayName: queryValue(query.homeTeamDisplayName || query.homeDisplayName),
+    awayDisplayName: queryValue(query.awayTeamDisplayName || query.awayDisplayName),
     leagueName: queryValue(query.leagueName),
+    leagueDisplay: queryValue(query.leagueDisplay || query.leagueDisplayName),
     matchTime,
     prediction
   }
 })
+const contextHomeName = computed(() => displayTeamName(matchContext.value?.homeName, matchContext.value?.homeDisplayName))
+const contextAwayName = computed(() => displayTeamName(matchContext.value?.awayName, matchContext.value?.awayDisplayName))
+const contextLeagueName = computed(() => displayLeagueName(matchContext.value?.leagueName, matchContext.value?.leagueDisplay))
+const artifactHomeName = artifact => displayTeamName(artifact?.homeTeamName, artifact?.homeTeamDisplayName || artifact?.homeTeamDisplay)
+const artifactAwayName = artifact => displayTeamName(artifact?.awayTeamName, artifact?.awayTeamDisplayName || artifact?.awayTeamDisplay)
+const artifactTeamName = artifact => displayTeamName(artifact?.teamName, artifact?.teamDisplayName || artifact?.displayName)
+const artifactLeagueName = artifact => displayLeagueName(artifact?.leagueName, artifact?.leagueDisplay || artifact?.leagueDisplayName)
 const createSessionId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
   return `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -305,8 +330,8 @@ const loadSessions = async () => {
     const list = Array.isArray(remote) ? remote : (remote?.items || remote?.data || [])
     sessions.value = list.filter(item => item?.id).map(item => ({
       id: item.id,
-      title: item.title || '未命名会话',
-      preview: item.preview || '历史会话',
+      title: item.title || '',
+      preview: item.preview || '',
       updatedAt: item.updatedAt || new Date().toISOString(),
       status: item.status || 'complete',
       hasMatchContext: Boolean(item.hasMatchContext || item.context?.fixtureId)
@@ -324,8 +349,8 @@ const loadSessions = async () => {
 const touchSession = (firstMessage = '') => {
   const now = new Date().toISOString()
   const index = sessions.value.findIndex(item => item.id === sessionId.value)
-  const title = firstMessage ? firstMessage.replace(/\s+/g, ' ').slice(0, 24) : currentSession.value?.title || '新会话'
-  const preview = firstMessage ? firstMessage.replace(/\s+/g, ' ').slice(0, 48) : currentSession.value?.preview || '开始一次新的足球对话'
+  const title = firstMessage ? firstMessage.replace(/\s+/g, ' ').slice(0, 24) : currentSession.value?.title || ''
+  const preview = firstMessage ? firstMessage.replace(/\s+/g, ' ').slice(0, 48) : currentSession.value?.preview || ''
   const item = { id: sessionId.value, title, preview, updatedAt: now, status: sending.value ? 'draft' : 'complete', hasMatchContext: Boolean(matchContext.value) }
   if (index === -1) sessions.value.unshift(item)
   else sessions.value.splice(index, 1, { ...sessions.value[index], ...item })
@@ -343,7 +368,7 @@ const startNewSession = () => {
   currentIntent.value = ''
   lastLatency.value = null
   lastRoute.value = null
-  runPhase.value = ''
+  runPhase.value = null
   lastDataFreshness.value = ''
   selectedEvidenceMessage.value = null
   evidenceDrawerVisible.value = false
@@ -380,7 +405,7 @@ const normalizeMessages = (items) => (Array.isArray(items) ? items : [])
     ...(item.metadata?.answerValidation ? { answerValidation: item.metadata.answerValidation } : {}),
     ...(item.metadata?.dataQuality ? { dataQuality: item.metadata.dataQuality } : {}),
     ...(item.metadata?.dataFreshness ? { dataFreshness: item.metadata.dataFreshness } : {}),
-    ...(item.metadata?.intent ? { intentLabel: ({ schedule: '赛程查询', 'match-analysis': '比赛分析', 'team-roster': '球队阵容', 'team-analysis': '球队分析', prediction: '预测解释', 'small-talk': '闲聊', general: '综合问答' }[item.metadata.intent] || item.metadata.intent) } : {}),
+    ...(item.metadata?.intent ? { intent: item.metadata.intent } : {}),
     ...(Array.isArray(item.metadata?.artifacts) ? { artifacts: item.metadata.artifacts } : {}),
     ...(Array.isArray(item.metadata?.actions) ? { actions: item.metadata.actions } : {}),
     ...(Array.isArray(item.metadata?.toolSteps) ? { toolEvents: item.metadata.toolSteps.map(tool => ({ tool, type: 'tool_result', status: 'ok' })) } : {})
@@ -404,7 +429,7 @@ const applySnapshot = (snapshot) => {
     if (metadata.answerValidation) lastAssistant.answerValidation = metadata.answerValidation
     if (metadata.dataQuality) lastAssistant.dataQuality = metadata.dataQuality
     if (metadata.dataFreshness) lastAssistant.dataFreshness = metadata.dataFreshness
-    if (metadata.intent) lastAssistant.intentLabel = intentLabel.value
+    if (metadata.intent) lastAssistant.intent = metadata.intent
     if (Array.isArray(metadata.artifacts)) lastAssistant.artifacts = metadata.artifacts
     if (Array.isArray(metadata.actions)) lastAssistant.actions = metadata.actions
     if (Array.isArray(metadata.evidenceSources) && !lastAssistant.evidence?.length) lastAssistant.sources = metadata.evidenceSources
@@ -425,7 +450,7 @@ const selectSession = async (id) => {
   } catch {
     sessions.value = sessions.value.filter(item => item.id !== id)
     persistSessions()
-    ElMessage.warning('会话记录暂时无法加载')
+    ElMessage.warning(t('agent.error.loadSession'))
   }
 }
 
@@ -437,7 +462,7 @@ const loadCurrentSession = async () => {
   }
   sessionId.value = requested
   if (!sessions.value.some(item => item.id === requested)) {
-    sessions.value.unshift({ id: requested, title: '未命名会话', preview: '历史会话', updatedAt: new Date().toISOString(), status: 'complete', hasMatchContext: Boolean(matchContext.value) })
+    sessions.value.unshift({ id: requested, title: '', preview: '', updatedAt: new Date().toISOString(), status: 'complete', hasMatchContext: Boolean(matchContext.value) })
     persistSessions()
   }
   try {
@@ -448,7 +473,7 @@ const loadCurrentSession = async () => {
     persistSessions()
     sessionId.value = createSessionId()
     updateSessionUrl()
-    ElMessage.warning('历史会话不存在或已过期，已创建新会话')
+    ElMessage.warning(t('agent.error.sessionExpired'))
   }
 }
 
@@ -490,7 +515,7 @@ const sendMessage = async (rawText = composerText.value) => {
   currentIntent.value = ''
   lastLatency.value = null
   lastRoute.value = null
-  runPhase.value = '正在理解问题'
+  runPhase.value = { key: 'agent.phase.understanding' }
   lastDataFreshness.value = ''
   analyticsApi.track('agent_message_sent', { page: '/agent', entityType: 'agent_session', entityId: sessionId.value, properties: { intent: 'pending', hasMatchContext: Boolean(matchContext.value) } }).catch(() => {})
   await scrollToBottom()
@@ -518,14 +543,20 @@ const sendMessage = async (rawText = composerText.value) => {
           assistantMessage.toolEvents = assistantMessage.toolEvents || []
           assistantMessage.toolEvents.push(event)
         }
-        if (event.type === 'tool_start') runPhase.value = `正在读取${toolLabel(event.tool)}`
-        if (event.type === 'tool_result') runPhase.value = event.status === 'error' ? `${toolLabel(event.tool)}读取失败` : (event.dataStatus && !['AVAILABLE', 'PARTIAL'].includes(String(event.dataStatus).toUpperCase()) ? `${toolLabel(event.tool)}：${evidenceStatusLabel(event.dataStatus)}` : `已读取${toolLabel(event.tool)}`)
+        if (event.type === 'tool_start') runPhase.value = { key: 'agent.phase.readingTool', tool: event.tool }
+        if (event.type === 'tool_result') {
+          runPhase.value = event.status === 'error'
+            ? { key: 'agent.phase.toolReadFailed', tool: event.tool }
+            : (event.dataStatus && !['AVAILABLE', 'PARTIAL'].includes(String(event.dataStatus).toUpperCase())
+              ? { key: 'agent.phase.toolStatus', tool: event.tool, status: event.dataStatus }
+              : { key: 'agent.phase.toolRead', tool: event.tool })
+        }
         if (event.type === 'stream_end') {
           streamCompleted = true
           lastLatency.value = Number(event.latencyMs) || null
           lastRoute.value = { provider: event.provider, model: event.model, fallbackFrom: event.fallbackFrom }
           assistantMessage.routeLabel = routeLabel.value
-          assistantMessage.intentLabel = intentLabel.value
+          assistantMessage.intent = currentIntent.value
           assistantMessage.sources = Array.isArray(event.evidenceSources) ? event.evidenceSources : []
           assistantMessage.evidence = Array.isArray(event.evidence) ? event.evidence : []
           assistantMessage.facts = Array.isArray(event.facts) ? event.facts : []
@@ -536,26 +567,26 @@ const sendMessage = async (rawText = composerText.value) => {
           assistantMessage.actions = Array.isArray(event.actions) ? event.actions : []
           lastDataFreshness.value = event.dataFreshness || ''
           assistantMessage.dataFreshness = event.dataFreshness || ''
-          runPhase.value = event.status && event.status !== 'ok' ? '模型通道异常' : '分析完成'
+          runPhase.value = { key: event.status && event.status !== 'ok' ? 'agent.phase.modelError' : 'agent.phase.completed' }
           analyticsApi.track('agent_message_completed', { page: '/agent', entityType: 'agent_session', entityId: sessionId.value, properties: { latencyMs: event.latencyMs, provider: event.provider, model: event.model, status: event.status || 'ok', streamMode: event.streamMode, usage: event.usage || {}, toolCount: Array.isArray(event.toolSteps) ? event.toolSteps.length : 0, dataQuality: event.dataQuality || {}, grounded: event.answerValidation?.grounded !== false } }).catch(() => {})
         }
-        if (event.type === 'error') { runPhase.value = '处理失败'; streamError = new Error(event.message || '助手处理失败') }
+        if (event.type === 'error') { runPhase.value = { key: 'agent.phase.failed' }; streamError = new Error(event.message || t('agent.error.handling')) }
         void scrollToBottom()
       }
     })
     if (streamError) throw streamError
     if (!streamCompleted && !abortController.signal.aborted) {
-      throw new Error('助手响应未完整结束')
+      throw new Error(t('agent.error.incomplete'))
     }
     assistantMessage.content = normalizeAssistantText(assistantMessage.content)
-    if (!assistantMessage.content) assistantMessage.content = '助手没有返回可展示的内容，请换个问法再试。'
+    if (!assistantMessage.content) assistantMessage.content = t('agent.error.emptyContent')
   } catch (error) {
     if (error?.name === 'AbortError') {
-      assistantMessage.content = assistantMessage.content || '本轮分析已停止。'
-      runPhase.value = '已停止'
+      assistantMessage.content = assistantMessage.content || t('agent.error.stoppedContent')
+      runPhase.value = { key: 'agent.phase.stopped' }
     } else {
-      assistantMessage.content = assistantMessage.content || `助手暂时无法响应：${error?.message || '网络错误'}`
-      ElMessage.warning('助手响应失败，请稍后重试')
+      assistantMessage.content = assistantMessage.content || t('agent.error.unavailable', { message: error?.message || t('agent.error.network') })
+      ElMessage.warning(t('agent.error.responseFailed'))
       analyticsApi.track('agent_message_failed', { page: '/agent', entityType: 'agent_session', entityId: sessionId.value, properties: { error: error?.message || 'network_error', partial: Boolean(assistantMessage.content) } }).catch(() => {})
     }
     streamError = error
@@ -565,7 +596,7 @@ const sendMessage = async (rawText = composerText.value) => {
     sending.value = false
     abortController = null
     activeStreamId.value = ''
-    if (!runPhase.value || runPhase.value === '分析完成') runPhase.value = ''
+    if (!runPhase.value || runPhaseKey() === 'agent.phase.completed') runPhase.value = null
     touchSession(text)
     await scrollToBottom()
   }
@@ -582,24 +613,24 @@ const deleteSession = async (session) => {
     await agentApi.deleteSession(session.id)
     sessions.value = sessions.value.filter(item => item.id !== session.id)
     if (session.id === sessionId.value) startNewSession()
-    ElMessage.success('会话已删除')
-  } catch { ElMessage.warning('会话删除失败，请稍后重试') }
+    ElMessage.success(t('agent.sessions.deleted'))
+  } catch { ElMessage.warning(t('agent.sessions.deleteFailed')) }
 }
 const renameSession = async (session) => {
   if (!session?.id || sending.value) return
-  const title = window.prompt('请输入新的会话标题', session.title || '新会话')
+  const title = window.prompt(t('agent.sessions.renamePrompt'), session.title || t('agent.common.newSession'))
   if (!title || !title.trim()) return
   try {
     await agentApi.renameSession(session.id, title.trim())
     session.title = title.trim().slice(0, 64)
     persistSessions()
-  } catch { ElMessage.warning('会话重命名失败，请稍后重试') }
+  } catch { ElMessage.warning(t('agent.sessions.renameFailed')) }
 }
 const copyText = async (value) => {
   try {
     await navigator.clipboard.writeText(String(value || ''))
-    ElMessage.success('已复制')
-  } catch { ElMessage.warning('复制失败，请手动选择文本') }
+    ElMessage.success(t('agent.feedback.copied'))
+  } catch { ElMessage.warning(t('agent.feedback.copyFailed')) }
 }
 const regenerateMessage = (index) => {
   if (sending.value) return
@@ -611,7 +642,7 @@ const regenerateMessage = (index) => {
 }
 const sendFeedback = (message, value) => {
   analyticsApi.track('agent_feedback', { page: '/agent', entityType: 'agent_message', entityId: message.id, properties: { value, sessionId: sessionId.value } }).catch(() => {})
-  ElMessage.success(value === 'helpful' ? '感谢反馈' : '已记录，我们会继续改进')
+  ElMessage.success(value === 'helpful' ? t('agent.feedback.thanks') : t('agent.feedback.recorded'))
 }
 const runAgentAction = (action) => {
   if (!action) return
@@ -627,7 +658,7 @@ const runAgentAction = (action) => {
 }
 const exportConversation = () => {
   if (!messages.value.length) return
-  const text = messages.value.map(item => `${item.role === 'assistant' ? '助手' : '我'}：\n${item.content || ''}`).join('\n\n')
+  const text = messages.value.map(item => `${item.role === 'assistant' ? t('agent.common.assistant') : t('agent.common.me')}:\n${item.content || ''}`).join('\n\n')
   const blob = new Blob([`# ${currentSessionTitle.value}\n\n${text}`], { type: 'text/markdown;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -650,19 +681,50 @@ const clearMessages = () => {
   currentIntent.value = ''
   lastLatency.value = null
   lastRoute.value = null
-  runPhase.value = ''
+  runPhase.value = null
   lastDataFreshness.value = ''
   touchSession('')
 }
-const useMatchPrompt = () => sendMessage('请结合当前比赛上下文，给出赛前研判、关键依据和主要风险。')
-const toolLabel = (tool) => toolLabels[tool] || tool
-const evidenceStatusLabel = status => ({ ok: '可用', available: '可用', empty: '空数据', 'missing-input': '缺少参数', error: '读取失败', stale: '已过期', conflict: '上下文冲突', partial: '部分数据', 'not-configured': '未配置', not_configured: '未配置', 'quota-limited': '额度受限', quota_limited: '额度受限', 'request-failed': '请求失败', request_failed: '请求失败', invalid: '参数无效' }[String(status || '').toLowerCase()] || '待确认')
+// The prompt is both display-adjacent copy and the request value sent to the
+// backend, so it follows the active locale.
+const useMatchPrompt = () => sendMessage(t('agent.conversation.matchPrompt'))
+const toolLabel = (tool) => {
+  const key = toolLabels[tool]
+  return key ? t(key) : tool
+}
+const evidenceStatusKeys = {
+  ok: 'agent.status.ok',
+  available: 'agent.status.ok',
+  empty: 'agent.status.empty',
+  'missing-input': 'agent.status.missingInput',
+  error: 'agent.status.error',
+  stale: 'agent.status.stale',
+  conflict: 'agent.status.conflict',
+  partial: 'agent.status.partial',
+  'not-configured': 'agent.status.notConfigured',
+  not_configured: 'agent.status.notConfigured',
+  'quota-limited': 'agent.status.quotaLimited',
+  quota_limited: 'agent.status.quotaLimited',
+  'request-failed': 'agent.status.requestFailed',
+  request_failed: 'agent.status.requestFailed',
+  invalid: 'agent.status.invalid'
+}
+const evidenceStatusLabel = status => t(evidenceStatusKeys[String(status || '').toLowerCase()] || 'agent.status.unknown')
+const runPhaseLabel = computed(() => {
+  const phase = runPhase.value
+  if (!phase) return ''
+  if (typeof phase === 'string') return t(phase)
+  return t(phase.key, {
+    tool: phase.tool ? toolLabel(phase.tool) : '',
+    status: phase.status ? evidenceStatusLabel(phase.status) : ''
+  })
+})
 const evidenceTagType = status => ({ ok: 'success', available: 'success', empty: 'info', 'missing-input': 'warning', error: 'danger', stale: 'warning', conflict: 'danger', partial: 'warning', 'not-configured': 'warning', not_configured: 'warning', 'quota-limited': 'warning', quota_limited: 'warning', 'request-failed': 'danger', request_failed: 'danger', invalid: 'danger' }[String(status || '').toLowerCase()] || 'info')
-const dataQualityLabel = level => ({ high: '高', medium: '中', low: '低' }[String(level || '').toLowerCase()] || '待确认')
+const dataQualityLabel = level => t(({ high: 'agent.quality.high', medium: 'agent.quality.medium', low: 'agent.quality.low' }[String(level || '').toLowerCase()] || 'agent.status.unknown'))
 const formatMatchTime = (value) => {
   if (!value) return ''
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 const formatProbability = (value) => {
   const number = Number(value)
@@ -670,40 +732,43 @@ const formatProbability = (value) => {
 }
 const formatPredictionSummary = summary => {
   if (!summary || typeof summary !== 'object') return ''
-  const labels = { READY: '已生成', UNAVAILABLE: '不可用', PENDING: '生成中', FAILED: '失败', NOT_GENERATED: '未生成', NOT_READ: '读取失败' }
+  const labels = { READY: 'agent.prediction.ready', UNAVAILABLE: 'agent.prediction.unavailable', PENDING: 'agent.prediction.pending', FAILED: 'agent.prediction.failed', NOT_GENERATED: 'agent.prediction.notGenerated', NOT_READ: 'agent.prediction.notRead' }
   return Object.entries(summary)
     .filter(([, count]) => Number(count) > 0)
-    .map(([status, count]) => `${labels[status] || status} ${count}`)
+    .map(([status, count]) => `${labels[status] ? t(labels[status]) : status} ${count}`)
     .join(' · ')
 }
 const renderMessageMarkdown = value => renderMarkdown(value)
 const formatEvidenceTime = (value) => {
-  if (!value) return '未知时间'
+  if (!value) return t('agent.common.unknownTime')
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 const formatRelativeTime = (value) => {
   if (!value) return ''
   const diff = Math.max(0, Date.now() - new Date(value).getTime())
-  if (diff < 60_000) return '刚刚'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`
-  return new Date(value).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+  if (diff < 60_000) return t('agent.common.justNow')
+  if (diff < 3_600_000) return t('agent.common.minutesAgo', { count: Math.floor(diff / 60_000) })
+  if (diff < 86_400_000) return t('agent.common.hoursAgo', { count: Math.floor(diff / 3_600_000) })
+  return new Date(value).toLocaleDateString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' })
 }
 const sessionState = session => {
   if (session?.status) return String(session.status).toLowerCase()
   if (session?.id === sessionId.value && sending.value) return 'draft'
   return 'complete'
 }
-const sessionStateLabel = session => ({ complete: '已完成', draft: '进行中', failed: '待重试', error: '失败' }[sessionState(session)] || '已完成')
+const sessionStateLabel = session => {
+  const key = { complete: 'agent.sessionState.complete', draft: 'agent.sessionState.draft', failed: 'agent.sessionState.failed', error: 'agent.sessionState.error' }[sessionState(session)] || 'agent.sessionState.complete'
+  return t(key)
+}
 const qualityMeta = message => {
   const level = String(message?.dataQuality?.level || '').toLowerCase()
   const statuses = (message?.evidence || []).map(item => String(item?.status || '').toLowerCase())
-  if (statuses.some(status => ['error', 'request-failed', 'quota-limited', 'conflict'].includes(status))) return { label: '来源异常', tone: 'danger' }
-  if (statuses.some(status => ['empty', 'stale', 'partial', 'missing-input'].includes(status)) || message?.unknowns?.length) return { label: '部分数据', tone: 'warning' }
-  if (level === 'high' || statuses.some(status => ['ok', 'available'].includes(status))) return { label: '已核验', tone: 'good' }
-  if (level === 'low') return { label: '数据不足', tone: 'warning' }
-  return { label: '依据待确认', tone: 'neutral' }
+  if (statuses.some(status => ['error', 'request-failed', 'quota-limited', 'conflict'].includes(status))) return { label: t('agent.quality.sourceError'), tone: 'danger' }
+  if (statuses.some(status => ['empty', 'stale', 'partial', 'missing-input'].includes(status)) || message?.unknowns?.length) return { label: t('agent.quality.partial'), tone: 'warning' }
+  if (level === 'high' || statuses.some(status => ['ok', 'available'].includes(status))) return { label: t('agent.quality.verified'), tone: 'good' }
+  if (level === 'low') return { label: t('agent.quality.insufficient'), tone: 'warning' }
+  return { label: t('agent.quality.pending'), tone: 'neutral' }
 }
 const evidenceCount = message => {
   const toolsFromEvents = Array.isArray(message?.toolEvents) ? message.toolEvents.filter(item => item.type === 'tool_result' || !item.type).map(item => item.tool).filter(Boolean) : []
@@ -715,9 +780,9 @@ const openEvidence = message => {
   evidenceDrawerVisible.value = true
 }
 const runStepClass = index => {
-  if (!sending.value) return runPhase.value === '分析完成' && index === 3 ? 'is-done' : ''
-  const phase = String(runPhase.value || '')
-  const current = phase.includes('理解') ? 0 : phase.includes('读取') ? 1 : phase.includes('校验') ? 2 : 3
+  if (!sending.value) return runPhaseKey() === 'agent.phase.completed' && index === 3 ? 'is-done' : ''
+  const phase = runPhaseKey()
+  const current = phase === 'agent.phase.understanding' ? 0 : (phase.includes('reading') || phase.includes('tool')) ? 1 : phase.includes('validat') ? 2 : 3
   return index < current ? 'is-done' : index === current ? 'is-active' : ''
 }
 const handleConversationCommand = command => {
@@ -737,13 +802,18 @@ const loadAgentStatus = async () => {
     const providers = health?.models?.providers || []
     providerHealth.value = providers
     const configured = providers.filter(item => item?.configured)
-    const hasReady = configured.some(item => ['正常', '未验证'].includes(item?.status))
+    // The backend keeps the canonical Chinese status and adds statusLabel for
+    // English. Accept both spellings so older/newer payloads stay compatible.
+    const readyStatuses = new Set(['正常', '未验证', 'normal', 'not verified'])
+    const statusValue = item => String(item?.status || '').toLowerCase()
+    const hasReady = configured.some(item => readyStatuses.has(statusValue(item))
+      || readyStatuses.has(String(item?.statusLabel || '').toLowerCase()))
     healthState.value = health?.status === 'checking'
       ? 'checking'
       : health?.status === 'ok' && (hasReady || configured.length === 0)
       ? 'ready'
       : (health?.status === 'degraded' ? 'degraded' : 'error')
-    providerHealthSummary.value = configured.length ? configured.map(item => `${item.provider === 'deepseek' ? 'DS' : item.provider === 'openrouter' ? 'OR' : item.provider === 'scnet' ? 'SC' : item.provider}:${item.status}`).join(' · ') : '未配置模型'
+    providerHealthSummary.value = configured.length ? configured.map(item => `${item.provider === 'deepseek' ? 'DS' : item.provider === 'openrouter' ? 'OR' : item.provider === 'scnet' ? 'SC' : item.provider}:${item.statusLabel || item.status || ''}`).join(' · ') : t('agent.common.modelsUnconfigured')
     const policy = health?.models?.configuredPolicy || {}
     const configuredProvider = String(policy.provider || 'auto').toLowerCase()
     const activeProvider = configuredProvider === 'openrouter'
@@ -767,6 +837,12 @@ onMounted(async () => {
   await loadCurrentSession()
   applyRoutePrompt()
   await Promise.all([loadAgentStatus(), scrollToBottom()])
+})
+
+watch(locale, async () => {
+  if (sending.value) return
+  await loadSessions()
+  if (queryValue(route.query.sessionId)) await loadCurrentSession()
 })
 
 onBeforeUnmount(() => {

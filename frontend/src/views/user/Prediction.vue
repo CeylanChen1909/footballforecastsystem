@@ -2,7 +2,7 @@
   <div class="prediction-page ff-page-shell">
     <AppTopNav
       title="ChenFootball"
-      subtitle="比赛预测"
+      :subtitle="t('prediction.page.subtitle')"
       :brand-icon="Football"
       active-path="/matches"
     />
@@ -12,15 +12,15 @@
         <section class="report-heading ff-appear">
           <div class="report-heading-main">
             <span class="ff-kicker">{{ pageKicker }}</span>
-            <h1 v-if="fixtureNotFound">未找到这场比赛</h1>
-            <h1 v-else>{{ fixtureData?.teams?.home?.name || '主队' }} <em>vs</em> {{ fixtureData?.teams?.away?.name || '客队' }}</h1>
-            <p v-if="fixtureNotFound">请返回比赛列表重新选择有效的比赛链接。</p>
-            <p v-else>{{ fixtureData?.league?.name || '比赛分析' }} · {{ formatDate(fixtureData?.fixture?.date) || '时间待定' }}</p>
+            <h1 v-if="fixtureNotFound">{{ t('prediction.page.notFoundTitle') }}</h1>
+            <h1 v-else>{{ homeTeamDisplayName }} <em>vs</em> {{ awayTeamDisplayName }}</h1>
+            <p v-if="fixtureNotFound">{{ t('prediction.page.notFoundHint') }}</p>
+            <p v-else>{{ leagueDisplayName || t('prediction.page.analysisFallback') }} · {{ formatDate(fixtureData?.fixture?.date) || t('prediction.page.timeTbd') }}</p>
           </div>
           <div class="report-heading-meta">
             <el-tag :type="statusType" size="small">{{ fixtureStatusLabel }}</el-tag>
             <div class="report-confidence">
-              <span>概率分离度</span>
+              <span>{{ t('prediction.page.probabilityMargin') }}</span>
               <strong>{{ confidenceValue }}</strong>
               <small>{{ confidenceLabel }}</small>
               <el-tag v-if="coverageBadge" class="coverage-badge" size="small" :type="coverageBadge.type" effect="plain">{{ coverageBadge.text }}</el-tag>
@@ -31,13 +31,13 @@
 
         <PageState
           v-if="fixtureNotFound"
-          title="未找到这场比赛"
-          description="这场比赛已经从当前赛程中移除，或链接中的比赛 ID 无效。请返回比赛列表重新选择。"
-          action-text="返回比赛列表"
+          :title="t('prediction.page.notFoundTitle')"
+          :description="t('prediction.page.notFoundDescription')"
+          :action-text="t('prediction.page.backToMatches')"
           @action="backToMatches"
         />
-        <div v-else-if="loading && !predictionResult && !matchLoadError" class="prediction-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label="正在加载比赛与预测">
-          <PageState type="loading" title="正在加载比赛与预测" description="正在读取赛程详情与统一预测快照…" :size="32" />
+        <div v-else-if="loading && !predictionResult && !matchLoadError" class="prediction-skeleton" role="status" aria-live="polite" aria-busy="true" :aria-label="t('prediction.page.loadingAria')">
+          <PageState type="loading" :title="t('prediction.page.loadingTitle')" :description="t('prediction.page.loadingDescription')" :size="32" />
           <div class="prediction-skeleton-card" aria-hidden="true">
             <i class="sk-line sk-wide"></i>
             <div class="sk-prob-grid"><i></i><i></i><i></i></div>
@@ -47,9 +47,9 @@
         <PageState
           v-else-if="matchLoadError && !predictionResult"
           type="error"
-          title="比赛详情加载失败"
+          :title="t('prediction.page.loadFailedTitle')"
           :description="matchLoadError"
-          action-text="重试"
+          :action-text="t('prediction.page.retry')"
           @action="loadMatch"
         />
         <PageState
@@ -64,14 +64,14 @@
           type="error"
           :title="predictionStatusTitle"
           :description="predictionStatusDescription"
-          action-text="重新检查"
+          :action-text="t('prediction.page.recheck')"
           @action="doPredict"
         />
         <PageState
           v-else-if="!predictionResult && predictionStatus === 'UNAVAILABLE'"
-          title="本场暂无可用预测"
+          :title="t('prediction.page.noPredictionTitle')"
           :description="predictionStatusDescription"
-          action-text="查看其他比赛"
+          :action-text="t('prediction.page.viewOtherMatches')"
           @action="backToMatches"
         />
         <PageState
@@ -85,19 +85,19 @@
         <el-card v-if="predictionResult" class="decision-card" shadow="never">
           <div class="decision-card-head">
             <div>
-              <span class="section-eyebrow">{{ isFinished ? '赛后复盘' : '统一预测结论' }}</span>
+              <span class="section-eyebrow">{{ isFinished ? t('prediction.page.reviewKicker') : t('prediction.page.conclusionKicker') }}</span>
               <h2>{{ resultLabelShort }}</h2>
               <p>{{ primaryDecisionText }}</p>
             </div>
             <div class="decision-actions">
-              <el-button class="favorite-action" :loading="favoriteLoading" :icon="Star" :type="isFavorite ? 'success' : 'default'" plain @click="toggleFavorite">{{ isFavorite ? '已收藏' : '收藏比赛' }}</el-button>
+              <el-button class="favorite-action" :loading="favoriteLoading" :icon="Star" :type="isFavorite ? 'success' : 'default'" plain @click="toggleFavorite">{{ isFavorite ? t('prediction.page.favorited') : t('prediction.page.favorite') }}</el-button>
               <el-dropdown trigger="click" @command="handleDecisionCommand">
-                <el-button text class="more-action" aria-label="更多操作">更多</el-button>
+                <el-button text class="more-action" :aria-label="t('prediction.page.moreActions')">{{ t('prediction.page.more') }}</el-button>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item command="share"><el-icon><Share /></el-icon>分享报告</el-dropdown-item>
-                    <el-dropdown-item command="agent"><el-icon><ChatLineSquare /></el-icon>让助手解读</el-dropdown-item>
-                    <el-dropdown-item v-if="!isFinished" command="reminder"><el-icon><Bell /></el-icon>{{ reminderSet ? '关闭开赛提醒' : '设置开赛提醒' }}</el-dropdown-item>
+                    <el-dropdown-item command="share"><el-icon><Share /></el-icon>{{ t('prediction.page.shareReport') }}</el-dropdown-item>
+                    <el-dropdown-item command="agent"><el-icon><ChatLineSquare /></el-icon>{{ t('prediction.page.askAgent') }}</el-dropdown-item>
+                    <el-dropdown-item v-if="!isFinished" command="reminder"><el-icon><Bell /></el-icon>{{ reminderSet ? t('prediction.page.disableReminder') : t('prediction.page.enableReminder') }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -106,12 +106,12 @@
 
           <div class="decision-lead" :class="resultClass">
             <div class="decision-lead-icon"><el-icon :size="28"><component :is="outcomeIcon" /></el-icon></div>
-            <div><strong>{{ isFinished ? actualResultLabel || '比赛已结束' : `模型倾向：${resultLabelShort}` }}</strong><span>{{ confidenceLabel }} · {{ predictionGeneratedAt ? `生成于 ${formatDate(predictionGeneratedAt)}` : '统一预测快照' }}</span></div>
+            <div><strong>{{ isFinished ? actualResultLabel || t('prediction.page.matchEnded') : t('prediction.page.modelLean', { result: resultLabelShort }) }}</strong><span>{{ confidenceLabel }} · {{ predictionGeneratedAt ? t('prediction.page.generatedAt', { date: formatDate(predictionGeneratedAt) }) : t('prediction.page.unifiedSnapshot') }}</span></div>
           </div>
 
           <PredictionProbabilityPanel
-            :home-name="fixtureData?.teams?.home?.name || '主队'"
-            :away-name="fixtureData?.teams?.away?.name || '客队'"
+            :home-name="homeTeamDisplayName"
+            :away-name="awayTeamDisplayName"
             :probabilities="normalizedProbabilities"
             :warning="predictionHasWarning || dataInsufficient"
             :hint="probabilityHint"
@@ -121,25 +121,25 @@
           />
 
           <div v-if="isFinished && actualResultLabel" class="review-summary" :class="predictionHit === true ? 'review-hit' : predictionHit === false ? 'review-miss' : ''">
-            <div><span>实际结果</span><strong>{{ actualResultLabel }}</strong></div>
-            <div><span>赛前预测</span><strong>{{ resultLabelShort }}</strong></div>
-            <el-tag v-if="predictionHit !== null" :type="predictionHit ? 'success' : 'danger'" size="small">{{ predictionHit ? '预测命中' : '预测未命中' }}</el-tag>
+            <div><span>{{ t('prediction.page.actualResult') }}</span><strong>{{ actualResultLabel }}</strong></div>
+            <div><span>{{ t('prediction.page.prematchPrediction') }}</span><strong>{{ resultLabelShort }}</strong></div>
+            <el-tag v-if="predictionHit !== null" :type="predictionHit ? 'success' : 'danger'" size="small">{{ predictionHit ? t('prediction.page.predictionHit') : t('prediction.page.predictionMiss') }}</el-tag>
           </div>
 
           <div class="decision-notice" :class="predictionHasWarning ? 'notice-caution' : 'notice-positive'">
             <span class="notice-dot"></span><strong>{{ predictionQualityTitle }}</strong><span>{{ riskSummary.join(' · ') }}</span>
           </div>
 
-          <div v-if="prematchQuality" class="prematch-quality-panel" aria-label="赛前数据覆盖">
-            <div class="quality-panel-head"><div><strong>赛前数据覆盖</strong><small>{{ prematchQuality.source || '本地赛前快照' }} · {{ prematchQuality.updatedAt || '更新时间未知' }}</small></div><el-tag size="small" :type="prematchQualityType">{{ prematchQualityLabel }}</el-tag></div>
+          <div v-if="prematchQuality" class="prematch-quality-panel" :aria-label="t('prediction.page.prematchCoverageAria')">
+            <div class="quality-panel-head"><div><strong>{{ t('prediction.page.prematchCoverageTitle') }}</strong><small>{{ prematchQuality.source || t('prediction.prematch.sourceFallback') }} · {{ prematchQuality.updatedAt || t('prediction.prematch.updatedUnknown') }}</small></div><el-tag size="small" :type="prematchQualityType">{{ prematchQualityLabel }}</el-tag></div>
             <div class="prematch-quality-grid"><div v-for="item in prematchQuality.items" :key="item.key"><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div></div>
           </div>
 
           <el-collapse v-model="advancedPanels" class="advanced-panels">
-            <el-collapse-item v-if="modelQualityVisible" name="quality" title="模型质量与适用范围">
+            <el-collapse-item v-if="modelQualityVisible" name="quality" :title="t('prediction.page.modelQualityTitle')">
               <PredictionModelQuality :quality="modelQuality" :visible="modelQualityVisible" :reliable="qualityIsReliable" />
             </el-collapse-item>
-            <el-collapse-item v-if="featureContrib?.length" name="factors" title="影响较大的输入指标">
+            <el-collapse-item v-if="featureContrib?.length" name="factors" :title="t('prediction.page.factorTitle')">
               <PredictionFeatureContribution :items="featureContrib" />
             </el-collapse-item>
           </el-collapse>
@@ -148,43 +148,43 @@
         <!-- 比赛信息放在结论之后，避免用户先读技术细节。 -->
         <el-card v-if="!fixtureNotFound" class="match-info-card" shadow="hover" :class="{ 'is-loading': loading }">
           <template #header>
-            <div class="card-header"><span>比赛信息</span><div class="header-actions"><el-tag v-if="loading" size="small" type="info">读取中…</el-tag><el-button size="small" text @click="showH2H"><el-icon><DataLine /></el-icon>查看交锋</el-button></div></div>
+            <div class="card-header"><span>{{ t('prediction.page.matchInfo') }}</span><div class="header-actions"><el-tag v-if="loading" size="small" type="info">{{ t('prediction.page.reading') }}</el-tag><el-button size="small" text @click="showH2H"><el-icon><DataLine /></el-icon>{{ t('prediction.page.viewH2H') }}</el-button></div></div>
           </template>
           <div class="match-detail">
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.home?.name || '主队'}阵容`" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">主</div><div class="team-name-lg">{{ fixtureData?.teams?.home?.name || '主队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="t('prediction.page.viewSquadAria', { team: homeTeamDisplayName })" @click="goTeamSquad(homeId, 'home')" @keydown.enter="goTeamSquad(homeId, 'home')" @keydown.space.prevent="goTeamSquad(homeId, 'home')"><img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="t('prediction.page.logoAlt', { team: homeTeamDisplayName })" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">{{ homeTeamInitial }}</div><div class="team-name-lg">{{ homeTeamDisplayName }}</div><small>{{ t('prediction.page.viewSquad') }}</small></div>
             <div class="vs-block"><div v-if="hasScore" class="final-score">{{ fixtureData.goals.home }} - {{ fixtureData.goals.away }}</div><div class="vs-label">VS</div><div class="match-date">{{ formatDate(fixtureData?.fixture?.date) }}</div><div class="match-venue" v-if="fixtureData?.fixture?.venue?.name">{{ fixtureData.fixture.venue.name }}</div></div>
-            <div class="team-block" role="button" tabindex="0" :aria-label="`查看${fixtureData?.teams?.away?.name || '客队'}阵容`" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">客</div><div class="team-name-lg">{{ fixtureData?.teams?.away?.name || '客队' }}</div><small>查看阵容</small></div>
+            <div class="team-block" role="button" tabindex="0" :aria-label="t('prediction.page.viewSquadAria', { team: awayTeamDisplayName })" @click="goTeamSquad(awayId, 'away')" @keydown.enter="goTeamSquad(awayId, 'away')" @keydown.space.prevent="goTeamSquad(awayId, 'away')"><img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="t('prediction.page.logoAlt', { team: awayTeamDisplayName })" class="big-logo" width="80" height="80" decoding="async" /><div v-else class="logo-placeholder">{{ awayTeamInitial }}</div><div class="team-name-lg">{{ awayTeamDisplayName }}</div><small>{{ t('prediction.page.viewSquad') }}</small></div>
           </div>
         </el-card>
 
           <!-- 历史交锋弹窗 -->
-          <el-dialog v-model="h2hVisible" title="历史交锋记录" width="min(650px, 94vw)">
+          <el-dialog v-model="h2hVisible" :title="t('prediction.page.h2hTitle')" width="min(650px, 94vw)">
             <div v-if="h2hLoading" class="loading-state">
               <el-skeleton :rows="5" animated />
             </div>
             <div v-else-if="h2hData" class="h2h-content">
               <div class="h2h-summary">
                 <div class="summary-team home">
-                  <img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="`${fixtureData?.teams?.home?.name || '主队'}队徽`" class="summary-logo" />
-                  <span>{{ fixtureData?.teams?.home?.name }}</span>
+                  <img v-if="fixtureData?.teams?.home?.logo" :src="getMediaAssetUrl(fixtureData.teams.home.logo)" :alt="t('prediction.page.logoAlt', { team: homeTeamDisplayName })" class="summary-logo" />
+                  <span>{{ homeTeamDisplayName }}</span>
                 </div>
                 <div class="summary-stats">
                   <div class="stat-box">
                     <span class="stat-num">{{ h2hData.summary?.homeWins || 0 }}</span>
-                    <span class="stat-desc">主队胜</span>
+                    <span class="stat-desc">{{ t('prediction.page.homeWins') }}</span>
                   </div>
                   <div class="stat-box">
                     <span class="stat-num">{{ h2hData.summary?.draws || 0 }}</span>
-                    <span class="stat-desc">平局</span>
+                    <span class="stat-desc">{{ t('prediction.page.draws') }}</span>
                   </div>
                   <div class="stat-box">
                     <span class="stat-num">{{ h2hData.summary?.awayWins || 0 }}</span>
-                    <span class="stat-desc">客队胜</span>
+                    <span class="stat-desc">{{ t('prediction.page.awayWins') }}</span>
                   </div>
                 </div>
                 <div class="summary-team away">
-                  <img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="`${fixtureData?.teams?.away?.name || '客队'}队徽`" class="summary-logo" />
-                  <span>{{ fixtureData?.teams?.away?.name }}</span>
+                  <img v-if="fixtureData?.teams?.away?.logo" :src="getMediaAssetUrl(fixtureData.teams.away.logo)" :alt="t('prediction.page.logoAlt', { team: awayTeamDisplayName })" class="summary-logo" />
+                  <span>{{ awayTeamDisplayName }}</span>
                 </div>
               </div>
               <div class="h2h-matches">
@@ -194,7 +194,7 @@
                   <span class="h2h-score">{{ match.homeScore }} - {{ match.awayScore }}</span>
                 </div>
                 <div v-if="!h2hData.recentMatches?.length" class="h2h-empty">
-                  暂无历史交锋记录
+                  {{ t('prediction.page.noH2H') }}
                 </div>
               </div>
             </div>
@@ -203,11 +203,11 @@
           <!-- 页面底部操作：只保留一个主要动作，避免反复点击误解。 -->
           <div v-if="!fixtureNotFound" class="action-area">
             <div class="action-buttons">
-              <el-button v-if="predictionResult" type="primary" size="large" :loading="predicting" class="predict-btn" @click="doPredict"><el-icon><RefreshRight /></el-icon>检查最新快照</el-button>
+              <el-button v-if="predictionResult" type="primary" size="large" :loading="predicting" class="predict-btn" @click="doPredict"><el-icon><RefreshRight /></el-icon>{{ t('prediction.page.checkLatest') }}</el-button>
               <el-button v-else type="primary" size="large" :loading="predicting" class="predict-btn" @click="predictionStatus === 'UNAVAILABLE' ? backToMatches() : doPredict"><el-icon><TrendCharts /></el-icon>{{ statusActionLabel }}</el-button>
-              <el-button size="large" plain @click="backToMatches">返回比赛列表</el-button>
+              <el-button size="large" plain @click="backToMatches">{{ t('prediction.page.backToMatches') }}</el-button>
             </div>
-            <div class="login-tip">预测结果按比赛统一生成；{{ isLoggedIn ? '可收藏比赛并设置提醒。' : '登录后可收藏比赛并设置提醒。' }}</div>
+            <div class="login-tip">{{ t('prediction.page.loginTipPrefix') }}{{ isLoggedIn ? t('prediction.page.loginTipLoggedIn') : t('prediction.page.loginTipGuest') }}</div>
           </div>
 
         </div>
@@ -231,7 +231,10 @@ import PredictionProbabilityPanel from '../../components/prediction/PredictionPr
 import PredictionModelQuality from '../../components/prediction/PredictionModelQuality.vue'
 import PredictionFeatureContribution from '../../components/prediction/PredictionFeatureContribution.vue'
 import { Bell, ChatLineSquare, CircleCheck, DataLine, Football, RefreshRight, Share, Star, TrendCharts, WarningFilled } from '@element-plus/icons-vue'
+import { displayLeagueName, displayTeamName } from '../../utils/teamNames'
+import { useI18n } from '../../i18n'
 
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -260,10 +263,22 @@ syncRouteContext()
 
 const fixtureData = ref({
   teams: {
-    home: { id: homeId, name: homeName, logo: queryText(route.query.homeLogo) },
-    away: { id: awayId, name: awayName, logo: queryText(route.query.awayLogo) }
+    home: { id: homeId, name: queryText(route.query.homeName || route.query.home), logo: queryText(route.query.homeLogo), teamDisplayName: queryText(route.query.homeTeamDisplayName || route.query.homeDisplayName) },
+    away: { id: awayId, name: queryText(route.query.awayName || route.query.away), logo: queryText(route.query.awayLogo), teamDisplayName: queryText(route.query.awayTeamDisplayName || route.query.awayDisplayName) }
   }
 })
+const teamDisplay = side => {
+  const team = fixtureData.value?.teams?.[side] || {}
+  return team.teamDisplayName || team.teamDisplay || team.displayName || team.display || fixtureData.value?.[`${side}TeamDisplayName`] || ''
+}
+const homeTeamDisplayName = computed(() => displayTeamName(fixtureData.value?.teams?.home?.name || t('prediction.common.homeTeam'), teamDisplay('home')))
+const awayTeamDisplayName = computed(() => displayTeamName(fixtureData.value?.teams?.away?.name || t('prediction.common.awayTeam'), teamDisplay('away')))
+const leagueDisplayName = computed(() => displayLeagueName(
+  fixtureData.value?.league?.name || queryText(route.query.leagueName),
+  fixtureData.value?.league?.leagueDisplay || fixtureData.value?.league?.leagueDisplayName || fixtureData.value?.league?.displayName || fixtureData.value?.leagueDisplay || queryText(route.query.leagueDisplay || route.query.leagueDisplayName)
+))
+const homeTeamInitial = computed(() => homeTeamDisplayName.value.trim().slice(0, 1).toUpperCase())
+const awayTeamInitial = computed(() => awayTeamDisplayName.value.trim().slice(0, 1).toUpperCase())
 const predictionResult = ref(null)
 const predictionStatus = ref('LOADING')
 const fixtureNotFound = ref(false)
@@ -285,22 +300,22 @@ const advancedPanels = ref([])
 const reminderSet = ref(false)
 const isLoggedIn = computed(() => Boolean(userStore.token))
 
-const predictionStatusTitle = computed(() => ({
-  LOADING: '正在读取比赛与预测状态',
-  PENDING: '统一预测准备中',
-  UNAVAILABLE: '本场暂无可用预测',
-  EMPTY: '暂无预测数据',
-  ERROR: '暂时无法读取预测结果',
-  FAILED: '预测快照生成失败',
-  TIMEOUT: '预测准备时间较长'
-}[predictionStatus.value] || '预测状态未知'))
+const predictionStatusTitle = computed(() => t({
+  LOADING: 'prediction.status.loading',
+  PENDING: 'prediction.status.pending',
+  UNAVAILABLE: 'prediction.status.unavailable',
+  EMPTY: 'prediction.status.empty',
+  ERROR: 'prediction.status.error',
+  FAILED: 'prediction.status.failed',
+  TIMEOUT: 'prediction.status.timeout'
+}[predictionStatus.value] || 'prediction.status.unknown'))
 const predictionStatusDescription = computed(() => {
-  if (fixtureNotFound.value) return '这场比赛已经从当前赛程中移除，或链接中的比赛 ID 无效。请返回比赛列表重新选择。'
-  if (predictionStatus.value === 'PENDING') return '系统会自动检查最新快照，不需要重复提交或连续点击。'
-  if (predictionStatus.value === 'UNAVAILABLE' || predictionStatus.value === 'EMPTY') return matchLoadError.value || '可能是联赛未覆盖、历史样本不足或赛前数据尚未同步。不会展示占位概率；可先查看其他比赛。'
-  if (predictionStatus.value === 'TIMEOUT') return '后台可能仍在准备数据；你可以稍后重新打开本场比赛。'
-  if (predictionStatus.value === 'ERROR' || predictionStatus.value === 'FAILED') return matchLoadError.value || '请点击“重新检查”再次读取，或返回比赛列表查看其他场次。'
-  return '请稍候，页面将自动加载结果。'
+  if (fixtureNotFound.value) return t('prediction.page.notFoundDescription')
+  if (predictionStatus.value === 'PENDING') return t('prediction.statusDesc.pending')
+  if (predictionStatus.value === 'UNAVAILABLE' || predictionStatus.value === 'EMPTY') return matchLoadError.value || t('prediction.statusDesc.unavailable')
+  if (predictionStatus.value === 'TIMEOUT') return t('prediction.statusDesc.timeout')
+  if (predictionStatus.value === 'ERROR' || predictionStatus.value === 'FAILED') return matchLoadError.value || t('prediction.statusDesc.error')
+  return t('prediction.statusDesc.loading')
 })
 
 const sampleCoverage = computed(() => {
@@ -334,15 +349,15 @@ const coverageBadge = computed(() => {
   if (home != null && away != null) {
     const total = home + away
     if (total <= 3 || home === 0 || away === 0) {
-      return { type: 'warning', text: `样本 ${home}/${away} · 数据不足` }
+      return { type: 'warning', text: t('prediction.coverage.samplesInsufficient', { home, away }) }
     }
     if (home < 3 || away < 3 || String(predictionResult.value.featureStatus || '').toUpperCase() === 'LIMITED') {
-      return { type: 'info', text: `样本 ${home}/${away} · 覆盖有限` }
+      return { type: 'info', text: t('prediction.coverage.samplesLimited', { home, away }) }
     }
-    return { type: 'success', text: `样本 ${home}/${away}` }
+    return { type: 'success', text: t('prediction.coverage.samples', { home, away }) }
   }
-  if (prematchUnconfigured.value) return { type: 'warning', text: '赛前特征未配置' }
-  if (predictionResult.value.featureComplete === false) return { type: 'warning', text: '特征不完整' }
+  if (prematchUnconfigured.value) return { type: 'warning', text: t('prediction.coverage.prematchUnconfigured') }
+  if (predictionResult.value.featureComplete === false) return { type: 'warning', text: t('prediction.coverage.featureIncomplete') }
   return null
 })
 const dataFreshnessLabel = computed(() => {
@@ -350,40 +365,40 @@ const dataFreshnessLabel = computed(() => {
   const snapshot = meta.prematchSnapshot || {}
   const stamp = snapshot.dataFetchedAt || snapshot.fetchedAt || meta.featureAsOf || predictionGeneratedAt.value
   if (!stamp) return ''
-  return `数据新鲜度：${formatDate(stamp)}`
+  return t('prediction.freshness', { date: formatDate(stamp) })
 })
 const probabilityHint = computed(() => {
-  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
-  if (predictionHasWarning.value) return '特征或模型质量不足，仅供参考'
-  return '来自正式预测服务'
+  if (dataInsufficient.value) return t('prediction.probabilityHint.insufficient')
+  if (predictionHasWarning.value) return t('prediction.probabilityHint.warning')
+  return t('prediction.probabilityHint.official')
 })
 const predictionQualityTitle = computed(() => {
   if (!predictionResult.value) return ''
   if (isFinished.value && predictionHit.value !== null) {
-    return predictionHit.value ? '赛前预测已命中，下面展示本场复盘' : '赛前预测未命中，下面展示本场复盘'
+    return predictionHit.value ? t('prediction.qualityTitle.hit') : t('prediction.qualityTitle.miss')
   }
   if (dataInsufficient.value) {
-    return '数据不足，暂不建议作为依据'
+    return t('prediction.qualityTitle.insufficient')
   }
   if (!normalizedProbabilities.value.valid) {
-    return '接口概率已自动归一化：本场结果仅供参考'
+    return t('prediction.qualityTitle.normalized')
   }
   if (predictionResult.value.featureComplete === false) {
     return predictionResult.value.featureStatus === 'DEFAULTED'
-      ? '特征数据不足：本次结果仅为低可信度参考'
+      ? t('prediction.qualityTitle.defaulted')
       : predictionResult.value.featureStatus === 'LIMITED'
-        ? '历史样本有限：本场使用 ELO+Poisson 保守基线'
-      : '部分特征缺失：本次结果仅供参考'
+        ? t('prediction.qualityTitle.limited')
+      : t('prediction.qualityTitle.partial')
   }
   const margin = Number(predictionResult.value.decisionMargin ?? predictionResult.value.featureMeta?.decisionMargin)
   if (Number.isFinite(margin) && margin < 0.08) {
-    return '三类概率接近：本场不做强结论，仅作为信息参考'
+    return t('prediction.qualityTitle.close')
   }
   const accuracy = Number(predictionResult.value.featureMeta?.model_accuracy)
   if (Number.isFinite(accuracy) && accuracy < 0.55) {
-    return `模型质量偏低：${resultLabelShort.value}（时间外测试准确率 ${(accuracy * 100).toFixed(1)}%，暂不建议据此做强结论）`
+    return t('prediction.qualityTitle.lowAccuracy', { result: resultLabelShort.value, accuracy: (accuracy * 100).toFixed(1) })
   }
-  return `预测已生成：${resultLabelShort.value}`
+  return t('prediction.qualityTitle.generated', { result: resultLabelShort.value })
 })
 const predictionHasWarning = computed(() => {
   if (!predictionResult.value) return false
@@ -397,44 +412,59 @@ const predictionHasWarning = computed(() => {
     || (Number.isFinite(Number(predictionResult.value.decisionMargin)) && Number(predictionResult.value.decisionMargin) < 0.08)
 })
 const modelQuality = computed(() => predictionResult.value?.featureMeta || {})
+const qualityStatusKeys = {
+  AVAILABLE: 'prediction.qualityStatus.available',
+  EMPTY: 'prediction.qualityStatus.empty',
+  NOT_CONFIGURED: 'prediction.qualityStatus.notConfigured',
+  UNSUPPORTED: 'prediction.qualityStatus.unsupported',
+  REQUEST_FAILED: 'prediction.qualityStatus.requestFailed'
+}
+const qualityStatusText = code => qualityStatusKeys[code]
+  ? t(qualityStatusKeys[code])
+  : t('prediction.qualityStatus.unknown')
 const prematchQuality = computed(() => {
   const snapshot = modelQuality.value?.prematchSnapshot
   if (!snapshot || typeof snapshot !== 'object') return null
   const quality = snapshot.dataQuality && typeof snapshot.dataQuality === 'object' ? snapshot.dataQuality : {}
-  const labels = { AVAILABLE: '已接入', EMPTY: '暂无数据', NOT_CONFIGURED: '未配置', UNSUPPORTED: '套餐不支持', REQUEST_FAILED: '请求失败' }
-  const status = key => labels[String(quality[key] || 'NOT_CONFIGURED').toUpperCase()] || String(quality[key] || '未知')
+  const qualityStatusCode = key => String(quality[key] || 'NOT_CONFIGURED').toUpperCase()
   const fetchedAt = snapshot.dataFetchedAt || snapshot.fetchedAt
   const trackedKeys = ['injuries', 'lineups', 'xgShots']
   return {
     source: snapshot.source || quality.historySource,
-    updatedAt: fetchedAt ? `更新于 ${formatDate(fetchedAt)}` : snapshot.cutoffTime ? `数据截止 ${formatDate(snapshot.cutoffTime)}` : '更新时间未知',
+    updatedAt: fetchedAt
+      ? t('prediction.prematch.updatedAt', { date: formatDate(fetchedAt) })
+      : snapshot.cutoffTime
+        ? t('prediction.prematch.cutoffTime', { date: formatDate(snapshot.cutoffTime) })
+        : t('prediction.prematch.updatedUnknown'),
     status: trackedKeys.some(key => String(quality[key] || '').toUpperCase() === 'REQUEST_FAILED') ? 'REQUEST_FAILED' : 'AVAILABLE',
     items: [
-      { key: 'injuries', label: '伤停', value: status('injuries') },
-      { key: 'lineups', label: '首发', value: status('lineups') },
-      { key: 'xgShots', label: 'xG / 射门', value: status('xgShots') }
+      { key: 'injuries', label: t('prediction.prematch.injuries'), status: qualityStatusCode('injuries'), value: qualityStatusText(qualityStatusCode('injuries')) },
+      { key: 'lineups', label: t('prediction.prematch.lineups'), status: qualityStatusCode('lineups'), value: qualityStatusText(qualityStatusCode('lineups')) },
+      { key: 'xgShots', label: t('prediction.prematch.xgShots'), status: qualityStatusCode('xgShots'), value: qualityStatusText(qualityStatusCode('xgShots')) }
     ]
   }
 })
 const prematchQualityLabel = computed(() => {
   if (!prematchQuality.value) return ''
-  const available = prematchQuality.value.items.filter(item => item.value === '已接入').length
-  return available === prematchQuality.value.items.length ? '数据完整' : `已接入 ${available}/${prematchQuality.value.items.length}`
+  const available = prematchQuality.value.items.filter(item => item.status === 'AVAILABLE').length
+  return available === prematchQuality.value.items.length
+    ? t('prediction.prematch.complete')
+    : t('prediction.prematch.available', { available, total: prematchQuality.value.items.length })
 })
 const prematchQualityType = computed(() => prematchQuality.value?.status === 'REQUEST_FAILED' ? 'danger' : 'info')
 const riskSummary = computed(() => {
   const risks = []
   const accuracy = Number(predictionResult.value?.featureMeta?.model_accuracy)
   const margin = Number(predictionResult.value?.decisionMargin)
-  if (predictionResult.value?.featureComplete === false) risks.push(predictionResult.value?.featureStatus === 'LIMITED' ? '历史样本有限，使用保守基线' : '部分输入数据缺失')
-  if (Number.isFinite(margin) && margin < 0.08) risks.push('三类概率接近')
-  if (Number.isFinite(accuracy) && accuracy < 0.55) risks.push('模型近期测试表现偏弱')
-  if (modelQuality.value?.model_quality_gate?.eligible === false) risks.push('模型尚未通过生产门槛')
+  if (predictionResult.value?.featureComplete === false) risks.push(predictionResult.value?.featureStatus === 'LIMITED' ? t('prediction.risk.limited') : t('prediction.risk.partial'))
+  if (Number.isFinite(margin) && margin < 0.08) risks.push(t('prediction.risk.close'))
+  if (Number.isFinite(accuracy) && accuracy < 0.55) risks.push(t('prediction.risk.weak'))
+  if (modelQuality.value?.model_quality_gate?.eligible === false) risks.push(t('prediction.risk.gate'))
   if (prematchQuality.value) {
-    const available = prematchQuality.value.items.filter(item => item.value === '已接入').length
-    if (available < prematchQuality.value.items.length) risks.push(`赛前数据已接入 ${available}/${prematchQuality.value.items.length}`)
+    const available = prematchQuality.value.items.filter(item => item.status === 'AVAILABLE').length
+    if (available < prematchQuality.value.items.length) risks.push(t('prediction.risk.coverage', { available, total: prematchQuality.value.items.length }))
   }
-  return risks.length ? risks : ['当前没有检测到额外风险']
+  return risks.length ? risks : [t('prediction.risk.none')]
 })
 const qualityValue = (key) => {
   const value = Number(modelQuality.value?.[key])
@@ -474,31 +504,38 @@ const hasScore = computed(() => {
   const valid = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
   return isFinished.value && valid(home) && valid(away)
 })
-const actualResultLabel = computed(() => {
+const actualResultCode = computed(() => {
   if (!hasScore.value) return ''
   const home = Number(fixtureData.value.goals.home)
   const away = Number(fixtureData.value.goals.away)
-  return home > away ? '主胜' : home < away ? '客胜' : '平局'
+  return home > away ? 'HOME_WIN' : home < away ? 'AWAY_WIN' : 'DRAW'
+})
+const actualResultLabel = computed(() => {
+  if (!actualResultCode.value) return ''
+  if (actualResultCode.value === 'HOME_WIN') return t('prediction.result.homeWin')
+  if (actualResultCode.value === 'AWAY_WIN') return t('prediction.result.awayWin')
+  return t('prediction.result.draw')
 })
 const predictionHit = computed(() => {
-  if (!actualResultLabel.value || !predictionResult.value?.resultLabel) return null
-  const actual = actualResultLabel.value === '主胜' ? 'HOME_WIN' : actualResultLabel.value === '客胜' ? 'AWAY_WIN' : 'DRAW'
-  return actual === predictionResult.value.resultLabel
+  if (!actualResultCode.value || !predictionResult.value?.resultLabel) return null
+  return actualResultCode.value === predictionResult.value.resultLabel
 })
 const fixtureStatusLabel = computed(() => {
   const long = fixtureData.value?.fixture?.status?.long
-  return long || statusText(matchStatus.value)
+  return statusText(matchStatus.value, long)
 })
-const pageKicker = computed(() => isFinished.value ? '赛后复盘' : '赛前预测')
-const predictionCardTitle = computed(() => isFinished.value ? '赛前预测复盘' : `${modelDisplayName.value}结果`)
+const pageKicker = computed(() => isFinished.value ? t('prediction.page.reviewKicker') : t('prediction.page.conclusionKicker'))
+const predictionCardTitle = computed(() => isFinished.value
+  ? t('prediction.model.reviewTitle')
+  : t('prediction.model.resultTitle', { model: modelDisplayName.value }))
 const modelDisplayName = computed(() => {
   const version = String(predictionResult.value?.modelVersion || '').toLowerCase()
-  if (version.includes('elo-calibrated')) return '校准 ELO 模型'
-  if (version.includes('hybrid')) return '混合模型'
-  if (version.includes('xgboost')) return 'XGBoost 模型'
-  if (version.includes('poisson')) return '进球分布模型'
-  if (version) return '赛前预测模型'
-  return '预测模型'
+  if (version.includes('elo-calibrated')) return t('prediction.model.eloCalibrated')
+  if (version.includes('hybrid')) return t('prediction.model.hybrid')
+  if (version.includes('xgboost')) return t('prediction.model.xgboost')
+  if (version.includes('poisson')) return t('prediction.model.poisson')
+  if (version) return t('prediction.model.prematch')
+  return t('prediction.model.default')
 })
 
 const normalizedProbabilities = computed(() => {
@@ -519,15 +556,15 @@ const resultClass = computed(() => {
 
 const resultLabelShort = computed(() => {
   const r = predictionResult.value?.resultLabel
-  if (r === 'HOME_WIN') return '主胜'
-  if (r === 'AWAY_WIN') return '客胜'
-  return '平局'
+  if (r === 'HOME_WIN') return t('prediction.result.homeWin')
+  if (r === 'AWAY_WIN') return t('prediction.result.awayWin')
+  return t('prediction.result.draw')
 })
 const resultLabel = computed(() => {
   const r = predictionResult.value?.resultLabel
-  if (r === 'HOME_WIN') return `预测：${fixtureData.value?.teams?.home?.name} 获胜`
-  if (r === 'AWAY_WIN') return `预测：${fixtureData.value?.teams?.away?.name} 获胜`
-  return '预测：双方势均力敌，可能平局'
+  if (r === 'HOME_WIN') return t('prediction.result.homeWinFull', { team: fixtureData.value?.teams?.home?.name })
+  if (r === 'AWAY_WIN') return t('prediction.result.awayWinFull', { team: fixtureData.value?.teams?.away?.name })
+  return t('prediction.result.drawFull')
 })
 const confidenceValue = computed(() => {
   if (!predictionResult.value) return 'N/A'
@@ -539,56 +576,59 @@ const confidenceValue = computed(() => {
   return values.length > 1 ? `${Math.round((values[0] - values[1]) * 100)}%` : 'N/A'
 })
 const confidenceLabel = computed(() => {
-  if (!predictionResult.value) return predictionStatus.value === 'LOADING' ? '正在读取统一快照' : '等待统一快照'
-  if (dataInsufficient.value) return '数据不足，暂不建议作为依据'
-  const label = predictionResult.value?.confidenceLabel || predictionResult.value?.featureMeta?.confidenceLabel || '概率分离程度'
-  return `${label}（未校准，不代表命中率）`
+  if (!predictionResult.value) return predictionStatus.value === 'LOADING'
+    ? t('prediction.confidence.loading')
+    : t('prediction.confidence.waiting')
+  if (dataInsufficient.value) return t('prediction.confidence.insufficient')
+  const label = predictionResult.value?.confidenceLabel || predictionResult.value?.featureMeta?.confidenceLabel || t('prediction.confidence.defaultLabel')
+  return t('prediction.confidence.suffix', { label })
 })
-const statusActionLabel = computed(() => ({
-  PENDING: '自动检查中',
-  ERROR: '重新读取结果',
-  FAILED: '重新读取结果',
-  TIMEOUT: '重新读取结果',
-  UNAVAILABLE: '查看其他比赛'
-}[predictionStatus.value] || '查看生成状态'))
+const statusActionLabel = computed(() => t({
+  PENDING: 'prediction.action.pending',
+  ERROR: 'prediction.action.reload',
+  FAILED: 'prediction.action.reload',
+  TIMEOUT: 'prediction.action.reload',
+  UNAVAILABLE: 'prediction.action.viewOtherMatches'
+}[predictionStatus.value] || 'prediction.action.viewStatus'))
 const primaryDecisionText = computed(() => {
   if (isFinished.value) {
-    if (predictionHit.value === true) return `赛前判断与最终赛果一致，概率仅代表赛前信息下的倾向。`
-    if (predictionHit.value === false) return `赛前判断与最终赛果不同，下面保留原始概率用于复盘。`
-    return '比赛已经结束，以下内容保留赛前预测快照。'
+    if (predictionHit.value === true) return t('prediction.decision.hit')
+    if (predictionHit.value === false) return t('prediction.decision.miss')
+    return t('prediction.decision.ended')
   }
-  if (dataInsufficient.value) return '数据不足，暂不建议作为依据；下方概率仅作低可信度参考。'
-  return `模型更偏向${resultLabelShort.value}，当前概率分离度为 ${confidenceValue.value}；请结合下方风险提示阅读。`
+  if (dataInsufficient.value) return t('prediction.decision.insufficient')
+  return t('prediction.decision.lean', { result: resultLabelShort.value, margin: confidenceValue.value })
 })
 const outcomeIcon = computed(() => {
   if (!isFinished.value) return TrendCharts
   return predictionHit.value === false ? WarningFilled : CircleCheck
 })
 
-const featureLabelMap = {
-  elo_diff: 'ELO差值',
-  win_rate_diff: '近期胜率差',
-  goal_diff: '场均进球差',
-  h2h_balance: '历史交锋平衡',
-  rest_days_diff: '休息天数差',
-  home_elo: '主队ELO',
-  away_elo: '客队ELO',
-  home_win_rate: '主队胜率',
-  away_win_rate: '客队胜率',
-  home_avg_goals: '主队场均进球',
-  away_avg_goals: '客队场均进球',
-  home_avg_loss: '主队场均失球',
-  away_avg_loss: '客队场均失球',
-  home_days_rest: '主队休息天数',
-  away_days_rest: '客队休息天数',
-  h2h_home_wins: '历史交锋主胜',
-  h2h_draws: '历史交锋平局',
-  h2h_away_wins: '历史交锋客胜',
-  homeWinProb: '主胜概率',
-  drawProb: '平局概率',
-  awayWinProb: '客胜概率',
-  modelVersion: '模型版本'
+const featureLabelKeys = {
+  elo_diff: 'prediction.feature.eloDiff',
+  win_rate_diff: 'prediction.feature.winRateDiff',
+  goal_diff: 'prediction.feature.goalDiff',
+  h2h_balance: 'prediction.feature.h2hBalance',
+  rest_days_diff: 'prediction.feature.restDaysDiff',
+  home_elo: 'prediction.feature.homeElo',
+  away_elo: 'prediction.feature.awayElo',
+  home_win_rate: 'prediction.feature.homeWinRate',
+  away_win_rate: 'prediction.feature.awayWinRate',
+  home_avg_goals: 'prediction.feature.homeAvgGoals',
+  away_avg_goals: 'prediction.feature.awayAvgGoals',
+  home_avg_loss: 'prediction.feature.homeAvgLoss',
+  away_avg_loss: 'prediction.feature.awayAvgLoss',
+  home_days_rest: 'prediction.feature.homeDaysRest',
+  away_days_rest: 'prediction.feature.awayDaysRest',
+  h2h_home_wins: 'prediction.feature.h2hHomeWins',
+  h2h_draws: 'prediction.feature.h2hDraws',
+  h2h_away_wins: 'prediction.feature.h2hAwayWins',
+  homeWinProb: 'prediction.feature.homeWinProb',
+  drawProb: 'prediction.feature.drawProb',
+  awayWinProb: 'prediction.feature.awayWinProb',
+  modelVersion: 'prediction.feature.modelVersion'
 }
+const featureLabel = key => featureLabelKeys[key] ? t(featureLabelKeys[key]) : key
 
 const featureContrib = computed(() => {
   if (!predictionResult.value) return null
@@ -598,7 +638,7 @@ const featureContrib = computed(() => {
     const parsed = typeof item === 'string' ? parseFeatureString(item) : null
     if (parsed) {
       const feature = parsed.feature || `feature_${index + 1}`
-      const label = parsed.label || featureLabelMap[feature] || feature
+      const label = featureLabelKeys[feature] ? featureLabel(feature) : (parsed.label || feature)
       const importance = Number(parsed.importance ?? 0)
       const valueText = parsed.value !== undefined ? `${parsed.value}${parsed.unit ? ` ${parsed.unit}` : ''}` : `${importance || Math.max(0, 100 - index * 18)}%`
       return {
@@ -606,26 +646,27 @@ const featureContrib = computed(() => {
         label,
         importance: Number.isFinite(importance) && importance > 0 ? importance : null,
         detail: parsed.value !== undefined
-          ? `${label}当前值：${parsed.value}${parsed.unit ? ` ${parsed.unit}` : ''} · 这是模型参考输入，不代表因果关系`
-          : `${label}作为模型参考输入，仅展示相对排序，不代表因果关系`,
+          ? t('prediction.feature.currentValue', { label, value: `${parsed.value}${parsed.unit ? ` ${parsed.unit}` : ''}` })
+          : t('prediction.feature.rankOnly', { label }),
         valueText,
         percent: 0,
       }
     }
 
     if (typeof item === 'string') {
+      const label = featureLabelKeys[item] ? featureLabel(item) : item
       return {
         feature: item,
-        label: featureLabelMap[item] || item,
+        label,
         importance: null,
-        detail: `${featureLabelMap[item] || item}作为模型参考输入，仅展示相对排序，不代表因果关系`,
-        valueText: `排名 ${index + 1}`,
+        detail: t('prediction.feature.rankOnly', { label }),
+        valueText: t('prediction.feature.rank', { rank: index + 1 }),
         percent: 0,
       }
     }
 
     const feature = item?.feature || item?.name || item?.label || `feature_${index + 1}`
-    const label = item?.label || featureLabelMap[feature] || feature
+    const label = featureLabelKeys[feature] ? featureLabel(feature) : (item?.label || feature)
     const importance = Number(item?.importance ?? item?.value ?? 0)
     const unit = item?.unit ? String(item.unit) : ''
     return {
@@ -633,9 +674,9 @@ const featureContrib = computed(() => {
       label,
       importance: Number.isFinite(importance) && importance > 0 ? importance : null,
       detail: item?.value !== undefined
-        ? `${label}当前值：${item.value}${unit ? ` ${unit}` : ''} · 这是模型参考输入，不代表因果关系`
-        : `${label}作为模型参考输入，仅展示相对排序，不代表因果关系`,
-      valueText: item?.value !== undefined ? String(item.value) : (importance > 0 ? `${importance}` : `排名 ${index + 1}`),
+        ? t('prediction.feature.currentValue', { label, value: `${item.value}${unit ? ` ${unit}` : ''}` })
+        : t('prediction.feature.rankOnly', { label }),
+      valueText: item?.value !== undefined ? String(item.value) : (importance > 0 ? `${importance}` : t('prediction.feature.rank', { rank: index + 1 })),
       percent: 0,
     }
   })
@@ -654,10 +695,19 @@ const featureContrib = computed(() => {
   return []
 })
 
-const statusText = (status) => ({
-  NS: '未开赛', LIVE: '进行中', '1H': '上半场', HT: '中场', '2H': '下半场',
-  FT: '已结束', CANCEL: '已取消', POSTP: '已推迟'
-}[String(status || '').toUpperCase()] || '未开赛')
+const statusText = (status, fallback = '') => {
+  const key = {
+    NS: 'prediction.status.notStarted',
+    LIVE: 'prediction.status.live',
+    '1H': 'prediction.status.firstHalf',
+    HT: 'prediction.status.halfTime',
+    '2H': 'prediction.status.secondHalf',
+    FT: 'prediction.status.finished',
+    CANCEL: 'prediction.status.canceled',
+    POSTP: 'prediction.status.postponed'
+  }[String(status || '').toUpperCase()]
+  return key ? t(key) : (fallback || t('prediction.status.notStarted'))
+}
 
 const normalizeMatchDetail = (payload) => {
   const raw = Array.isArray(payload)
@@ -674,10 +724,26 @@ const normalizeMatchDetail = (payload) => {
       venue: { name: raw.venue || '' },
       date: raw.matchTime || ''
     },
-    league: { id: raw.leagueId || '', name: raw.leagueName || '', round: raw.round || '' },
+    league: {
+      id: raw.leagueId || '',
+      name: raw.leagueName || raw.league?.name || '',
+      round: raw.round || '',
+      leagueDisplay: raw.leagueDisplay || raw.leagueDisplayName || raw.league?.leagueDisplay || raw.league?.displayName || '',
+      displayName: raw.leagueDisplay || raw.leagueDisplayName || raw.league?.displayName || ''
+    },
     teams: {
-      home: { id: raw.homeTeamId || '', name: raw.homeTeamName || '主队', logo: raw.homeTeamLogo || '' },
-      away: { id: raw.awayTeamId || '', name: raw.awayTeamName || '客队', logo: raw.awayTeamLogo || '' }
+      home: {
+        id: raw.homeTeamId || '',
+        name: raw.homeTeamName || raw.teams?.home?.name || t('prediction.common.homeTeam'),
+        logo: raw.homeTeamLogo || raw.teams?.home?.logo || '',
+        teamDisplayName: raw.homeTeamDisplayName || raw.homeTeamDisplay || raw.teams?.home?.teamDisplayName || raw.teams?.home?.displayName || ''
+      },
+      away: {
+        id: raw.awayTeamId || '',
+        name: raw.awayTeamName || raw.teams?.away?.name || t('prediction.common.awayTeam'),
+        logo: raw.awayTeamLogo || raw.teams?.away?.logo || '',
+        teamDisplayName: raw.awayTeamDisplayName || raw.awayTeamDisplay || raw.teams?.away?.teamDisplayName || raw.teams?.away?.displayName || ''
+      }
     },
     goals: { home: raw.homeScore ?? null, away: raw.awayScore ?? null }
   }
@@ -724,10 +790,25 @@ const applyPredictionSnapshot = (snapshot) => {
       ...fixtureData.value,
       fixture: { ...fixtureData.value?.fixture, date: fixtureData.value?.fixture?.date || snapshot.matchTime },
       teams: {
-        home: { ...fixtureData.value?.teams?.home, name: home || fixtureData.value?.teams?.home?.name, logo: snapshot.homeTeamLogo || fixtureData.value?.teams?.home?.logo },
-        away: { ...fixtureData.value?.teams?.away, name: away || fixtureData.value?.teams?.away?.name, logo: snapshot.awayTeamLogo || fixtureData.value?.teams?.away?.logo }
+        home: {
+          ...fixtureData.value?.teams?.home,
+          name: home || fixtureData.value?.teams?.home?.name,
+          logo: snapshot.homeTeamLogo || fixtureData.value?.teams?.home?.logo,
+          teamDisplayName: snapshot.homeTeamDisplayName || snapshot.homeTeamDisplay || fixtureData.value?.teams?.home?.teamDisplayName
+        },
+        away: {
+          ...fixtureData.value?.teams?.away,
+          name: away || fixtureData.value?.teams?.away?.name,
+          logo: snapshot.awayTeamLogo || fixtureData.value?.teams?.away?.logo,
+          teamDisplayName: snapshot.awayTeamDisplayName || snapshot.awayTeamDisplay || fixtureData.value?.teams?.away?.teamDisplayName
+        }
       },
-      league: { ...fixtureData.value?.league, name: snapshot.leagueName || fixtureData.value?.league?.name }
+      league: {
+        ...fixtureData.value?.league,
+        name: snapshot.leagueName || fixtureData.value?.league?.name,
+        leagueDisplay: snapshot.leagueDisplay || snapshot.leagueDisplayName || fixtureData.value?.league?.leagueDisplay,
+        displayName: snapshot.leagueDisplay || snapshot.leagueDisplayName || fixtureData.value?.league?.displayName
+      }
     }
   }
   return true
@@ -787,7 +868,7 @@ const loadCachedPrediction = async ({ silent = false } = {}) => {
     predictionStatus.value = String(snapshot?.status || 'PENDING').toUpperCase()
     if (!predictionResult.value && predictionStatus.value === 'UNAVAILABLE') {
       const reason = snapshot?.fallbackReason || snapshot?.featureMeta?.gateReason
-      matchLoadError.value = reason ? `数据不足，暂不预测：${reason}` : '本场暂时没有可用预测，请稍后重试。'
+      matchLoadError.value = reason ? t('prediction.page.insufficientReason', { reason }) : t('prediction.page.noPredictionRetry')
     }
     if (predictionStatus.value === 'PENDING') queuePredictionPolling()
     else if (predictionStatus.value !== 'LOADING') stopPredictionPolling()
@@ -795,7 +876,7 @@ const loadCachedPrediction = async ({ silent = false } = {}) => {
     if (requestId !== predictionRequestSequence) return
     if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return
     predictionStatus.value = 'ERROR'
-    if (!predictionResult.value) matchLoadError.value = '预测结果暂时不可用，请稍后刷新。'
+    if (!predictionResult.value) matchLoadError.value = t('prediction.page.predictionUnavailable')
     stopPredictionPolling()
   } finally {
     if (requestId === predictionRequestSequence) {
@@ -819,14 +900,32 @@ const loadMatch = async () => {
       ...fixtureData.value,
       fixture: {
         id: fixtureId,
-        status: { short: 'NS', long: '未开赛' },
+        status: { short: 'NS', long: statusText('NS') },
         venue: { name: '' },
         date: queryText(route.query.matchTime)
       },
-      league: { id: queryText(route.query.leagueId), name: queryLeague, round: queryText(route.query.round) },
+      league: {
+        id: queryText(route.query.leagueId),
+        name: queryLeague,
+        round: queryText(route.query.round),
+        leagueDisplay: queryText(route.query.leagueDisplay || route.query.leagueDisplayName),
+        displayName: queryText(route.query.leagueDisplay || route.query.leagueDisplayName)
+      },
       teams: {
-        home: { ...homeTeam, id: homeId || homeTeam.id, name: homeTeam.name || homeName, logo: homeTeam.logo || queryText(route.query.homeLogo) },
-        away: { ...awayTeam, id: awayId || awayTeam.id, name: awayTeam.name || awayName, logo: awayTeam.logo || queryText(route.query.awayLogo) }
+        home: {
+          ...homeTeam,
+          id: homeId || homeTeam.id,
+          name: homeTeam.name || '',
+          logo: homeTeam.logo || queryText(route.query.homeLogo),
+          teamDisplayName: homeTeam.teamDisplayName || queryText(route.query.homeTeamDisplayName || route.query.homeDisplayName)
+        },
+        away: {
+          ...awayTeam,
+          id: awayId || awayTeam.id,
+          name: awayTeam.name || '',
+          logo: awayTeam.logo || queryText(route.query.awayLogo),
+          teamDisplayName: awayTeam.teamDisplayName || queryText(route.query.awayTeamDisplayName || route.query.awayDisplayName)
+        }
       },
       goals: { home: null, away: null }
     }
@@ -860,14 +959,14 @@ const loadMatch = async () => {
         } else if (!hasQueryContext) {
           fixtureNotFound.value = true
           predictionStatus.value = 'UNAVAILABLE'
-          matchLoadError.value = '未找到该场比赛的详细信息。'
+          matchLoadError.value = t('prediction.page.matchDetailNotFound')
         }
       } catch (error) {
         if (controller.signal.aborted && sequence !== loadSequence) return
         if (!hasQueryContext) {
           fixtureNotFound.value = true
           predictionStatus.value = 'UNAVAILABLE'
-          matchLoadError.value = error?.name === 'AbortError' ? '比赛详情加载超时，无法确认这场比赛。' : '比赛详情加载失败，无法确认这场比赛。'
+          matchLoadError.value = error?.name === 'AbortError' ? t('prediction.page.matchDetailTimeout') : t('prediction.page.matchDetailFailed')
         }
       } finally {
         window.clearTimeout(timeoutId)
@@ -888,11 +987,11 @@ const doPredict = async () => {
     // 手动刷新是一次新的轮询周期，避免上一次超时计数阻止后续重试。
     stopPredictionPolling()
     await loadCachedPrediction()
-    if (predictionStatus.value === 'READY') ElMessage.success('已加载本场统一预测结果')
-    else if (predictionStatus.value === 'PENDING') ElMessage.info('预测正在生成，请稍后刷新')
+    if (predictionStatus.value === 'READY') ElMessage.success(t('prediction.page.loadedSuccess'))
+    else if (predictionStatus.value === 'PENDING') ElMessage.info(t('prediction.page.generating'))
   } catch (e) {
     predictionStatus.value = 'ERROR'
-    ElMessage.warning('预测结果暂不可用，请稍后重试')
+    ElMessage.warning(t('prediction.page.unavailableRetry'))
   } finally {
     predicting.value = false
   }
@@ -929,9 +1028,11 @@ const goTeamSquad = (teamId, side) => {
     path: `/team/${encodeURIComponent(target)}/squad`,
     query: {
       name: target,
+      teamDisplayName: team.teamDisplayName || team.displayName || '',
       teamId: String(team.id || teamId || ''),
       logo: team.logo || '',
       league: fixtureData.value?.league?.name || queryText(route.query.leagueName, ''),
+      leagueDisplay: fixtureData.value?.league?.leagueDisplay || fixtureData.value?.league?.displayName || leagueDisplayName.value,
       season: String(new Date().getFullYear())
     }
   })
@@ -958,23 +1059,23 @@ const toggleReminder = async () => {
   if (reminderSet.value) {
     writeMatchReminders(items.filter(item => String(item?.fixtureId || '') !== String(fixtureId)))
     reminderSet.value = false
-    ElMessage.success('已关闭本场提醒')
+    ElMessage.success(t('prediction.page.reminderClosed'))
     return
   }
   const matchTime = fixtureData.value?.fixture?.date || route.query.matchTime || ''
   if (!matchTime || !parseBusinessDate(matchTime)) {
-    ElMessage.info('当前比赛时间尚未同步，暂时无法设置提醒')
+    ElMessage.info(t('prediction.page.matchTimeMissing'))
     return
   }
   writeMatchReminders([...items.filter(item => String(item?.fixtureId || '') !== String(fixtureId)), {
     fixtureId: String(fixtureId),
-    title: `${fixtureData.value?.teams?.home?.name || homeName} vs ${fixtureData.value?.teams?.away?.name || awayName}`,
+    title: `${homeTeamDisplayName.value} vs ${awayTeamDisplayName.value}`,
     matchTime,
     notified: false
   }])
   reminderSet.value = true
   if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {})
-  ElMessage.success('已设置开赛提醒')
+  ElMessage.success(t('prediction.page.reminderSet'))
 }
 const handleDecisionCommand = (command) => {
   if (command === 'share') shareReport()
@@ -1011,9 +1112,14 @@ const maybeAskBrowserNotifyAfterFavorite = async () => {
   if (localStorage.getItem(BROWSER_NOTIFY_DISMISS_KEY) === '1') return
   try {
     await ElMessageBox.confirm(
-      '收藏后可在开赛前收到站内提醒。是否同时开启浏览器通知？可稍后在通知中心处理。',
-      '开启浏览器通知',
-      { confirmButtonText: '开启', cancelButtonText: '暂时不用', type: 'info', distinguishCancelAndClose: true }
+      t('prediction.page.browserNotifyConfirm'),
+      t('prediction.page.browserNotifyTitle'),
+      {
+        confirmButtonText: t('prediction.page.browserNotifyConfirmBtn'),
+        cancelButtonText: t('prediction.page.browserNotifyCancelBtn'),
+        type: 'info',
+        distinguishCancelAndClose: true
+      }
     )
     await Notification.requestPermission()
   } catch (error) {
@@ -1032,40 +1138,40 @@ const toggleFavorite = async () => {
     if (isFavorite.value) {
       await favoriteApi.removeMatch(fixtureId)
       isFavorite.value = false
-      ElMessage.success('已取消收藏比赛')
+      ElMessage.success(t('prediction.page.favoriteRemoved'))
     } else {
-      const home = fixtureData.value?.teams?.home?.name || homeName
-      const away = fixtureData.value?.teams?.away?.name || awayName
+      const home = homeTeamDisplayName.value
+      const away = awayTeamDisplayName.value
       await favoriteApi.addMatch(fixtureId, `${home} vs ${away}`, {
         leagueName: fixtureData.value?.league?.name || queryText(route.query.leagueName, ''),
         matchTime: fixtureData.value?.fixture?.date || queryText(route.query.matchTime, '')
       })
       isFavorite.value = true
-      ElMessage.success('比赛收藏成功，开赛前将站内提醒')
+      ElMessage.success(t('prediction.page.favoriteAdded'))
       maybeAskBrowserNotifyAfterFavorite()
     }
   } catch (error) {
-    ElMessage.error(error?.message || '收藏操作失败，请稍后重试')
+    ElMessage.error(error?.message || t('prediction.page.favoriteFailed'))
   } finally {
     favoriteLoading.value = false
   }
 }
 
 const shareReport = async () => {
-  const title = `${fixtureData.value?.teams?.home?.name || homeName} vs ${fixtureData.value?.teams?.away?.name || awayName} · 预测报告`
+  const title = t('prediction.page.shareReportTitle', { home: homeTeamDisplayName.value, away: awayTeamDisplayName.value })
   const url = window.location.href
   try {
     if (navigator.share) {
-      await navigator.share({ title, text: '查看这场比赛的统一预测与赛前数据覆盖', url })
+      await navigator.share({ title, text: t('prediction.page.shareText'), url })
     } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url)
-      ElMessage.success('报告链接已复制')
+      ElMessage.success(t('prediction.page.reportLinkCopied'))
     } else {
-      window.prompt('复制报告链接', url)
+      window.prompt(t('prediction.page.copyReportLink'), url)
     }
     analyticsApi.track('prediction_shared', { page: route.fullPath, entityType: 'match', entityId: fixtureId }).catch(() => {})
   } catch (error) {
-    if (error?.name !== 'AbortError') ElMessage.info('分享已取消')
+    if (error?.name !== 'AbortError') ElMessage.info(t('prediction.page.shareCanceled'))
   }
 }
 
@@ -1093,7 +1199,13 @@ const openAgent = () => {
       drawProb: predictionResult.value?.drawProb ?? '',
       awayWinProb: predictionResult.value?.awayWinProb ?? '',
       explanation: predictionResult.value?.explanation || '',
-      contextSummary: `${modelDisplayName.value}；${prematchQualityLabel.value || '赛前数据覆盖未知'}；${isFinished.value ? `实际结果${actualResultLabel.value || '未知'}` : '比赛尚未结束'}`
+      contextSummary: t('prediction.page.contextSummary', {
+        model: modelDisplayName.value,
+        coverage: prematchQualityLabel.value || t('prediction.page.contextCoverageUnknown'),
+        result: isFinished.value
+          ? t('prediction.page.contextActualResult', { result: actualResultLabel.value || t('prediction.common.unknown') })
+          : t('prediction.page.contextMatchNotFinished')
+      })
     }
   })
 }
@@ -1108,12 +1220,12 @@ const parseBusinessDate = value => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const date = parseBusinessDate(dateStr)
-  if (!date) return '时间待定'
-  return new Intl.DateTimeFormat('zh-CN', {
+  if (!date) return t('prediction.page.timeTbd')
+  return new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit'
-  }).format(date) + '（北京时间）'
+  }).format(date) + t('prediction.page.beijingTime')
 }
 
 onMounted(async () => {
@@ -1137,13 +1249,30 @@ watch(() => route.fullPath, async () => {
   reminderSet.value = false
   fixtureData.value = {
     teams: {
-      home: { id: homeId, name: homeName, logo: queryText(route.query.homeLogo) },
-      away: { id: awayId, name: awayName, logo: queryText(route.query.awayLogo) }
+      home: {
+        id: homeId,
+        name: queryText(route.query.homeName || route.query.home),
+        logo: queryText(route.query.homeLogo),
+        teamDisplayName: queryText(route.query.homeTeamDisplayName || route.query.homeDisplayName)
+      },
+      away: {
+        id: awayId,
+        name: queryText(route.query.awayName || route.query.away),
+        logo: queryText(route.query.awayLogo),
+        teamDisplayName: queryText(route.query.awayTeamDisplayName || route.query.awayDisplayName)
+      }
     }
   }
   await loadMatch()
   await loadFavoriteState()
   syncReminderState()
+})
+
+// Re-fetch the fixture and current prediction snapshot so server-localised
+// display copy is refreshed after the language switch.
+watch(locale, async () => {
+  if (!pageMounted) return
+  await loadMatch()
 })
 
 onUnmounted(() => {

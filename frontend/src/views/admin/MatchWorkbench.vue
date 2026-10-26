@@ -2,14 +2,14 @@
   <el-card class="panel-card" shadow="never">
     <template #header>
       <div class="panel-header">
-        <span>比赛工作台</span>
+        <span>{{ t('admin.workbench.title') }}</span>
         <div class="panel-actions">
           <el-date-picker
             :model-value="date"
             type="date"
             value-format="YYYY-MM-DD"
             format="YYYY-MM-DD"
-            placeholder="筛选日期"
+            :placeholder="t('admin.workbench.placeholder.date')"
             clearable
             style="width: 150px"
             @update:model-value="$emit('update:date', $event)"
@@ -17,7 +17,7 @@
           />
           <el-input
             :model-value="keyword"
-            placeholder="搜索联赛/球队"
+            :placeholder="t('admin.workbench.placeholder.search')"
             clearable
             style="width: 200px"
             @update:model-value="$emit('update:keyword', $event)"
@@ -25,65 +25,65 @@
           />
           <el-select
             :model-value="status"
-            placeholder="状态"
+            :placeholder="t('admin.workbench.placeholder.status')"
             clearable
             style="width: 140px"
             @update:model-value="$emit('update:status', $event)"
             @change="$emit('reload', 1)"
           >
-            <el-option label="未开始" value="NS" />
-            <el-option label="进行中" value="LIVE" />
-            <el-option label="已完场" value="FT" />
-            <el-option label="已取消" value="CANCEL" />
+            <el-option :label="t('admin.workbench.status.ns')" value="NS" />
+            <el-option :label="t('admin.workbench.status.live')" value="LIVE" />
+            <el-option :label="t('admin.workbench.status.ft')" value="FT" />
+            <el-option :label="t('admin.workbench.status.cancel')" value="CANCEL" />
           </el-select>
-          <el-button type="primary" @click="$emit('create')">新增维护项</el-button>
+          <el-button type="primary" @click="$emit('create')">{{ t('admin.workbench.create') }}</el-button>
         </div>
       </div>
     </template>
 
     <div class="workbench-summary">
-      <div><span>当前页</span><strong>{{ matches.length }}</strong></div>
-      <div><span>进行中</span><strong class="is-live">{{ liveCount }}</strong></div>
-      <div><span>待开赛</span><strong class="is-upcoming">{{ upcomingCount }}</strong></div>
-      <div class="summary-note">筛选条件会同步影响列表与分页</div>
+      <div><span>{{ t('admin.workbench.summary.current') }}</span><strong>{{ matches.length }}</strong></div>
+      <div><span>{{ t('admin.workbench.summary.live') }}</span><strong class="is-live">{{ liveCount }}</strong></div>
+      <div><span>{{ t('admin.workbench.summary.upcoming') }}</span><strong class="is-upcoming">{{ upcomingCount }}</strong></div>
+      <div class="summary-note">{{ t('admin.workbench.summary.note') }}</div>
     </div>
 
-    <PageState v-if="error" type="error" title="比赛数据加载失败" :description="error" action-text="重试" @action="$emit('reload', page)" />
+    <PageState v-if="error" type="error" :title="t('admin.workbench.loadFailed')" :description="error" :action-text="t('admin.common.retry')" @action="$emit('reload', page)" />
     <el-table v-else :data="matches" stripe>
       <el-table-column prop="fixtureId" label="Fixture ID" width="110" />
       <el-table-column prop="externalMatchId" label="External ID" width="150" show-overflow-tooltip />
-      <el-table-column label="日期" width="130">
+      <el-table-column :label="t('admin.workbench.col.date')" width="130">
         <template #default="{ row }">{{ row.matchDate || '-' }}</template>
       </el-table-column>
-      <el-table-column label="主队头像" width="80">
+      <el-table-column :label="t('admin.workbench.col.homeLogo')" width="80">
         <template #default="{ row }">
           <el-avatar :size="32" :src="getMediaAssetUrl(row.homeTeamLogo)">{{ row.homeTeamName?.slice(0, 1) || 'H' }}</el-avatar>
         </template>
       </el-table-column>
-      <el-table-column prop="homeTeamName" label="主队" min-width="150" />
-      <el-table-column label="客队头像" width="80">
+      <el-table-column prop="homeTeamName" :label="t('admin.workbench.col.homeTeam')" min-width="150" />
+      <el-table-column :label="t('admin.workbench.col.awayLogo')" width="80">
         <template #default="{ row }">
           <el-avatar :size="32" :src="getMediaAssetUrl(row.awayTeamLogo)">{{ row.awayTeamName?.slice(0, 1) || 'A' }}</el-avatar>
         </template>
       </el-table-column>
-      <el-table-column prop="awayTeamName" label="客队" min-width="150" />
-      <el-table-column prop="homeScore" label="主比分" width="90" />
-      <el-table-column prop="awayScore" label="客比分" width="90" />
-      <el-table-column prop="status" label="状态" width="100">
+      <el-table-column prop="awayTeamName" :label="t('admin.workbench.col.awayTeam')" min-width="150" />
+      <el-table-column prop="homeScore" :label="t('admin.workbench.col.homeScore')" width="90" />
+      <el-table-column prop="awayScore" :label="t('admin.workbench.col.awayScore')" width="90" />
+      <el-table-column prop="status" :label="t('admin.workbench.col.status')" width="100">
         <template #default="{ row }">
-          <el-tag :type="matchStatusTag(row.status)">{{ row.status || 'UNKNOWN' }}</el-tag>
+          <el-tag :type="matchStatusTag(row.status)">{{ row.status || t('admin.common.unknown') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column :label="t('admin.workbench.col.actions')" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="$emit('edit', row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="$emit('delete', row)">删除</el-button>
+          <el-button size="small" @click="$emit('edit', row)">{{ t('admin.workbench.edit') }}</el-button>
+          <el-button size="small" type="danger" @click="$emit('delete', row)">{{ t('admin.workbench.delete') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <div class="pager-bar">
-      <span>共 {{ total }} 条</span>
+      <span>{{ t('admin.common.totalRecords', { total }) }}</span>
       <el-pagination
         background
         layout="total, prev, pager, next, sizes, jumper"
@@ -102,6 +102,9 @@
 import { computed } from 'vue'
 import PageState from '../../components/layout/PageState.vue'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   matches: { type: Array, default: () => [] },

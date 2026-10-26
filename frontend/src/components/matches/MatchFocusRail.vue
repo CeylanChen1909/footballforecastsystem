@@ -2,27 +2,27 @@
   <section class="focus-rail" aria-labelledby="match-focus-title">
     <div class="focus-head">
       <div>
-        <span class="focus-kicker">赛程</span>
-        <h2 id="match-focus-title">比赛焦点</h2>
+        <span class="focus-kicker">{{ t('matches.focusKicker') }}</span>
+        <h2 id="match-focus-title">{{ t('matches.focusTitle') }}</h2>
       </div>
       <div class="focus-head-actions">
-        <span v-if="meta?.returnedCount != null" class="focus-count">{{ meta.returnedCount }} 场</span>
-        <button v-if="error && items.length" type="button" class="focus-retry-link" @click="$emit('retry')">重新更新</button>
+        <span v-if="meta?.returnedCount != null" class="focus-count">{{ t('matches.matchCount', { count: meta.returnedCount }) }}</span>
+        <button v-if="error && items.length" type="button" class="focus-retry-link" @click="$emit('retry')">{{ t('matches.focusRetry') }}</button>
       </div>
     </div>
 
-    <div v-if="loading" class="focus-list focus-list-skeleton" aria-live="polite" aria-label="正在加载比赛焦点">
+    <div v-if="loading" class="focus-list focus-list-skeleton" aria-live="polite" :aria-label="t('matches.focusLoadingAria')">
       <div v-for="index in 3" :key="index" class="focus-skeleton-card"><i></i><b></b><em></em></div>
     </div>
     <div v-else-if="error && !items.length" class="focus-state focus-state-error" role="alert">
-      <strong>比赛焦点暂时无法更新</strong>
+      <strong>{{ t('matches.focusUnavailable') }}</strong>
       <span>{{ error }}</span>
-      <button type="button" @click="$emit('retry')">重试</button>
+      <button type="button" @click="$emit('retry')">{{ t('matches.retry') }}</button>
     </div>
     <div v-else-if="!items.length" class="focus-state" aria-live="polite">
       <strong>{{ emptyTitle }}</strong>
       <span>{{ emptyDescription }}</span>
-      <button type="button" @click="$emit('view-all')">查看全部赛程</button>
+      <button type="button" @click="$emit('view-all')">{{ t('matches.viewAllFixtures') }}</button>
     </div>
     <div v-else class="focus-list" :class="{ 'is-stale': stale }">
       <article v-for="(match, index) in items" :key="recommendationKey(match, index)" class="focus-card" :class="`is-${tier(match)}`">
@@ -33,28 +33,31 @@
             <span class="focus-status"><i v-if="tier(match) === 'LIVE'"></i>{{ statusText(match) }}</span>
           </span>
           <span class="focus-matchup">
-            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${homeName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${homeName(match)}暂无队徽`">{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
-            <span class="focus-center"><b>{{ scoreOrTime(match) }}</b><small>{{ tier(match) === 'LIVE' ? '进行中' : kickoffLabel(match) }}</small></span>
-            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="`${awayName(match)}队徽`" @error="onLogoError" /><b v-else title="暂无队徽" :aria-label="`${awayName(match)}暂无队徽`">{{ initial(awayName(match)) }}</b></span>
+            <span class="focus-team"><img v-if="homeLogo(match)" :src="homeLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="t('matches.teamLogoAlt', { team: homeName(match) })" @error="onLogoError" /><b v-else :title="t('matches.noLogo')" :aria-label="t('matches.noLogoAria', { team: homeName(match) })">{{ initial(homeName(match)) }}</b><strong>{{ homeName(match) }}</strong></span>
+            <span class="focus-center"><b>{{ scoreOrTime(match) }}</b><small>{{ tier(match) === 'LIVE' ? t('matches.liveNow') : kickoffLabel(match) }}</small></span>
+            <span class="focus-team away"><strong>{{ awayName(match) }}</strong><img v-if="awayLogo(match)" :src="awayLogo(match)" width="24" height="24" loading="lazy" decoding="async" :alt="t('matches.teamLogoAlt', { team: awayName(match) })" @error="onLogoError" /><b v-else :title="t('matches.noLogo')" :aria-label="t('matches.noLogoAria', { team: awayName(match) })">{{ initial(awayName(match)) }}</b></span>
           </span>
           <span class="focus-reasons">
             <em v-for="reason in reasons(match).slice(0, 2)" :key="reason">{{ reason }}</em>
           </span>
         </button>
         <div class="focus-card-actions">
-          <button type="button" @click="$emit('predict', match)">{{ tier(match) === 'RECENT' ? '查看复盘' : '查看预测' }}</button>
+          <button type="button" @click="$emit('predict', match)">{{ tier(match) === 'RECENT' ? t('matches.viewReview') : t('matches.viewPrediction') }}</button>
         </div>
       </article>
     </div>
-    <p v-if="stale" class="focus-stale-note" role="status">推荐数据暂未刷新，显示上次成功读取的结果。</p>
+    <p v-if="stale" class="focus-stale-note" role="status">{{ t('matches.focusStale') }}</p>
   </section>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { formatMatchTime, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../../utils/match'
-import { getTeamDisplayName } from '../../utils/teamNames'
+import { formatMatchTime, getLeagueDisplay, getMatchTimestamp, getStatusText, getTeamDisplay, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../../utils/match'
+import { displayLeagueName, getTeamDisplayName } from '../../utils/teamNames'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
+import { useI18n } from '../../i18n'
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -66,35 +69,35 @@ const props = defineProps({
 })
 defineEmits(['open', 'predict', 'retry', 'view-all'])
 
-const emptyTitle = computed(() => props.meta?.emptyReason === 'NO_MATCHES_IN_WINDOW' ? '当前日期没有比赛' : '暂无重点比赛')
-const emptyDescription = computed(() => props.meta?.emptyReason === 'NO_VISIBLE_FOCUS_MATCHES' ? '当前数据已读取，但没有符合焦点规则的赛事。' : '当前没有正在进行或临近开赛的重点赛事。')
+const emptyTitle = computed(() => props.meta?.emptyReason === 'NO_MATCHES_IN_WINDOW' ? t('matches.noMatchesInWindow') : t('matches.noFocusMatches'))
+const emptyDescription = computed(() => props.meta?.emptyReason === 'NO_VISIBLE_FOCUS_MATCHES' ? t('matches.noVisibleFocusMatches') : t('matches.noUpcomingFocus'))
 const team = (match, side) => match?.teams?.[side] || {}
-const homeName = match => getTeamDisplayName(team(match, 'home').name || match?.homeTeamName || '主队', props.teamNameMode)
-const awayName = match => getTeamDisplayName(team(match, 'away').name || match?.awayTeamName || '客队', props.teamNameMode)
-const leagueName = match => match?.league?.name || match?.leagueName || '其他赛事'
+const homeName = match => getTeamDisplayName(team(match, 'home').name || match?.homeTeamName || t('matches.homeTeam'), props.teamNameMode, getTeamDisplay(match, 'home'))
+const awayName = match => getTeamDisplayName(team(match, 'away').name || match?.awayTeamName || t('matches.awayTeam'), props.teamNameMode, getTeamDisplay(match, 'away'))
+const leagueName = match => displayLeagueName(match?.league?.name || match?.leagueName || t('matches.leagueOther'), getLeagueDisplay(match))
 const homeLogo = match => getMediaAssetUrl(team(match, 'home').logo || match?.homeTeamLogo || '')
 const awayLogo = match => getMediaAssetUrl(team(match, 'away').logo || match?.awayTeamLogo || '')
 const initial = name => String(name || '?').trim().slice(0, 1).toUpperCase()
 const recommendationKey = (match, index) => match?.matchId || match?.id || match?.fixtureId || `${homeName(match)}-${awayName(match)}-${index}`
 const tier = match => String(match?.recommendation?.tier || (isLiveMatch(match) ? 'LIVE' : isFinishedMatch(match) ? 'RECENT' : 'UPCOMING')).toUpperCase()
-const statusText = match => getStatusText(match) || (tier(match) === 'LIVE' ? '进行中' : tier(match) === 'RECENT' ? '已结束' : '未开始')
+const statusText = match => getStatusText(match) || (tier(match) === 'LIVE' ? t('matches.liveNow') : tier(match) === 'RECENT' ? t('matches.finished') : t('matches.notStarted'))
 const reasons = match => {
   const texts = Array.isArray(match?.recommendation?.reasonTexts) ? match.recommendation.reasonTexts : []
   const codes = Array.isArray(match?.recommendation?.reasonCodes) ? match.recommendation.reasonCodes : []
-  if (!texts.length) return ['当前赛程焦点']
+  if (!texts.length) return [t('matches.focusDefaultReason')]
   const priority = { POPULAR_TEAM: 0, LIVE_NOW: 0, KICKOFF_SOON: 1, TOP_LEAGUE: 2, KEY_ROUND: 3, KICKOFF_TODAY: 4 }
   return texts.map((text, index) => ({ text, code: codes[index] || '' }))
     .sort((a, b) => (priority[a.code] ?? 9) - (priority[b.code] ?? 9))
     .map(item => item.text)
 }
 const timestamp = match => getMatchTimestamp(match)
-const kickoffLabel = match => timestamp(match) ? formatMatchTime(match) : '时间待同步'
+const kickoffLabel = match => timestamp(match) ? formatMatchTime(match) : t('matches.timePending')
 const scoreOrTime = match => {
   const home = match?.goals?.home ?? match?.homeScore
   const away = match?.goals?.away ?? match?.awayScore
   if ((tier(match) === 'LIVE' || tier(match) === 'RECENT') && home != null && away != null) return `${home} - ${away}`
   if (!timestamp(match)) return '—'
-  return new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp(match)))
+  return new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp(match)))
 }
 const onLogoError = event => { event.target.style.display = 'none' }
 

@@ -1,87 +1,89 @@
 <template>
   <div class="login-page">
-    <a class="skip-link" href="#app-main">跳转到主要内容</a>
+    <a class="skip-link" href="#app-main">{{ t('account.login.skipToMain') }}</a>
     <main id="app-main" class="login-card reveal" tabindex="-1">
       <div class="logo">
         <div class="logo-icon"><el-icon :size="36"><Football /></el-icon></div>
         <h1>ChenFootball</h1>
-        <p>登录或注册账号</p>
+        <p>{{ t('account.login.subtitle') }}</p>
       </div>
 
       <el-tabs v-model="activeTab" class="auth-tabs">
-        <el-tab-pane label="登录" name="login">
+        <el-tab-pane :label="t('account.login.tab')" name="login">
           <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" label-position="top">
-            <el-form-item label="邮箱或账号" prop="account">
-              <el-input v-model="loginForm.account" placeholder="请输入邮箱或账号" prefix-icon="Message" clearable size="large" />
+            <el-form-item :label="t('account.login.accountLabel')" prop="account">
+              <el-input v-model="loginForm.account" :placeholder="t('account.login.accountPlaceholder')" prefix-icon="Message" clearable size="large" />
             </el-form-item>
-            <el-form-item v-if="userStore.loginChallenge" label="安全验证" prop="captchaAnswer">
-              <div class="captcha-row"><span class="captcha-question">{{ userStore.loginChallenge.captchaQuestion }}</span><el-input v-model="loginForm.captchaAnswer" placeholder="计算结果" /></div>
+            <el-form-item v-if="userStore.loginChallenge" :label="t('account.login.securityCheck')" prop="captchaAnswer">
+              <div class="captcha-row"><span class="captcha-question">{{ userStore.loginChallenge.captchaQuestion }}</span><el-input v-model="loginForm.captchaAnswer" :placeholder="t('account.login.captchaPlaceholder')" /></div>
             </el-form-item>
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock"
+            <el-form-item :label="t('account.login.passwordLabel')" prop="password">
+              <el-input v-model="loginForm.password" type="password" :placeholder="t('account.login.passwordPlaceholder')" prefix-icon="Lock"
                 show-password @keyup.enter="handleLogin" size="large" />
             </el-form-item>
-            <div class="forgot-password" @click="showForgotPassword">忘记密码？</div>
+            <div class="forgot-password" @click="showForgotPassword">{{ t('account.login.forgotPassword') }}</div>
             <el-button type="primary" :loading="loading" class="submit-btn" @click="handleLogin">
-              登录
+              {{ t('account.login.loginButton') }}
             </el-button>
           </el-form>
         </el-tab-pane>
 
-        <el-tab-pane label="注册" name="register">
+        <el-tab-pane :label="t('account.login.registerTab')" name="register">
           <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-position="top">
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model="registerForm.email" placeholder="用于登录和接收验证码" prefix-icon="Message" clearable size="large" />
+            <el-form-item :label="t('account.register.emailLabel')" prop="email">
+              <el-input v-model="registerForm.email" :placeholder="t('account.register.emailPlaceholder')" prefix-icon="Message" clearable size="large" />
             </el-form-item>
-            <el-form-item label="昵称" prop="nickname">
-              <el-input v-model="registerForm.nickname" placeholder="对外展示的昵称" prefix-icon="User" clearable size="large" />
+            <el-form-item :label="t('account.register.nicknameLabel')" prop="nickname">
+              <el-input v-model="registerForm.nickname" :placeholder="t('account.register.nicknamePlaceholder')" prefix-icon="User" clearable size="large" />
             </el-form-item>
-            <el-form-item label="图形验证" prop="captchaAnswer">
+            <el-form-item :label="t('account.register.captchaLabel')" prop="captchaAnswer">
               <ImageCaptcha :image="registerCaptchaImage" v-model:answer="registerForm.captchaAnswer" @refresh="refreshRegisterCaptcha" />
             </el-form-item>
-            <el-form-item label="邮箱验证码" prop="verificationCode">
-              <div class="code-row"><el-input v-model="registerForm.verificationCode" placeholder="6 位验证码" /><el-button :disabled="codeCountdown > 0" @click="sendRegisterCode">{{ codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码' }}</el-button></div>
+            <el-form-item :label="t('account.common.emailCode')" prop="verificationCode">
+              <div class="code-row"><el-input v-model="registerForm.verificationCode" :placeholder="t('account.login.codePlaceholder')" /><el-button :disabled="codeCountdown > 0" @click="sendRegisterCode">{{ codeCountdown > 0 ? t('account.login.resend', { seconds: codeCountdown }) : t('account.login.sendCode') }}</el-button></div>
             </el-form-item>
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="registerForm.password" type="password" placeholder="请输入密码（至少8位）"
+            <el-form-item :label="t('account.login.passwordLabel')" prop="password">
+              <el-input v-model="registerForm.password" type="password" :placeholder="t('account.register.passwordPlaceholder')"
                 prefix-icon="Lock" show-password size="large" />
             </el-form-item>
-            <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input v-model="registerForm.confirmPassword" type="password" placeholder="请再次输入密码"
+            <el-form-item :label="t('account.register.confirmPasswordLabel')" prop="confirmPassword">
+              <el-input v-model="registerForm.confirmPassword" type="password" :placeholder="t('account.register.confirmPasswordPlaceholder')"
                 prefix-icon="Lock" show-password @keyup.enter="handleRegister" size="large" />
             </el-form-item>
             <el-button type="primary" :loading="loading" class="submit-btn" @click="handleRegister">
-              注册
+              {{ t('account.register.registerButton') }}
             </el-button>
           </el-form>
         </el-tab-pane>
       </el-tabs>
 
-      <div class="login-footnote">登录后可同步收藏、预测历史与提醒设置；没有账号可直接注册。<router-link to="/privacy">隐私与数据说明</router-link></div>
-      <div class="login-footnote">© ChenFootball · 赛程与预测</div>
+      <div class="login-footnote">{{ t('account.login.footnote') }} <router-link to="/privacy">{{ t('account.login.privacyLink') }}</router-link></div>
+      <div class="login-footnote">{{ t('account.login.copyright') }}</div>
     </main>
-    <el-dialog v-model="resetVisible" title="通过邮箱重置密码" width="min(420px, 92vw)">
+    <el-dialog v-model="resetVisible" :title="t('account.reset.title')" width="min(420px, 92vw)">
       <el-form label-position="top">
-        <el-form-item label="注册邮箱"><el-input v-model="resetForm.email" type="email" placeholder="请输入注册邮箱" /></el-form-item>
-        <el-form-item label="验证码"><div class="code-row"><el-input v-model="resetForm.verificationCode" placeholder="6 位验证码" /><el-button :disabled="resetCountdown > 0" @click="sendResetCode">{{ resetCountdown > 0 ? `${resetCountdown}s 后重发` : '发送验证码' }}</el-button></div></el-form-item>
-        <el-form-item label="新密码"><el-input v-model="resetForm.newPassword" type="password" show-password placeholder="至少 8 位" /></el-form-item>
+        <el-form-item :label="t('account.reset.emailLabel')"><el-input v-model="resetForm.email" type="email" :placeholder="t('account.reset.emailPlaceholder')" /></el-form-item>
+        <el-form-item :label="t('account.common.verificationCode')"><div class="code-row"><el-input v-model="resetForm.verificationCode" :placeholder="t('account.login.codePlaceholder')" /><el-button :disabled="resetCountdown > 0" @click="sendResetCode">{{ resetCountdown > 0 ? t('account.login.resend', { seconds: resetCountdown }) : t('account.login.sendCode') }}</el-button></div></el-form-item>
+        <el-form-item :label="t('account.reset.newPasswordLabel')"><el-input v-model="resetForm.newPassword" type="password" show-password :placeholder="t('account.reset.newPasswordPlaceholder')" /></el-form-item>
       </el-form>
-      <template #footer><el-button @click="resetVisible=false">取消</el-button><el-button type="primary" @click="submitReset">重置密码</el-button></template>
+      <template #footer><el-button @click="resetVisible=false">{{ t('account.common.cancel') }}</el-button><el-button type="primary" @click="submitReset">{{ t('account.reset.submit') }}</el-button></template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
 import { Football } from '@element-plus/icons-vue'
 import { userApi } from '../../api'
 import ImageCaptcha from '../../components/auth/ImageCaptcha.vue'
+import { useI18n } from '../../i18n'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 const activeTab = ref('login')
 const loading = ref(false)
@@ -101,24 +103,24 @@ let resetTimer = null
 watch(activeTab, value => { if (value === 'register' && !registerCaptchaImage.value) refreshRegisterCaptcha() })
 
 const validateConfirm = (rule, value, callback) => {
-  if (value !== registerForm.password) callback(new Error('两次密码不一致'))
+  if (value !== registerForm.password) callback(new Error(t('account.validation.passwordMismatch')))
   else callback()
 }
 
-const loginRules = {
-  account: [{ required: true, message: '请输入邮箱或账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  captchaAnswer: [{ required: true, message: '请输入计算结果', trigger: 'blur' }]
-}
-const registerRules = {
-  account: [{ required: true, message: '请输入邮箱或账号', trigger: 'blur' }],
-  email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }, { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
-  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }, { max: 32, message: '昵称不能超过32个字符', trigger: 'blur' }],
-  verificationCode: [{ required: true, message: '请输入邮箱验证码', trigger: 'blur' }, { len: 6, message: '验证码为6位数字', trigger: 'blur' }],
-  captchaAnswer: [{ required: true, message: '请输入计算结果', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 8, message: '密码至少8位', trigger: 'blur' }],
-  confirmPassword: [{ required: true, message: '请确认密码', trigger: 'blur' }, { validator: validateConfirm, trigger: 'blur' }]
-}
+const loginRules = computed(() => ({
+  account: [{ required: true, message: t('account.validation.accountRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('account.validation.passwordRequired'), trigger: 'blur' }],
+  captchaAnswer: [{ required: true, message: t('account.validation.captchaRequired'), trigger: 'blur' }]
+}))
+const registerRules = computed(() => ({
+  account: [{ required: true, message: t('account.validation.accountRequired'), trigger: 'blur' }],
+  email: [{ required: true, message: t('account.validation.emailRequired'), trigger: 'blur' }, { type: 'email', message: t('account.validation.emailFormat'), trigger: 'blur' }],
+  nickname: [{ required: true, message: t('account.validation.nicknameRequired'), trigger: 'blur' }, { max: 32, message: t('account.validation.nicknameMax'), trigger: 'blur' }],
+  verificationCode: [{ required: true, message: t('account.validation.emailCodeRequired'), trigger: 'blur' }, { len: 6, message: t('account.validation.emailCodeLength'), trigger: 'blur' }],
+  captchaAnswer: [{ required: true, message: t('account.validation.captchaRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('account.validation.passwordRequired'), trigger: 'blur' }, { min: 8, message: t('account.validation.passwordMin'), trigger: 'blur' }],
+  confirmPassword: [{ required: true, message: t('account.validation.confirmRequired'), trigger: 'blur' }, { validator: validateConfirm, trigger: 'blur' }]
+}))
 
 const refreshRegisterCaptcha = async () => {
   registerForm.captchaAnswer = ''
@@ -126,47 +128,47 @@ const refreshRegisterCaptcha = async () => {
   try {
     const result = await userApi.getRegistrationCaptcha()
     const data = result?.data ?? result
-    if (data?.ok === false) throw new Error(data.message || '图形验证码加载失败')
+    if (data?.ok === false) throw new Error(data.message || t('account.errors.captchaLoadFailed'))
     registerForm.captchaId = data?.captchaId || ''
     registerCaptchaImage.value = data?.image || ''
-  } catch (error) { ElMessage.error(error?.message || '图形验证加载失败，请刷新后重试') }
+  } catch (error) { ElMessage.error(error?.message || t('account.errors.captchaLoadFailedRetry')) }
 }
 
 const showForgotPassword = () => { resetVisible.value = true }
 
 const sendRegisterCode = async () => {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) { ElMessage.warning('请先输入有效邮箱'); return }
-  if (!registerForm.captchaId || !registerForm.captchaAnswer) { ElMessage.warning('请先完成图形验证'); return }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerForm.email)) { ElMessage.warning(t('account.errors.emailInvalid')); return }
+  if (!registerForm.captchaId || !registerForm.captchaAnswer) { ElMessage.warning(t('account.errors.captchaNotCompleted')); return }
   try {
     const result = await userApi.sendEmailCode(registerForm.email, 'REGISTER', registerForm.captchaId, registerForm.captchaAnswer)
-    if (result?.ok === false) throw new Error(result.message || '验证码发送失败')
-    ElMessage.success(result?.delivery === 'console' ? '验证码已写入后端开发日志' : '验证码已发送，请查收邮件')
+    if (result?.ok === false) throw new Error(result.message || t('account.errors.codeSendFailed'))
+    ElMessage.success(result?.delivery === 'console' ? t('account.notice.codeInDevLog') : t('account.notice.codeSent'))
     await refreshRegisterCaptcha()
     codeCountdown.value = 60
     codeTimer = window.setInterval(() => { codeCountdown.value -= 1; if (codeCountdown.value <= 0) { window.clearInterval(codeTimer); codeTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
+  } catch (error) { ElMessage.error(error?.message || t('account.errors.codeSendRetry')) }
 }
 
 const sendResetCode = async () => {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetForm.email)) { ElMessage.warning('请先输入有效邮箱'); return }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetForm.email)) { ElMessage.warning(t('account.errors.emailInvalid')); return }
   try {
     const result = await userApi.requestPasswordReset(resetForm.email)
-    if (result?.ok === false) throw new Error(result.message || '验证码发送失败')
-    ElMessage.success('如果该邮箱已注册，验证码已发送')
+    if (result?.ok === false) throw new Error(result.message || t('account.errors.codeSendFailed'))
+    ElMessage.success(t('account.notice.resetCodeSent'))
     resetCountdown.value = 60
     resetTimer = window.setInterval(() => { resetCountdown.value -= 1; if (resetCountdown.value <= 0) { window.clearInterval(resetTimer); resetTimer = null } }, 1000)
-  } catch (error) { ElMessage.error(error?.message || '验证码未能发送，请稍后重试') }
+  } catch (error) { ElMessage.error(error?.message || t('account.errors.codeSendRetry')) }
 }
 const submitReset = async () => {
-  if (!resetForm.email || !/^\d{6}$/.test(resetForm.verificationCode) || resetForm.newPassword.length < 8) { ElMessage.warning('请填写注册邮箱、6 位验证码，以及至少 8 位新密码'); return }
+  if (!resetForm.email || !/^\d{6}$/.test(resetForm.verificationCode) || resetForm.newPassword.length < 8) { ElMessage.warning(t('account.errors.resetFormInvalid')); return }
   try {
     const result = await userApi.resetPassword(resetForm.email, resetForm.verificationCode, resetForm.newPassword)
-    if (result?.ok === false) throw new Error(result.message || '密码重置失败')
-    ElMessage.success('密码已重置，请使用新密码登录')
+    if (result?.ok === false) throw new Error(result.message || t('account.errors.resetFailed'))
+    ElMessage.success(t('account.notice.resetSuccess'))
     resetVisible.value = false
     loginForm.account = resetForm.email
     resetForm.verificationCode = ''; resetForm.newPassword = ''
-  } catch (error) { ElMessage.error(error?.message || '密码重置未完成，请确认验证码后重试') }
+  } catch (error) { ElMessage.error(error?.message || t('account.errors.resetRetry')) }
 }
 
 const handleLogin = async () => {
@@ -176,7 +178,7 @@ const handleLogin = async () => {
   const ok = await userStore.login(loginForm.account, loginForm.password, userStore.loginChallenge?.captchaId, loginForm.captchaAnswer)
   loading.value = false
   if (ok) {
-    ElMessage.success('登录成功')
+    ElMessage.success(t('account.notice.loginSuccess'))
     const redirect = router.currentRoute.value.query.redirect
     if (typeof redirect === 'string' && redirect.startsWith('/')) {
       router.replace(redirect)

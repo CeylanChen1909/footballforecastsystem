@@ -3,20 +3,20 @@
     <div class="match-info">
       <div class="team-row">
         <div class="team">
-          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${homeDisplayName}队徽`" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
-          <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${homeDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
-          <span class="team-name" role="button" tabindex="0" :title="homeDisplayName" :aria-label="`查看${homeDisplayName}资料`" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
+          <img v-if="homeLogoVisible" :src="homeLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="t('matches.teamLogoAlt', { team: homeDisplayName })" @error="homeLogoBroken = true" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" />
+          <span v-else class="logo-placeholder" :title="t('matches.noLogo')" :aria-label="t('matches.noLogoViewProfileAria', { team: homeDisplayName })" role="button" tabindex="0" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName?.[0] }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="homeDisplayName" :aria-label="t('matches.viewTeamProfileAria', { team: homeDisplayName })" @click.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.enter.stop="$emit('teamClick', homeTeam?.name, 'home', match)" @keydown.space.prevent.stop="$emit('teamClick', homeTeam?.name, 'home', match)">{{ homeDisplayName }}</span>
         </div>
         <div class="score">
           <span v-if="(isFinished || isLive) && goals?.home != null && goals?.away != null" class="score-text">
             {{ goals.home }} - {{ goals.away }}
           </span>
-          <span v-else class="match-time" :class="{ 'is-unknown': !matchTimestamp }">{{ isFinished ? '比分待同步' : matchTimestamp ? formatTime(match) : '时间待同步' }}</span>
+          <span v-else class="match-time" :class="{ 'is-unknown': !matchTimestamp }">{{ isFinished ? t('matches.scorePending') : matchTimestamp ? formatTime(match) : t('matches.timePending') }}</span>
         </div>
         <div class="team">
-          <span class="team-name" role="button" tabindex="0" :title="awayDisplayName" :aria-label="`查看${awayDisplayName}资料`" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
-          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="`${awayDisplayName}队徽`" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
-          <span v-else class="logo-placeholder" title="暂无队徽" :aria-label="`${awayDisplayName}暂无队徽，查看资料`" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
+          <span class="team-name" role="button" tabindex="0" :title="awayDisplayName" :aria-label="t('matches.viewTeamProfileAria', { team: awayDisplayName })" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName }}</span>
+          <img v-if="awayLogoVisible" :src="awayLogoSrc" class="team-logo" width="30" height="30" loading="lazy" decoding="async" :alt="t('matches.teamLogoAlt', { team: awayDisplayName })" @error="awayLogoBroken = true" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" />
+          <span v-else class="logo-placeholder" :title="t('matches.noLogo')" :aria-label="t('matches.noLogoViewProfileAria', { team: awayDisplayName })" role="button" tabindex="0" @click.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.enter.stop="$emit('teamClick', awayTeam?.name, 'away', match)" @keydown.space.prevent.stop="$emit('teamClick', awayTeam?.name, 'away', match)">{{ awayDisplayName?.[0] }}</span>
         </div>
       </div>
       <div class="match-meta">
@@ -29,42 +29,42 @@
           {{ match.league.round }}
         </div>
         <div class="status">
-          <span v-if="focused" class="focus-mark">焦点</span>
+          <span v-if="focused" class="focus-mark">{{ t('matches.focus') }}</span>
           <el-tag :type="statusType" size="small" effect="plain">
             <span v-if="isLive" class="live-dot"></span>{{ statusLabel }}
           </el-tag>
         </div>
       </div>
     </div>
-    <div class="action-area" aria-label="比赛操作">
-      <el-button class="action-primary" type="primary" size="small" plain :aria-label="primaryActionLabel + '：打开本场分析'" @click.stop="$emit('predict', match)">
+    <div class="action-area" :aria-label="t('matches.matchActions')">
+      <el-button class="action-primary" type="primary" size="small" plain :aria-label="t('matches.openAnalysis', { label: primaryActionLabel })" @click.stop="$emit('predict', match)">
         <span class="action-copy-full">{{ primaryActionLabel }}</span>
-        <span class="action-copy-short">{{ isFinished ? '复盘' : '预测' }}</span>
+        <span class="action-copy-short">{{ isFinished ? t('matches.review') : t('matches.predict') }}</span>
       </el-button>
       <el-button class="action-details" size="small" plain @click.stop="$emit('details', match)">
-        赛事数据
+        {{ t('matches.matchData') }}
       </el-button>
-      <el-tooltip :content="favorited ? '取消收藏' : '收藏比赛'" placement="top">
-        <el-button class="favorite-btn" :class="{ 'is-favorited': favorited }" size="small" circle plain :aria-label="favorited ? '取消收藏比赛' : '收藏比赛'" @click.stop="$emit('favorite-match', match)">
+      <el-tooltip :content="favorited ? t('matches.unfavorite') : t('matches.favoriteMatch')" placement="top">
+        <el-button class="favorite-btn" :class="{ 'is-favorited': favorited }" size="small" circle plain :aria-label="favorited ? t('matches.unfavoriteMatch') : t('matches.favoriteMatch')" @click.stop="$emit('favorite-match', match)">
         <el-icon><Star v-if="!favorited" /><StarFilled v-else /></el-icon>
         </el-button>
       </el-tooltip>
       <el-dropdown class="more-actions" trigger="click" @command="handleMoreCommand">
-        <el-button class="more-btn" size="small" circle plain aria-label="更多比赛操作" title="更多比赛操作">
+        <el-button class="more-btn" size="small" circle plain :aria-label="t('matches.moreActions')" :title="t('matches.moreActions')">
           <el-icon><MoreFilled /></el-icon>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="h2h">
               <el-icon><DataLine /></el-icon>
-              历史交锋
+              {{ t('matches.h2hTitle') }}
             </el-dropdown-item>
             <el-dropdown-item command="agent">
               <el-icon><ChatLineSquare /></el-icon>
-              AI 助手
+              {{ t('matches.aiAssistant') }}
             </el-dropdown-item>
             <el-dropdown-item command="details" divided>
-              赛事数据
+              {{ t('matches.matchData') }}
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -76,9 +76,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ChatLineSquare, DataLine, Location, MoreFilled, Star, StarFilled, TrendCharts, Trophy } from '@element-plus/icons-vue'
-import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatchId, getMatchTimestamp, getStatusText, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../utils/match'
+import { formatMatchTime, getAwayTeam, getDisplayStatusKey, getHomeTeam, getMatchId, getMatchTimestamp, getStatusText, getTeamDisplay, isFinished as isFinishedMatch, isLive as isLiveMatch } from '../utils/match'
 import { getTeamDisplayName } from '../utils/teamNames'
 import { getMediaAssetUrl } from '../utils/mediaAsset'
+
+import { useI18n } from '../i18n'
+const { t, locale } = useI18n()
 
 const props = defineProps({ match: Object, favorited: { type: Boolean, default: false }, focused: { type: Boolean, default: false }, teamNameMode: { type: String, default: 'zh' } })
 const emit = defineEmits(['predict', 'teamClick', 'h2h', 'agent', 'details', 'favorite-match'])
@@ -91,14 +94,14 @@ const fixture = computed(() => ({
 }))
 const homeTeam = computed(() => {
   const team = getHomeTeam(props.match) || {}
-  return { ...team, name: team.name || props.match?.homeTeamName || '主队', logo: team.logo || props.match?.homeTeamLogo || '' }
+  return { ...team, name: team.name || props.match?.homeTeamName || t('matches.homeTeam'), logo: team.logo || props.match?.homeTeamLogo || '' }
 })
 const awayTeam = computed(() => {
   const team = getAwayTeam(props.match) || {}
-  return { ...team, name: team.name || props.match?.awayTeamName || '客队', logo: team.logo || props.match?.awayTeamLogo || '' }
+  return { ...team, name: team.name || props.match?.awayTeamName || t('matches.awayTeam'), logo: team.logo || props.match?.awayTeamLogo || '' }
 })
-const homeDisplayName = computed(() => getTeamDisplayName(homeTeam.value.name, props.teamNameMode))
-const awayDisplayName = computed(() => getTeamDisplayName(awayTeam.value.name, props.teamNameMode))
+const homeDisplayName = computed(() => getTeamDisplayName(homeTeam.value.name, props.teamNameMode, getTeamDisplay(props.match, 'home')))
+const awayDisplayName = computed(() => getTeamDisplayName(awayTeam.value.name, props.teamNameMode, getTeamDisplay(props.match, 'away')))
 const goals = computed(() => props.match?.goals || { home: props.match?.homeScore, away: props.match?.awayScore })
 const homeLogoBroken = ref(false)
 const awayLogoBroken = ref(false)
@@ -123,7 +126,7 @@ const isFinished = computed(() => isFinishedMatch(props.match))
 const matchTimestamp = computed(() => getMatchTimestamp(props.match))
 const statusLabel = computed(() => getStatusText(props.match))
 const statusType = computed(() => isLive.value ? 'danger' : isFinished.value ? 'success' : getDisplayStatusKey(props.match) === 'STALE' ? 'warning' : 'info')
-const primaryActionLabel = computed(() => isFinished.value ? '查看复盘' : '查看预测')
+const primaryActionLabel = computed(() => isFinished.value ? t('matches.viewReview') : t('matches.viewPrediction'))
 
 const handleMoreCommand = (command) => {
   if (command === 'h2h') {
@@ -136,10 +139,11 @@ const handleMoreCommand = (command) => {
 }
 
 const formatTime = match => {
+  const pendingText = t('matches.timePending')
   const full = formatMatchTime(match)
-  if (full.includes('时间待同步')) return '时间待同步'
+  if (full.includes(pendingText)) return pendingText
   const timestamp = getMatchTimestamp(match)
-  return timestamp ? new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp)) : '时间待同步'
+  return timestamp ? new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp)) : pendingText
 }
 </script>
 

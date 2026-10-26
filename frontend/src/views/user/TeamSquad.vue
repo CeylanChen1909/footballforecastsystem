@@ -2,61 +2,61 @@
   <div class="squad-page ff-page-shell">
     <AppTopNav
       title="ChenFootball"
-      subtitle="球队阵容"
+      :subtitle="t('prediction.teamSquad.subtitle')"
       :brand-icon="Trophy"
       active-path="/competitions"
     />
 
     <el-main id="app-main" class="main-content" tabindex="-1">
       <div class="page-toolbar">
-        <el-button text :icon="ArrowLeft" @click="backToCompetitions">返回赛事资料</el-button>
+        <el-button text :icon="ArrowLeft" @click="backToCompetitions">{{ t('prediction.teamSquad.backToCompetitions') }}</el-button>
         <div class="toolbar-actions">
-          <el-button plain size="small" @click="goTeamMatches">查看赛程</el-button>
-          <el-button size="small" type="primary" plain :loading="loading" @click="loadSquad(true)">刷新阵容</el-button>
+          <el-button plain size="small" @click="goTeamMatches">{{ t('prediction.teamSquad.viewFixtures') }}</el-button>
+          <el-button size="small" type="primary" plain :loading="loading" @click="loadSquad(true)">{{ t('prediction.teamSquad.refreshSquad') }}</el-button>
         </div>
       </div>
 
-      <PageState v-if="loading && !squad.length" type="loading" title="正在加载球队阵容..." :size="40" />
-      <PageState v-else-if="error" type="error" title="球队阵容加载失败" :description="error" action-text="重试" @action="loadSquad(true)" />
+      <PageState v-if="loading && !squad.length" type="loading" :title="t('prediction.teamSquad.loadingTitle')" :size="40" />
+      <PageState v-else-if="error" type="error" :title="t('prediction.teamSquad.loadFailedTitle')" :description="error" :action-text="t('prediction.teamSquad.retry')" @action="loadSquad(true)" />
       <template v-else>
         <section class="team-page-head ff-appear" aria-labelledby="team-page-title">
           <div class="team-identity">
-            <img v-if="teamLogo" :src="getMediaAssetUrl(teamLogo)" :alt="teamName" class="team-logo" @error="handleTeamLogoError" />
-            <span v-else class="team-logo placeholder">{{ firstLetter(teamName) }}</span>
+            <img v-if="teamLogo" :src="getMediaAssetUrl(teamLogo)" :alt="teamLabel" class="team-logo" @error="handleTeamLogoError" />
+            <span v-else class="team-logo placeholder">{{ firstLetter(teamLabel) }}</span>
             <div>
-              <span class="ff-kicker">{{ league }} · {{ seasonLabel }}</span>
-              <h1 id="team-page-title">{{ teamName }}</h1>
+              <span class="ff-kicker">{{ leagueLabel }} · {{ seasonLabel }}</span>
+              <h1 id="team-page-title">{{ teamLabel }}</h1>
             </div>
           </div>
           <div class="hero-actions">
             <el-tag :type="squadTone" effect="plain">{{ squadLabel }}</el-tag>
-            <el-button size="small" type="warning" plain @click="toggleFavorite">{{ favorited ? '已关注' : '关注球队' }}</el-button>
+            <el-button size="small" type="warning" plain @click="toggleFavorite">{{ favorited ? t('prediction.teamSquad.followed') : t('prediction.teamSquad.follow') }}</el-button>
           </div>
         </section>
 
-        <section class="info-strip" aria-label="阵容数据说明">
-          <div><span>数据源</span><strong>{{ sourceLabel }}</strong></div>
-          <div><span>球员数</span><strong>{{ squad.length || '—' }}</strong></div>
-          <div><span>最近同步</span><strong>{{ syncedLabel }}</strong></div>
-          <div class="info-note">阵容来自公开球队页面，仅展示已抓取并可核验的名单，不用模型补全。<template v-if="cacheState === 'STALE'">当前展示最近快照，后台正在更新。</template><template v-else-if="cacheState === 'CACHED'">已使用最近快照；需要时可手动刷新。</template></div>
+        <section class="info-strip" :aria-label="t('prediction.teamSquad.infoAria')">
+          <div><span>{{ t('prediction.teamSquad.dataSource') }}</span><strong>{{ sourceLabel }}</strong></div>
+          <div><span>{{ t('prediction.teamSquad.playerCount') }}</span><strong>{{ squad.length || '—' }}</strong></div>
+          <div><span>{{ t('prediction.teamSquad.lastSynced') }}</span><strong>{{ syncedLabel }}</strong></div>
+          <div class="info-note">{{ t('prediction.teamSquad.infoNote') }}<template v-if="cacheState === 'STALE'">{{ t('prediction.teamSquad.staleNote') }}</template><template v-else-if="cacheState === 'CACHED'">{{ t('prediction.teamSquad.cachedNote') }}</template></div>
         </section>
 
-        <PageSection title="注册阵容" :subtitle="squadMessage || '按位置查看当前公开注册名单'">
-          <div v-if="squad.length" class="squad-toolbar" aria-label="阵容筛选">
-            <el-input v-model="playerKeyword" clearable size="small" placeholder="搜索球员" aria-label="搜索球员" />
-            <el-select v-model="positionFilter" size="small" aria-label="按位置筛选"><el-option label="全部位置" value="all" /><el-option label="门将" value="goalkeeper" /><el-option label="后卫" value="defender" /><el-option label="中场" value="midfielder" /><el-option label="前锋" value="forward" /><el-option label="其他 / 待确认" value="other" /></el-select>
-            <span>显示 {{ filteredSquad.length }} / {{ squad.length }} 人</span>
+        <PageSection :title="t('prediction.teamSquad.registeredSquad')" :subtitle="squadMessage || t('prediction.teamSquad.squadSubtitle')">
+          <div v-if="squad.length" class="squad-toolbar" :aria-label="t('prediction.teamSquad.filterAria')">
+            <el-input v-model="playerKeyword" clearable size="small" :placeholder="t('prediction.teamSquad.searchPlaceholder')" :aria-label="t('prediction.teamSquad.searchPlaceholder')" />
+            <el-select v-model="positionFilter" size="small" :aria-label="t('prediction.teamSquad.filterByPositionAria')"><el-option :label="t('prediction.teamSquad.allPositions')" value="all" /><el-option :label="t('prediction.teamSquad.goalkeeper')" value="goalkeeper" /><el-option :label="t('prediction.teamSquad.defender')" value="defender" /><el-option :label="t('prediction.teamSquad.midfielder')" value="midfielder" /><el-option :label="t('prediction.teamSquad.forward')" value="forward" /><el-option :label="t('prediction.teamSquad.other')" value="other" /></el-select>
+            <span>{{ t('prediction.teamSquad.showing', { shown: filteredSquad.length, total: squad.length }) }}</span>
           </div>
           <div v-if="filteredSquad.length" class="squad-groups">
             <div v-for="group in filteredSquadGroups" :key="group.key" class="squad-group">
-              <div class="group-heading"><strong>{{ group.label }}</strong><span>{{ group.items.length }} 人</span></div>
+              <div class="group-heading"><strong>{{ group.label }}</strong><span>{{ t('prediction.teamSquad.peopleCount', { count: group.items.length }) }}</span></div>
               <div class="player-grid">
                 <article v-for="player in group.items" :key="playerKey(player)" class="player-card">
-                  <img v-if="player.photo && !player.photoBroken" :src="getMediaAssetUrl(player.photo)" :alt="player.name" @error="handlePlayerPhotoError(player)" />
-                  <span v-else class="player-avatar">{{ firstLetter(player.name) }}</span>
+                  <img v-if="player.photo && !player.photoBroken" :src="getMediaAssetUrl(player.photo)" :alt="playerName(player)" @error="handlePlayerPhotoError(player)" />
+                  <span v-else class="player-avatar">{{ firstLetter(playerName(player)) }}</span>
                   <div class="player-copy">
-                    <strong>{{ player.name || '未知球员' }}<b v-if="player.number" class="player-number">#{{ player.number }}</b></strong>
-                    <span>{{ player.position || '位置待确认' }}<template v-if="player.number"> · {{ player.number }}号</template></span>
+                    <strong>{{ playerName(player) }}<b v-if="player.number" class="player-number">#{{ player.number }}</b></strong>
+                    <span>{{ playerPositionLabel(player) }}<template v-if="player.number"> · {{ t('prediction.teamSquad.jerseyNumber', { number: player.number }) }}</template></span>
                     <small><template v-if="player.nationality">{{ player.nationality }}</template><template v-if="playerAgeLabel(player)"> · {{ playerAgeLabel(player) }}</template></small>
                   </div>
                 </article>
@@ -66,9 +66,9 @@
           <div v-else class="empty-state">
             <span class="empty-mark">◎</span>
             <div>
-              <strong>{{ squad.length ? '没有匹配球员' : squadLabel }}</strong>
-              <p>{{ squad.length ? '换一个关键词或位置筛选后再试。' : (squadMessage || '当前公开阵容页面没有返回可核验的名单，请稍后重试。') }}</p>
-              <el-button v-if="!squad.length" size="small" type="primary" plain :loading="loading" @click="loadSquad(true)">重新获取</el-button>
+              <strong>{{ squad.length ? t('prediction.teamSquad.noMatches') : squadLabel }}</strong>
+              <p>{{ squad.length ? t('prediction.teamSquad.adjustFilters') : (squadMessage || t('prediction.teamSquad.emptySquad')) }}</p>
+              <el-button v-if="!squad.length" size="small" type="primary" plain :loading="loading" @click="loadSquad(true)">{{ t('prediction.teamSquad.reload') }}</el-button>
             </div>
           </div>
         </PageSection>
@@ -90,13 +90,18 @@ import PageState from '../../components/layout/PageState.vue'
 import { crawlerApi, favoriteApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import { getMediaAssetUrl } from '../../utils/mediaAsset'
+import { displayLeagueName, displayPersonName, displayPositionName, displayTeamName } from '../../utils/teamNames'
+import { useI18n } from '../../i18n'
 
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const teamName = ref('')
+const teamDisplay = ref('')
 const teamId = ref('')
 const league = ref('英超')
+const leagueDisplay = ref('')
 const season = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -113,36 +118,62 @@ const favorited = ref(false)
 const favorites = ref([])
 const favoriteRecords = computed(() => favorites.value.filter(item => isCurrentFavorite(item)))
 
-const seasonLabel = computed(() => season.value || '当前赛季')
-const sourceLabel = computed(() => ({ 'espn-squad': 'ESPN 公开球队页', 'espn-squad+transfermarkt-photos': 'ESPN 阵容 + Transfermarkt 头像', 'api-football': 'API-Football' }[squadSource.value] || squadSource.value || '待确认'))
-const syncedLabel = computed(() => formatDateTime(syncedAt.value) || '待同步')
-const squadLabel = computed(() => cacheState.value === 'STALE' ? '最近快照较旧' : cacheState.value === 'CACHED' ? '已使用最近快照' : ({ AVAILABLE: '已确认', EMPTY: '暂无名单', NOT_CONFIGURED: '未配置阵容源', REQUEST_FAILED: '请求失败', QUOTA_LIMITED: '额度受限' }[squadStatus.value] || '待确认'))
+const teamLabel = computed(() => displayTeamName(teamName.value, teamDisplay.value))
+const leagueLabel = computed(() => displayLeagueName(league.value, leagueDisplay.value))
+const seasonLabel = computed(() => season.value || t('prediction.teamSquad.currentSeason'))
+const sourceLabel = computed(() => ({
+  'espn-squad': t('prediction.teamSquad.sourceEspn'),
+  'espn-squad+transfermarkt-photos': t('prediction.teamSquad.sourceEspnTransfermarkt'),
+  'api-football': 'API-Football'
+}[squadSource.value] || squadSource.value || t('prediction.teamSquad.statusPending')))
+const syncedLabel = computed(() => formatDateTime(syncedAt.value) || t('prediction.teamSquad.syncedPending'))
+const squadStatusKeys = {
+  AVAILABLE: 'prediction.teamSquad.statusAvailable',
+  EMPTY: 'prediction.teamSquad.statusEmpty',
+  NOT_CONFIGURED: 'prediction.teamSquad.statusNotConfigured',
+  REQUEST_FAILED: 'prediction.teamSquad.statusRequestFailed',
+  QUOTA_LIMITED: 'prediction.teamSquad.statusQuotaLimited'
+}
+const squadLabel = computed(() => cacheState.value === 'STALE'
+  ? t('prediction.teamSquad.statusStale')
+  : cacheState.value === 'CACHED'
+    ? t('prediction.teamSquad.statusCached')
+    : squadStatusKeys[squadStatus.value]
+      ? t(squadStatusKeys[squadStatus.value])
+      : t('prediction.teamSquad.statusPending'))
 const squadTone = computed(() => ['STALE', 'CACHED'].includes(cacheState.value) ? 'warning' : squadStatus.value === 'AVAILABLE' ? 'success' : squadStatus.value === 'EMPTY' ? 'info' : 'warning')
+const playerPosition = player => String(player?.position || player?.positionLabel || '')
+const playerName = player => displayPersonName(
+  player?.name || t('prediction.teamSquad.unknownPlayer'),
+  player?.playerDisplayName || player?.displayName || player?.nameEn
+)
+const playerPositionLabel = player => displayPositionName(player?.position, player?.positionLabel) || t('prediction.teamSquad.positionUnknown')
 const squadGroups = computed(() => {
   const definitions = [
-    { key: 'goalkeeper', label: '门将', test: /goalkeeper|keeper|门将/i },
-    { key: 'defender', label: '后卫', test: /defender|back|后卫/i },
-    { key: 'midfielder', label: '中场', test: /midfielder|中场/i },
-    { key: 'forward', label: '前锋', test: /forward|attacker|striker|前锋/i }
+    { key: 'goalkeeper', label: t('prediction.teamSquad.goalkeeper'), test: /goalkeeper|keeper|门将/i },
+    { key: 'defender', label: t('prediction.teamSquad.defender'), test: /defender|defence|defense|back|后卫/i },
+    { key: 'midfielder', label: t('prediction.teamSquad.midfielder'), test: /midfielder|midfield|中场|前腰|后腰/i },
+    { key: 'forward', label: t('prediction.teamSquad.forward'), test: /forward|attacker|striker|winger|前锋|边锋|中锋/i }
   ]
   const groups = definitions.map(item => ({ ...item, items: [] }))
-  const other = { key: 'other', label: '其他 / 待确认', items: [] }
-  squad.value.forEach(player => (groups.find(group => group.test.test(String(player.position || ''))) || other).items.push(player))
+  const other = { key: 'other', label: t('prediction.teamSquad.other'), items: [] }
+  squad.value.forEach(player => (groups.find(group => group.test.test(playerPosition(player))) || other).items.push(player))
   return [...groups, other].filter(group => group.items.length)
 })
 const positionKey = value => {
   const text = String(value || '')
   if (/goalkeeper|keeper|门将/i.test(text)) return 'goalkeeper'
-  if (/defender|back|后卫/i.test(text)) return 'defender'
-  if (/midfielder|中场/i.test(text)) return 'midfielder'
-  if (/forward|attacker|striker|前锋/i.test(text)) return 'forward'
+  if (/defender|defence|defense|back|后卫/i.test(text)) return 'defender'
+  if (/midfielder|midfield|中场|前腰|后腰/i.test(text)) return 'midfielder'
+  if (/forward|attacker|striker|winger|前锋|边锋|中锋/i.test(text)) return 'forward'
   return 'other'
 }
 const filteredSquad = computed(() => {
   const keyword = playerKeyword.value.trim().toLowerCase()
   return squad.value.filter(player => {
-    const keywordOk = !keyword || [player.name, player.position, player.nationality, player.number].some(value => String(value || '').toLowerCase().includes(keyword))
-    return keywordOk && (positionFilter.value === 'all' || positionKey(player.position) === positionFilter.value)
+    const keywordOk = !keyword || [playerName(player), player.position, player.positionLabel, player.nationality, player.number]
+      .some(value => String(value || '').toLowerCase().includes(keyword))
+    return keywordOk && (positionFilter.value === 'all' || positionKey(playerPosition(player)) === positionFilter.value)
   })
 })
 const filteredSquadGroups = computed(() => {
@@ -155,19 +186,23 @@ const playerAgeLabel = (player) => {
   if (!Number.isFinite(age) || age <= 0) return ''
   // Privacy: only surface ages for 18+ players; under-18 stays N/A.
   if (age < 18) return 'N/A'
-  return `${Math.trunc(age)}岁`
+  return t('prediction.teamSquad.age', { age: Math.trunc(age) })
 }
 const firstLetter = value => String(value || '?').trim().slice(0, 1).toUpperCase()
 const playerKey = player => `${player.id || player.name}-${player.number || ''}`
 const formatDateTime = value => {
   if (!value) return ''
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? String(value).replace('T', ' ').slice(0, 16) : date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return Number.isNaN(date.getTime())
+    ? String(value).replace('T', ' ').slice(0, 16)
+    : date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 const normalizeList = value => Array.isArray(value) ? value : Array.isArray(value?.response) ? value.response : []
-const squadCacheKey = () => `chenfootball:squad:${teamId.value || teamName.value}:${league.value}:${season.value || 'current'}`
+const squadCacheKey = () => `chenfootball:squad:${locale.value}:${teamId.value || teamName.value}:${league.value}:${season.value || 'current'}`
 const applySquadPayload = data => {
   squad.value = normalizeList(data).map(player => ({ ...player, photoBroken: false }))
+  if (data?.teamDisplayName || data?.teamNameDisplay) teamDisplay.value = data.teamDisplayName || data.teamNameDisplay
+  if (data?.leagueDisplay || data?.leagueDisplayName) leagueDisplay.value = data.leagueDisplay || data.leagueDisplayName
   squadStatus.value = data.status || (squad.value.length ? 'AVAILABLE' : 'EMPTY')
   squadMessage.value = data.message || ''
   squadSource.value = data.source || ''
@@ -195,7 +230,9 @@ const syncRouteState = () => {
   // been stored under a provider id (or vice versa).
   teamId.value = String(route.query.teamId || '').trim()
   teamLogo.value = String(route.query.logo || '')
+  teamDisplay.value = String(route.query.teamDisplayName || route.query.teamDisplay || route.query.nameDisplay || '').trim()
   league.value = String(route.query.league || '英超')
+  leagueDisplay.value = String(route.query.leagueDisplay || route.query.leagueDisplayName || '').trim()
   season.value = String(route.query.season || '')
 }
 
@@ -228,9 +265,9 @@ const loadSquad = async (force = false) => {
     applySquadPayload(data)
     try { sessionStorage.setItem(squadCacheKey(), JSON.stringify({ savedAt: Date.now(), payload: data })) } catch (_) { /* storage may be disabled */ }
   } catch (err) {
-    error.value = err?.message || '球队资料暂时不可用'
+    error.value = err?.message || t('prediction.teamSquad.teamUnavailable')
     squadStatus.value = 'REQUEST_FAILED'
-    squadMessage.value = '阵容请求失败，请稍后重试。'
+    squadMessage.value = t('prediction.teamSquad.squadRequestFailed')
   } finally {
     loading.value = false
   }
@@ -253,20 +290,21 @@ const toggleFavorite = async () => {
       // Clean up both legacy name-keyed rows and newer provider-id rows so a
       // previous identity migration cannot leave the button stuck on “已关注”.
       await Promise.all(favoriteRecords.value.map(item => favoriteApi.remove(item.teamId || item.teamName || teamName.value)))
-      ElMessage.success('已取消关注')
+      ElMessage.success(t('prediction.teamSquad.unfollowed'))
     } else {
       const id = teamId.value || teamName.value
       const result = await favoriteApi.add(id, teamName.value, { teamLogo: teamLogo.value, leagueName: league.value })
-      if (result?.ok === false) throw new Error(result.message || '关注保存失败')
-      ElMessage.success('已关注球队')
+      if (result?.ok === false) throw new Error(result.message || t('prediction.teamSquad.followFailed'))
+      ElMessage.success(t('prediction.teamSquad.followSaved'))
     }
     await loadFavorites()
-  } catch (err) { ElMessage.warning(err?.message || '关注操作失败') }
+  } catch (err) { ElMessage.warning(err?.message || t('prediction.teamSquad.followActionFailed')) }
 }
 const backToCompetitions = () => router.push({ path: '/competitions', query: { league: league.value, season: season.value } })
 const goTeamMatches = () => router.push({ path: '/matches', query: { team: teamName.value, league: league.value } })
 onMounted(async () => { syncRouteState(); await Promise.all([loadSquad(), loadFavorites(), loadTeamLogo()]) })
 watch(() => route.fullPath, async () => { syncRouteState(); await Promise.all([loadSquad(), loadFavorites(), loadTeamLogo()]) })
+watch(locale, () => loadSquad(true))
 watch(() => userStore.token, loadFavorites)
 </script>
 

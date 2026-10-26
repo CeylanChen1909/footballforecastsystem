@@ -1,19 +1,27 @@
 <template>
-  <router-view v-if="!legalGateVisible" />
-  <AgentLauncher v-if="!legalGateVisible && showAgentLauncher && agentLauncherReady" />
-  <AuthDialog v-if="!legalGateVisible" />
-  <ConsentBanner v-if="!legalGateVisible" />
-  <LegalConsentGate :visible="legalGateVisible" @accepted="handleLegalAccepted" />
+  <el-config-provider :locale="elementLocale">
+    <router-view v-if="!legalGateVisible" />
+    <AgentLauncher v-if="!legalGateVisible && showAgentLauncher && agentLauncherReady" />
+    <AuthDialog v-if="!legalGateVisible" />
+    <ConsentBanner v-if="!legalGateVisible" />
+    <LegalConsentGate :visible="legalGateVisible" @accepted="handleLegalAccepted" />
+  </el-config-provider>
 </template>
 
 <script setup>
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElConfigProvider } from 'element-plus'
+import en from 'element-plus/es/locale/lang/en'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { useUserStore } from './stores/user'
 import LegalConsentGate from './components/privacy/LegalConsentGate.vue'
 import { analyticsApi, userApi } from './api'
 import { canTrackAnalytics } from './utils/privacyConsent'
 import { hasLegalConsent, saveLegalConsent } from './utils/legalConsent'
+import { locale } from './i18n'
+
+const elementLocale = computed(() => locale.value === 'zh' ? zhCn : en)
 
 const AgentLauncher = defineAsyncComponent(() => import('./components/layout/AgentLauncher.vue'))
 const agentLauncherReady = ref(false)

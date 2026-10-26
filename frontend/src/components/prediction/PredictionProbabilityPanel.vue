@@ -1,8 +1,8 @@
 <template>
-  <section class="prob-section" aria-label="预测概率分布">
+  <section class="prob-section" :aria-label="t('prediction.probability.sectionAria')">
     <div class="prob-header">
-      <span>预测概率分布</span>
-      <span class="prob-hint">{{ hint || (warning ? '特征或模型质量不足，仅供参考' : '来自正式预测服务') }}</span>
+      <span>{{ t('prediction.probability.title') }}</span>
+      <span class="prob-hint">{{ hint || (warning ? t('prediction.probability.hintWarning') : t('prediction.probability.hintOfficial')) }}</span>
     </div>
     <p v-if="leadingSummary" class="leading-summary" :class="{ 'is-caution': warning }">{{ leadingSummary }}</p>
     <div class="prob-bars">
@@ -10,7 +10,7 @@
         <div class="prob-label">
           <span class="label-text">{{ item.label }}</span>
           <span v-if="item.tag" class="team-tag" :class="item.tagClass">{{ item.tag }}</span>
-          <span v-if="item.isLeading" class="leading-tag">最高概率</span>
+          <span v-if="item.isLeading" class="leading-tag">{{ t('prediction.probability.leadingTag') }}</span>
         </div>
         <div class="prob-bar-wrapper">
           <el-progress :percentage="item.percent" :color="item.color" :stroke-width="16" :show-text="false" />
@@ -23,10 +23,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from '../../i18n'
 
 const props = defineProps({
-  homeName: { type: String, default: '主队' },
-  awayName: { type: String, default: '客队' },
+  homeName: { type: String, default: '' },
+  awayName: { type: String, default: '' },
   probabilities: { type: Object, default: () => ({ home: 0, draw: 0, away: 0 }) },
   warning: { type: Boolean, default: false },
   hint: { type: String, default: '' },
@@ -35,10 +36,14 @@ const props = defineProps({
   awayColor: { type: String, default: '#b27a18' }
 })
 
+const { t } = useI18n()
+const homeLabel = computed(() => props.homeName || t('prediction.common.homeTeam'))
+const awayLabel = computed(() => props.awayName || t('prediction.common.awayTeam'))
+
 const items = computed(() => [
-  { key: 'home', label: `${props.homeName} 胜`, tag: '主队', tagClass: 'home-tag', color: props.homeColor },
-  { key: 'draw', label: '平局', color: props.drawColor },
-  { key: 'away', label: `${props.awayName} 胜`, tag: '客队', tagClass: 'away-tag', color: props.awayColor }
+  { key: 'home', label: t('prediction.probability.homeWin', { team: homeLabel.value }), tag: t('prediction.probability.homeTag'), tagClass: 'home-tag', color: props.homeColor },
+  { key: 'draw', label: t('prediction.probability.draw'), color: props.drawColor },
+  { key: 'away', label: t('prediction.probability.awayWin', { team: awayLabel.value }), tag: t('prediction.probability.awayTag'), tagClass: 'away-tag', color: props.awayColor }
 ].map(item => {
   const value = Number(props.probabilities?.[item.key] || 0)
   return { ...item, percent: Math.round(value * 100), text: `${(value * 100).toFixed(1)}%` }
@@ -48,12 +53,14 @@ const leadingSummary = computed(() => {
   const leading = items.value.filter(item => item.isLeading)
   if (!leading.length) return ''
   if (leading.length > 1) {
-    return `当前最高概率并列：${leading.map(item => `${item.label} ${item.text}`).join(' / ')}`
+    return t('prediction.probability.tie', {
+      items: leading.map(item => `${item.label} ${item.text}`).join(' / ')
+    })
   }
   const top = leading[0]
   return props.warning
-    ? `当前倾向：${top.label}（${top.text}），数据或模型质量不足，仅供参考`
-    : `当前倾向：${top.label}（${top.text}）`
+    ? t('prediction.probability.leanWarning', { label: top.label, value: top.text })
+    : t('prediction.probability.lean', { label: top.label, value: top.text })
 })
 </script>
 

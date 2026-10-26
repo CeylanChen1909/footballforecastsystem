@@ -2,6 +2,33 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { authStorage } from '../utils/authStorage'
 import { canTrackAnalytics } from '../utils/privacyConsent'
+import { locale, t } from '../i18n'
+
+const currentLocale = () => (locale.value === 'zh' ? 'zh' : 'en')
+const acceptLanguage = () => (currentLocale() === 'zh' ? 'zh-CN' : 'en-US')
+
+/** Headers shared by axios and the fetch-based SSE stream. */
+export const localeRequestHeaders = () => ({
+  'X-Lang': currentLocale(),
+  'Accept-Language': acceptLanguage()
+})
+
+const applyLocaleRequestContext = config => {
+  const headers = localeRequestHeaders()
+  config.headers = config.headers || {}
+  if (typeof config.headers.set === 'function') {
+    Object.entries(headers).forEach(([name, value]) => config.headers.set(name, value))
+  } else {
+    Object.assign(config.headers, headers)
+  }
+  // GET requests also carry the locale as a query parameter so proxies,
+  // caches and older backends that only read query strings stay consistent.
+  const method = String(config.method || 'get').toLowerCase()
+  if (method === 'get') {
+    config.params = { ...(config.params || {}), lang: currentLocale() }
+  }
+  return config
+}
 
 const api = axios.create({
   baseURL: '/api',
@@ -29,6 +56,7 @@ const isApiErrorPayload = (payload) => {
 }
 
 api.interceptors.request.use(config => {
+  applyLocaleRequestContext(config)
   const token = authStorage.get('football_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
@@ -42,9 +70,9 @@ api.interceptors.response.use(response => {
   // first, otherwise a real 401/500 can be silently normalized to null and
   // the UI will look as if the request succeeded.
   if (isApiErrorPayload(data)) {
-    const message = String(data.message || data.msg || '请求失败')
+    const message = String(data.message || data.msg || t('account.errors.requestFailed'))
     if (message.toLowerCase().includes('unauthorized') || String(data.code || '').startsWith('401')) {
-      if (response.config.notifyOnError !== false) ElMessage.error('登录已过期，请重新登录')
+      if (response.config.notifyOnError !== false) ElMessage.error(t('account.errors.sessionExpired'))
       forceLogout()
     } else if (response.config.notifyOnError !== false) {
       ElMessage.error(message)
@@ -54,9 +82,9 @@ api.interceptors.response.use(response => {
   if (data && typeof data === 'object' && 'data' in data) {
     const payload = data.data
   if (isApiErrorPayload(payload)) {
-      const message = String(payload.message || payload.msg || '请求失败')
+      const message = String(payload.message || payload.msg || t('account.errors.requestFailed'))
       if (message.toLowerCase().includes('unauthorized') || String(payload.code || '').startsWith('401')) {
-        if (response.config.notifyOnError !== false) ElMessage.error('登录已过期，请重新登录')
+        if (response.config.notifyOnError !== false) ElMessage.error(t('account.errors.sessionExpired'))
         forceLogout()
         return Promise.reject(new Error('unauthorized'))
       }
@@ -67,7 +95,7 @@ api.interceptors.response.use(response => {
     return normalizePayload(payload)
   }
   if (isApiErrorPayload(data)) {
-    const message = String(data.message || data.msg || '请求失败')
+    const message = String(data.message || data.msg || t('account.errors.requestFailed'))
     if (response.config.notifyOnError !== false) ElMessage.error(message)
     return Promise.reject(Object.assign(new Error(message), { response: { data } }))
   }
@@ -86,19 +114,19 @@ api.interceptors.response.use(response => {
   }
   if (response) {
     const { status, data } = response
-    const message = data?.message || data?.msg || '请求失败'
+    const message = data?.message || data?.msg || t('account.errors.requestFailed')
     const notify = config?.notifyOnError !== false
     if (status === 401) {
-      if (notify) ElMessage.error('登录已过期，请重新登录')
+      if (notify) ElMessage.error(t('account.errors.sessionExpired'))
       forceLogout()
     } else if (status === 403) {
-      if (notify) ElMessage.error('没有权限访问该资源')
+      if (notify) ElMessage.error(t('account.errors.forbidden'))
     } else if (status === 404) {
-      if (notify) ElMessage.error('请求的资源不存在')
+      if (notify) ElMessage.error(t('account.errors.notFound'))
     } else if (status === 429) {
-      if (notify) ElMessage.warning('请求过于频繁，请稍后再试')
+      if (notify) ElMessage.warning(t('account.errors.tooManyRequests'))
     } else if (status === 500) {
-      if (notify) ElMessage.error('服务器错误，请联系管理员')
+      if (notify) ElMessage.error(t('account.errors.serverError'))
     } else {
       if (notify) ElMessage.error(message)
     }
@@ -107,9 +135,9 @@ api.interceptors.response.use(response => {
     // They are not user-visible network errors.
     return Promise.reject(error)
   } else if (error.code === 'ECONNABORTED') {
-    if (config?.notifyOnError !== false) ElMessage.error('请求超时，请检查网络连接')
+    if (config?.notifyOnError !== false) ElMessage.error(t('account.errors.timeout'))
   } else {
-    if (config?.notifyOnError !== false) ElMessage.error('网络错误，请检查网络连接')
+    if (config?.notifyOnError !== false) ElMessage.error(t('account.errors.networkError'))
   }
   return Promise.reject(error)
 })
@@ -361,12 +389,15 @@ export const agentApi = {
   chat(data) { return api.post('/agent/chat', data, { preserveMeta: true }) },
   capabilities() { return api.get('/agent/capabilities') },
   async streamChat(data, { onEvent, signal } = {}) {
-    const createRequest = () => fetch('/api/agent/chat/stream', {
+    // SSE via fetch can send headers, but EventSource-style proxies may strip
+    // them; keep the locale in the query string as well.
+    const createRequest = () => fetch(`/api/agent/chat/stream?lang=${encodeURIComponent(currentLocale())}`, {
       method: 'POST',
       signal,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'text/event-stream',
+        ...localeRequestHeaders(),
         ...(authStorage.get('football_token') ? { Authorization: `Bearer ${authStorage.get('football_token')}` } : {})
       },
       body: JSON.stringify(data)
@@ -379,7 +410,7 @@ export const agentApi = {
       } catch { /* 下方统一抛出 401 */ }
     }
     if (!response.ok) {
-      let message = `Agent 请求失败（${response.status}）`
+      let message = t('account.errors.agentRequestFailed', { status: response.status })
       try {
         const payload = await response.json()
         message = payload?.message || payload?.msg || message
@@ -389,7 +420,7 @@ export const agentApi = {
       throw error
     }
     if (!response.body) {
-      throw new Error('Agent 未返回流式响应')
+      throw new Error(t('account.errors.agentStreamMissing'))
     }
 
     const reader = response.body.getReader()

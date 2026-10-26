@@ -3,62 +3,62 @@
     <AppTopNav title="ChenFootball" subtitle="" :brand-icon="Football" active-path="/about" />
     <main id="app-main" class="legal-main" tabindex="-1">
       <header class="about-hero">
-        <p class="eyebrow">关于 ChenFootball</p>
-        <p class="one-liner">按日看足球赛程，点进去看预测概率、数据覆盖与质量门槛——只做参考，不做投注建议。</p>
-        <router-link class="hero-cta" to="/matches">去看赛程</router-link>
+        <p class="eyebrow">{{ t('about.eyebrow') }}</p>
+        <p class="one-liner">{{ t('about.oneLiner') }}</p>
+        <router-link class="hero-cta" to="/matches">{{ t('about.cta') }}</router-link>
       </header>
 
-      <section class="product-brief" aria-label="产品简介">
+      <section class="product-brief" :aria-label="t('about.overviewAria')">
         <div class="brief-cols">
           <div class="brief-col">
-            <h3>做什么</h3>
+            <h3>{{ t('about.whatWeDo') }}</h3>
             <ul>
-              <li>按日列出已同步赛程（主入口：<router-link to="/matches">比赛赛程</router-link>）</li>
-              <li>点开比赛查看预测概率、数据覆盖与质量门槛</li>
-              <li>赛后可对照赛前预测快照</li>
-              <li>登录后可收藏比赛、设置开赛提醒</li>
+              <li>{{ t('about.doFixturesPrefix') }}<router-link to="/matches">{{ t('about.fixturesLink') }}</router-link>{{ t('about.doFixturesSuffix') }}</li>
+              <li>{{ t('about.doProbabilities') }}</li>
+              <li>{{ t('about.doReview') }}</li>
+              <li>{{ t('about.doFavorites') }}</li>
             </ul>
           </div>
           <div class="brief-col is-boundary">
-            <h3>不做什么</h3>
+            <h3>{{ t('about.whatWeDontDo') }}</h3>
             <ul>
-              <li><strong>不提供投注建议</strong></li>
-              <li>不保证预测命中</li>
-              <li>不鼓励、不支持任何违法博彩用途</li>
+              <li><strong>{{ t('about.dontBetting') }}</strong></li>
+              <li>{{ t('about.dontGuarantee') }}</li>
+              <li>{{ t('about.dontIllegal') }}</li>
             </ul>
           </div>
         </div>
       </section>
 
-      <dl class="trust-facts trust-grid" aria-label="信任要点">
+      <dl class="trust-facts trust-grid" :aria-label="t('about.trustAria')">
         <div>
-          <dt>公开赛程</dt>
-          <dd>比赛列表与联赛积分来自主爬虫同步快照，页面会标注数据状态。</dd>
+          <dt>{{ t('about.trustFixturesTitle') }}</dt>
+          <dd>{{ t('about.trustFixturesBody') }}</dd>
         </div>
         <div>
-          <dt>预测边界</dt>
-          <dd>概率与结论仅供参考；样本不足或未过质量门槛时会明确提示。</dd>
+          <dt>{{ t('about.trustPredictionsTitle') }}</dt>
+          <dd>{{ t('about.trustPredictionsBody') }}</dd>
         </div>
         <div>
-          <dt>隐私可控</dt>
-          <dd>匿名统计可撤回；账号资料可在个人中心管理，详见隐私说明。</dd>
+          <dt>{{ t('about.trustPrivacyTitle') }}</dt>
+          <dd>{{ t('about.trustPrivacyBody') }}</dd>
         </div>
       </dl>
 
-      <section class="about-disclaimer" aria-label="免责声明">
-        <h2>免责声明</h2>
-        <p>所有预测、概率与助手解读仅供信息参考，不构成投注、投资或其他决策建议。比赛结果受多种不确定因素影响，请以官方赛果为准。</p>
+      <section class="about-disclaimer" :aria-label="t('about.disclaimerAria')">
+        <h2>{{ t('about.disclaimerTitle') }}</h2>
+        <p>{{ t('about.disclaimerBody') }}</p>
       </section>
 
-      <section class="about-contact" aria-label="联系与反馈">
-        <h2>联系与反馈</h2>
-        <p>当前未公开独立客服渠道（与隐私说明一致）。账号与隐私请求可在 <router-link to="/profile">个人中心</router-link> 处理；产品反馈可使用站内 <router-link to="/agent">助手</router-link>。法律文档见 <router-link to="/terms">使用条款</router-link> 与 <router-link to="/privacy">隐私说明</router-link>。</p>
+      <section class="about-contact" :aria-label="t('about.contactAria')">
+        <h2>{{ t('about.contactTitle') }}</h2>
+        <p>{{ t('about.contactChannels') }}{{ t('about.contactAccountPrefix') }}<router-link to="/profile">{{ t('common.profile') }}</router-link>{{ t('about.contactAccountSuffix') }}<router-link to="/agent">{{ t('common.agent') }}</router-link>{{ t('about.contactAgentSuffix') }}<router-link to="/terms">{{ t('common.terms') }}</router-link>{{ t('about.contactAnd') }}<router-link to="/privacy">{{ t('common.privacy') }}</router-link>{{ t('about.contactEnd') }}</p>
       </section>
 
       <div class="legal-actions">
-        <router-link class="action-primary" to="/matches">去看赛程</router-link>
-        <router-link class="action-ghost" to="/privacy">隐私说明</router-link>
-        <router-link class="action-ghost" to="/terms">使用条款</router-link>
+        <router-link class="action-primary" to="/matches">{{ t('about.cta') }}</router-link>
+        <router-link class="action-ghost" to="/privacy">{{ t('common.privacy') }}</router-link>
+        <router-link class="action-ghost" to="/terms">{{ t('common.terms') }}</router-link>
       </div>
     </main>
     <AppFooter />
@@ -69,6 +69,9 @@
 import AppFooter from '../../components/layout/AppFooter.vue'
 import AppTopNav from '../../components/layout/AppTopNav.vue'
 import { Football } from '@element-plus/icons-vue'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 </script>
 
 <style scoped>

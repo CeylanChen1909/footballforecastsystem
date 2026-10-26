@@ -2,37 +2,37 @@
   <el-card class="panel-card" shadow="never">
     <template #header>
       <div class="panel-header">
-        <span>用户运营</span>
+        <span>{{ t('admin.users.title') }}</span>
         <div class="panel-actions">
-          <el-select :model-value="roleFilter" placeholder="角色" style="width: 130px" clearable @update:model-value="updateRole" @change="$emit('filter-change')">
+          <el-select :model-value="roleFilter" :placeholder="t('admin.users.placeholder.role')" style="width: 130px" clearable @update:model-value="updateRole" @change="$emit('filter-change')">
             <el-option label="USER" value="USER" />
             <el-option label="ADMIN" value="ADMIN" />
           </el-select>
-          <el-select :model-value="statusFilter" placeholder="状态" style="width: 130px" clearable @update:model-value="updateStatus" @change="$emit('filter-change')">
+          <el-select :model-value="statusFilter" :placeholder="t('admin.users.placeholder.status')" style="width: 130px" clearable @update:model-value="updateStatus" @change="$emit('filter-change')">
             <el-option label="ACTIVE" value="ACTIVE" />
             <el-option label="DISABLED" value="DISABLED" />
           </el-select>
         </div>
       </div>
     </template>
-    <PageState v-if="error" type="error" title="用户数据加载失败" :description="error" action-text="重试" @action="$emit('retry')" />
+    <PageState v-if="error" type="error" :title="t('admin.users.loadFailed')" :description="error" :action-text="t('admin.common.retry')" @action="$emit('retry')" />
     <el-table v-else :data="users" stripe>
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="username" label="用户名" min-width="180" />
-      <el-table-column prop="role" label="角色" width="120">
+      <el-table-column prop="username" :label="t('admin.users.col.username')" min-width="180" />
+      <el-table-column prop="role" :label="t('admin.users.col.role')" width="120">
         <template #default="{ row }"><el-tag :type="row.role === 'ADMIN' ? 'danger' : 'info'">{{ row.role }}</el-tag></template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="120">
+      <el-table-column prop="status" :label="t('admin.users.col.status')" width="120">
         <template #default="{ row }"><el-tag :type="row.status === 'ACTIVE' ? 'success' : 'warning'">{{ row.status }}</el-tag></template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column :label="t('admin.users.col.actions')" width="260" fixed="right">
         <template #default="{ row }">
           <el-dropdown @command="command => $emit('user-action', command, row)">
-            <el-button size="small">更多操作 <el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+            <el-button size="small">{{ t('admin.users.more') }} <el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="toggleRole">切换角色</el-dropdown-item>
-                <el-dropdown-item command="toggleStatus">切换状态</el-dropdown-item>
+                <el-dropdown-item command="toggleRole">{{ t('admin.users.toggleRole') }}</el-dropdown-item>
+                <el-dropdown-item command="toggleStatus">{{ t('admin.users.toggleStatus') }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -45,6 +45,9 @@
 <script setup>
 import { ArrowDown } from '@element-plus/icons-vue'
 import PageState from '../../components/layout/PageState.vue'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 
 defineProps({
   users: { type: Array, default: () => [] },

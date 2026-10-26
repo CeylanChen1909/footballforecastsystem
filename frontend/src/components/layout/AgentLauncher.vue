@@ -1,15 +1,17 @@
 <template>
-  <button class="agent-launcher" type="button" aria-label="打开赛程助手" @click="router.push('/agent')">
+  <button class="agent-launcher" type="button" :aria-label="t('components.agentLauncher.ariaLabel')" @click="router.push('/agent')">
     <el-icon :size="18"><ChatLineSquare /></el-icon>
-    <span>助手</span>
+    <span>{{ t('components.agentLauncher.label') }}</span>
   </button>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
 import { ChatLineSquare } from '@element-plus/icons-vue'
+import { useI18n } from '../../i18n'
 
 const router = useRouter()
+const { t } = useI18n()
 </script>
 
 <style scoped>

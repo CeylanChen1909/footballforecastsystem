@@ -1,27 +1,30 @@
 <template>
-  <footer class="app-footer" aria-label="站点页脚">
+  <footer class="app-footer" :aria-label="t('footer.ariaLabel')">
     <div class="app-footer-inner">
       <div class="footer-brand">
         <strong>ChenFootball</strong>
-        <span>赛程、比分与预测概率</span>
+        <span>{{ t('footer.tagline') }}</span>
       </div>
-      <nav class="footer-links" aria-label="页脚导航">
-        <router-link to="/matches">比赛</router-link>
-        <router-link to="/matches?discover=predict">精选预测</router-link>
-        <router-link to="/competitions">赛事资料</router-link>
-        <router-link to="/agent">助手</router-link>
-        <router-link to="/about">关于</router-link>
-        <router-link to="/terms">使用条款</router-link>
-        <router-link to="/privacy">隐私说明</router-link>
+      <nav class="footer-links" :aria-label="t('footer.navLabel')">
+        <router-link to="/matches">{{ t('footer.matches') }}</router-link>
+        <router-link to="/matches?discover=predict">{{ t('footer.featuredPredictions') }}</router-link>
+        <router-link to="/competitions">{{ t('footer.competitions') }}</router-link>
+        <router-link to="/agent">{{ t('footer.agent') }}</router-link>
+        <router-link to="/about">{{ t('footer.about') }}</router-link>
+        <router-link to="/terms">{{ t('footer.terms') }}</router-link>
+        <router-link to="/privacy">{{ t('footer.privacy') }}</router-link>
       </nav>
-      <p class="footer-note">预测仅供参考，不构成投注建议。数据覆盖与模型质量会在页面中明确标注。</p>
-      <p class="footer-copy">© {{ year }} ChenFootball</p>
+      <p class="footer-note">{{ t('footer.note') }}</p>
+      <p class="footer-copy">{{ t('footer.copyright', { year }) }}</p>
     </div>
   </footer>
 </template>
 
 <script setup>
+import { useI18n } from '../../i18n'
+
 const year = new Date().getFullYear()
+const { t } = useI18n()
 </script>
 
 <style scoped>

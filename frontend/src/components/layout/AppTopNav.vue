@@ -1,7 +1,7 @@
 <template>
   <el-header class="app-top-nav ff-surface">
-    <a class="skip-link" href="#app-main">跳转到主要内容</a>
-    <div class="nav-brand" role="link" tabindex="0" aria-label="返回比赛" @click="handleBrandClick" @keydown.enter="handleBrandClick" @keydown.space.prevent="handleBrandClick">
+    <a class="skip-link" href="#app-main">{{ t('nav.skipToContent') }}</a>
+    <div class="nav-brand" role="link" tabindex="0" :aria-label="t('nav.backToMatches')" @click="handleBrandClick" @keydown.enter="handleBrandClick" @keydown.space.prevent="handleBrandClick">
       <div class="brand-icon football-brand">
         <component :is="brandIcon" :size="22" />
       </div>
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-        <nav class="nav-menu-wrap" :class="{ 'is-open': mobileMenuOpen }" aria-label="主导航">
+    <nav class="nav-menu-wrap" :class="{ 'is-open': mobileMenuOpen }" :aria-label="t('nav.mainNavigation')">
       <div class="top-menu sport-menu" role="menubar">
         <button
           v-for="item in navItems"
@@ -29,89 +29,97 @@
           <el-icon><component :is="item.icon" /></el-icon><span>{{ item.label }}</span>
         </button>
       </div>
+      <div class="lang-switch mobile-lang-switch" role="group" :aria-label="t('nav.language')">
+        <button type="button" class="lang-option" :class="{ 'is-active': locale === 'en' }" :aria-pressed="locale === 'en'" :aria-label="t('nav.english')" @click="setLocale('en')">EN</button>
+        <button type="button" class="lang-option" :class="{ 'is-active': locale === 'zh' }" :aria-pressed="locale === 'zh'" :aria-label="t('nav.chinese')" @click="setLocale('zh')">{{ t('components.language.zh') }}</button>
+      </div>
     </nav>
 
     <div class="nav-actions">
       <slot name="actions" />
-      <el-button text class="mobile-menu-toggle" :aria-expanded="mobileMenuOpen" :aria-label="mobileMenuOpen ? '关闭导航菜单' : '打开导航菜单'" :title="mobileMenuOpen ? '关闭导航菜单' : '导航菜单'" @click="mobileMenuOpen = !mobileMenuOpen"><el-icon><Menu /></el-icon></el-button>
-      <el-button text class="global-search-btn" aria-label="全局搜索" title="全局搜索" @click="openSearch"><el-icon><Search /></el-icon><span class="nav-action-label">搜索</span></el-button>
+      <div class="lang-switch desktop-lang-switch" role="group" :aria-label="t('nav.language')">
+        <button type="button" class="lang-option" :class="{ 'is-active': locale === 'en' }" :aria-pressed="locale === 'en'" :aria-label="t('nav.english')" @click="setLocale('en')">EN</button>
+        <button type="button" class="lang-option" :class="{ 'is-active': locale === 'zh' }" :aria-pressed="locale === 'zh'" :aria-label="t('nav.chinese')" @click="setLocale('zh')">{{ t('components.language.zh') }}</button>
+      </div>
+      <el-button text class="mobile-menu-toggle" :aria-expanded="mobileMenuOpen" :aria-label="mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')" :title="mobileMenuOpen ? t('nav.closeMenu') : t('nav.menu')" @click="mobileMenuOpen = !mobileMenuOpen"><el-icon><Menu /></el-icon></el-button>
+      <el-button text class="global-search-btn" :aria-label="t('nav.search')" :title="t('nav.search')" @click="openSearch"><el-icon><Search /></el-icon><span class="nav-action-label">{{ t('nav.search') }}</span></el-button>
       <el-badge v-if="userStore.token" :value="notificationUnread" :hidden="notificationUnread === 0" :max="99" class="notification-badge">
-        <el-button text class="global-search-btn" aria-label="通知中心" title="通知中心" @click="openNotifications"><el-icon><Bell /></el-icon></el-button>
+        <el-button text class="global-search-btn" :aria-label="t('nav.notificationCenter')" :title="t('nav.notificationCenter')" @click="openNotifications"><el-icon><Bell /></el-icon></el-button>
       </el-badge>
       <el-dropdown trigger="click" @command="handleUserCommand">
-        <div class="nav-account-trigger" :aria-label="userStore.token ? '打开个人菜单' : '打开登录菜单'">
-          <el-avatar :size="36" class="nav-avatar" :src="userStore.avatarData || undefined">{{ userStore.username?.[0]?.toUpperCase() || '客' }}</el-avatar>
+        <div class="nav-account-trigger" :aria-label="userStore.token ? t('nav.openAccountMenu') : t('nav.openLoginMenu')">
+          <el-avatar :size="36" class="nav-avatar" :src="userStore.avatarData || undefined">{{ userStore.username?.[0]?.toUpperCase() || t('nav.guest') }}</el-avatar>
           <el-icon class="nav-account-arrow" aria-hidden="true"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="userStore.token" command="profile"><el-icon><User /></el-icon> 个人信息</el-dropdown-item>
-            <el-dropdown-item v-else command="login"><el-icon><SwitchButton /></el-icon> 登录 / 注册</el-dropdown-item>
-            <el-dropdown-item command="privacy"><el-icon><Notebook /></el-icon> 隐私说明</el-dropdown-item>
-            <el-dropdown-item v-if="userStore.token" divided command="logout"><el-icon><SwitchButton /></el-icon> 退出登录</el-dropdown-item>
+            <el-dropdown-item v-if="userStore.token" command="profile"><el-icon><User /></el-icon> {{ t('nav.profile') }}</el-dropdown-item>
+            <el-dropdown-item v-else command="login"><el-icon><SwitchButton /></el-icon> {{ t('nav.loginRegister') }}</el-dropdown-item>
+            <el-dropdown-item command="privacy"><el-icon><Notebook /></el-icon> {{ t('nav.privacy') }}</el-dropdown-item>
+            <el-dropdown-item v-if="userStore.token" divided command="logout"><el-icon><SwitchButton /></el-icon> {{ t('nav.logout') }}</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </div>
-    <el-dialog v-if="dialogsReady" v-model="searchVisible" title="全局搜索" width="min(620px, 92vw)" append-to-body @opened="focusSearchInput">
-      <el-input ref="searchInputRef" v-model="searchKeyword" clearable autofocus placeholder="搜索球队、联赛或比赛（支持中英文别名）" @keyup.enter="runSearch" @input="onSearchInput" />
-      <div v-if="searchLoading" class="global-search-state">正在搜索…</div>
+    <el-dialog v-if="dialogsReady" v-model="searchVisible" :title="t('nav.searchTitle')" width="min(620px, 92vw)" append-to-body @opened="focusSearchInput">
+      <el-input ref="searchInputRef" v-model="searchKeyword" clearable autofocus :placeholder="t('nav.searchPlaceholder')" @keyup.enter="runSearch" @input="onSearchInput" />
+      <div v-if="searchLoading" class="global-search-state">{{ t('nav.searching') }}</div>
       <div v-else-if="hasSearchHits" class="global-search-results">
         <div v-if="searchResults.teams.length" class="global-search-section">
-          <div class="global-search-section-title">球队</div>
+          <div class="global-search-section-title">{{ t('nav.searchTeams') }}</div>
           <button v-for="item in searchResults.teams" :key="`t-${item.id || item.name}`" type="button" class="global-search-item" @click="openTeam(item)">
             <strong>{{ item.name }}</strong>
-            <small>{{ item.league || '球队资料' }}</small>
+            <small>{{ item.league || t('nav.searchTeamFallback') }}</small>
           </button>
         </div>
         <div v-if="searchResults.leagues.length" class="global-search-section">
-          <div class="global-search-section-title">联赛</div>
+          <div class="global-search-section-title">{{ t('nav.searchLeagues') }}</div>
           <button v-for="item in searchResults.leagues" :key="`l-${item.name}`" type="button" class="global-search-item" @click="openLeague(item)">
             <strong>{{ item.name }}</strong>
-            <small>{{ item.matchCount ? `${item.matchCount} 场相关比赛` : '赛事资料' }}</small>
+            <small>{{ item.matchCount ? t('nav.searchLeagueMatchCount', { count: item.matchCount }) : t('nav.searchLeagueFallback') }}</small>
           </button>
         </div>
         <div v-if="searchResults.matches.length" class="global-search-section">
-          <div class="global-search-section-title">比赛</div>
+          <div class="global-search-section-title">{{ t('nav.searchMatches') }}</div>
           <button v-for="item in searchResults.matches" :key="`m-${item.fixtureId || item.matchId || item.id}-${item.homeTeamName}-${item.awayTeamName}`" type="button" class="global-search-item" @click="openMatch(item)">
-            <strong>{{ item.homeTeamName }} vs {{ item.awayTeamName }}</strong>
-            <small>{{ item.leagueName || '比赛' }}{{ item.matchTime ? ` · ${formatSearchTime(item.matchTime)}` : '' }} · 查看预测</small>
+            <strong>{{ searchMatchTeam(item, 'home') }} vs {{ searchMatchTeam(item, 'away') }}</strong>
+            <small>{{ searchMatchLeague(item) || t('nav.searchMatchFallback') }}{{ item.matchTime ? ` · ${formatSearchTime(item.matchTime)}` : '' }} · {{ t('nav.searchViewPrediction') }}</small>
           </button>
         </div>
         <div v-if="searchResults.articles.length" class="global-search-section">
-          <div class="global-search-section-title">资讯</div>
+          <div class="global-search-section-title">{{ t('nav.searchArticles') }}</div>
           <button v-for="item in searchResults.articles" :key="`a-${item.id || item.title}`" type="button" class="global-search-item" @click="openArticle(item)">
-            <strong>{{ item.title || '资讯' }}</strong>
-            <small>{{ item.source || '文章' }}</small>
+            <strong>{{ item.title || t('nav.searchArticleFallback') }}</strong>
+            <small>{{ item.source || t('nav.searchArticleSourceFallback') }}</small>
           </button>
         </div>
       </div>
       <div v-else-if="searchKeyword.trim()" class="global-search-state global-search-empty">
-        <p>没有找到「{{ searchKeyword.trim() }}」相关内容</p>
+        <p>{{ t('nav.searchNoResults', { keyword: searchKeyword.trim() }) }}</p>
         <div class="global-search-empty-links">
-          <el-button type="primary" link @click="goBrowse('/matches')">浏览比赛并查看预测</el-button>
-          <el-button type="primary" link @click="goBrowse('/competitions')">查看赛事资料</el-button>
+          <el-button type="primary" link @click="goBrowse('/matches')">{{ t('nav.searchBrowseMatches') }}</el-button>
+          <el-button type="primary" link @click="goBrowse('/competitions')">{{ t('nav.searchBrowseCompetitions') }}</el-button>
         </div>
       </div>
     </el-dialog>
-    <el-dialog v-if="dialogsReady" v-model="notificationVisible" title="通知中心" width="min(520px, 92vw)" append-to-body>
+    <el-dialog v-if="dialogsReady" v-model="notificationVisible" :title="t('nav.notificationCenter')" width="min(520px, 92vw)" append-to-body>
       <div class="notification-head">
-        <span>收藏比赛后将在开赛前站内提醒；也可开启浏览器通知。</span>
-        <el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">全部已读</el-button>
+        <span>{{ t('nav.notificationHint') }}</span>
+        <el-button v-if="notificationUnread" link type="primary" @click="markAllNotifications">{{ t('nav.markAllRead') }}</el-button>
       </div>
-      <div v-if="notificationLoading" class="global-search-state">正在加载通知…</div>
+      <div v-if="notificationLoading" class="global-search-state">{{ t('nav.notificationLoading') }}</div>
       <div v-else-if="notifications.length === 0" class="notification-empty">
-        <p class="notification-empty-title">暂无通知</p>
-        <p class="notification-empty-hint">收藏比赛后，开赛前 30 分钟会写在这里。</p>
+        <p class="notification-empty-title">{{ t('nav.noNotifications') }}</p>
+        <p class="notification-empty-hint">{{ t('nav.notificationEmptyHint') }}</p>
         <div class="notification-empty-actions">
-          <el-button type="primary" plain size="small" @click="goBrowse('/matches')">去收藏一场比赛</el-button>
-          <el-button v-if="browserNotifyState === 'default'" size="small" plain @click="requestBrowserNotify">开启浏览器通知</el-button>
+          <el-button type="primary" plain size="small" @click="goBrowse('/matches')">{{ t('nav.favoriteMatch') }}</el-button>
+          <el-button v-if="browserNotifyState === 'default'" size="small" plain @click="requestBrowserNotify">{{ t('nav.enableBrowserNotifications') }}</el-button>
         </div>
       </div>
       <div v-else class="notification-list">
         <button v-for="item in notifications" :key="item.id" type="button" class="notification-item" :class="{ 'is-unread': !item.read_at }" @click="markNotification(item)">
           <span class="notification-dot"></span>
-          <span class="notification-copy"><strong>{{ item.title }}</strong><small>{{ item.body || '暂无详细内容' }}</small><em>{{ formatNotificationTime(item.created_at) }}</em></span>
+          <span class="notification-copy"><strong>{{ item.title }}</strong><small>{{ item.body || t('nav.noDetails') }}</small><em>{{ formatNotificationTime(item.created_at) }}</em></span>
         </button>
       </div>
     </el-dialog>
@@ -129,9 +137,10 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { crawlerApi, searchApi, userApi } from '../../api'
-import { expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
+import { displayLeagueName, displayTeamName, expandSearchQueries, findLeagueAlias, matchLocalSearch } from '../../utils/teamNames'
 import { ArrowDown, ChatLineSquare, Football, Notebook, User, SwitchButton, Setting, Search, Bell, Menu } from '@element-plus/icons-vue'
 import { registerElementPlusDialog } from '../../plugins/register-element-plus-dialog'
+import { useI18n } from '../../i18n'
 
 const epApp = getCurrentInstance()?.appContext.app
 
@@ -145,6 +154,7 @@ const props = defineProps({
 
 const router = useRouter()
 const userStore = useUserStore()
+const { locale, t, setLocale } = useI18n()
 const dialogsReady = ref(false)
 const searchVisible = ref(false)
 const searchLoading = ref(false)
@@ -163,11 +173,11 @@ let notificationPollTimer = null
 const isAdmin = computed(() => ['ADMIN', 'SUPER_ADMIN'].includes(userStore.role))
 const navItems = computed(() => {
   const items = [
-    { path: '/matches', label: '比赛', icon: Football },
-    { path: '/competitions', label: '赛事资料', icon: Notebook },
-    { path: '/agent', label: '助手', icon: ChatLineSquare, soft: true },
+    { path: '/matches', label: t('nav.matches'), icon: Football },
+    { path: '/competitions', label: t('nav.competitions'), icon: Notebook },
+    { path: '/agent', label: t('nav.agent'), icon: ChatLineSquare, soft: true },
   ]
-  if (isAdmin.value) items.push({ path: '/admin', label: '管理', icon: Setting })
+  if (isAdmin.value) items.push({ path: '/admin', label: t('nav.admin'), icon: Setting })
   return items
 })
 const protectedPaths = ['/profile', '/admin']
@@ -214,11 +224,20 @@ const normalizeMatchHit = item => {
     matchId: fixtureId,
     id: fixtureId,
     homeTeamName: item?.homeTeamName || item?.teams?.home?.name || '',
+    homeTeamDisplayName: item?.homeTeamDisplayName || item?.homeTeamDisplay || item?.teams?.home?.teamDisplayName || item?.teams?.home?.displayName || '',
     awayTeamName: item?.awayTeamName || item?.teams?.away?.name || '',
+    awayTeamDisplayName: item?.awayTeamDisplayName || item?.awayTeamDisplay || item?.teams?.away?.teamDisplayName || item?.teams?.away?.displayName || '',
     leagueName: item?.leagueName || item?.league?.name || '',
+    leagueDisplay: item?.leagueDisplay || item?.leagueDisplayName || item?.league?.leagueDisplay || item?.league?.displayName || '',
     matchTime: item?.matchTime || item?.fixture?.date || ''
   }
 }
+
+const searchMatchTeam = (item, side) => displayTeamName(
+  item?.[`${side}TeamName`] || '',
+  item?.[`${side}TeamDisplayName`] || ''
+)
+const searchMatchLeague = item => displayLeagueName(item?.leagueName || '', item?.leagueDisplay || '')
 
 const normalizeTeamHit = item => ({
   id: item?.id || item?.teamId || 0,
@@ -314,7 +333,7 @@ const formatSearchTime = value => {
   if (!value) return ''
   const date = new Date(String(value).includes('T') ? value : String(value).replace(' ', 'T'))
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 const goBrowse = (path) => {
   searchVisible.value = false
@@ -354,8 +373,8 @@ const maybeBrowserNotify = (item) => {
   const type = String(item.type || item.category || '')
   if (type && !/MATCH_KICKOFF|PREDICTION_READY|REMINDER|FAVORITE/i.test(type) && !/提醒|开赛|预测/.test(String(item.title || ''))) return
   try {
-    new Notification(item.title || 'ChenFootball 提醒', {
-      body: item.body || '你收藏的比赛有新提醒',
+    new Notification(item.title || t('nav.browserReminderTitle'), {
+      body: item.body || t('nav.browserReminderBody'),
       tag: `cf-notif-${item.id}`
     })
   } catch { /* ignore */ }
@@ -400,7 +419,7 @@ const requestBrowserNotify = async () => {
   const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
   browserNotifyState.value = permission
 }
-const formatNotificationTime = value => value ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+const formatNotificationTime = value => value ? new Date(value).toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 
 const startNotificationPolling = () => {
   stopNotificationPolling()
@@ -446,6 +465,7 @@ watch(() => userStore.token, token => {
   else { notifications.value = []; notificationUnread.value = 0; knownNotificationIds.value = new Set(); stopNotificationPolling() }
 })
 watch(searchVisible, visible => { if (!visible && searchDebounceTimer) window.clearTimeout(searchDebounceTimer) })
+watch(locale, () => { if (userStore.token) loadNotifications({ silent: true }) })
 onMounted(() => { if (userStore.token) { loadNotifications(); startNotificationPolling() } })
 onBeforeUnmount(() => {
   stopNotificationPolling()
@@ -566,6 +586,33 @@ onBeforeUnmount(() => {
   gap: 6px;
   flex: none;
 }
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--ff-border);
+  border-radius: 999px;
+  background: var(--ff-surface-quiet);
+}
+.lang-option {
+  min-width: 38px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ff-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+.lang-option:hover { color: var(--ff-primary); }
+.lang-option.is-active { color: #ffffff; background: var(--ff-primary); }
+.lang-option:focus-visible { outline: 2px solid var(--ff-primary); outline-offset: 2px; }
+.mobile-lang-switch { display: none; }
 .mobile-menu-toggle { display:none; color:var(--ff-text-muted); }
 .nav-account-trigger {
   display: inline-flex;
@@ -712,7 +759,9 @@ onBeforeUnmount(() => {
     background: var(--ff-surface);
     box-shadow: 0 12px 28px rgba(15, 23, 20, 0.18);
   }
-  .nav-menu-wrap.is-open { display: flex; }
+  .nav-menu-wrap.is-open { display: flex; flex-direction: column; }
+  .desktop-lang-switch { display: none; }
+  .mobile-lang-switch { display: inline-flex; align-self: flex-start; margin: 8px 2px 0; }
   .mobile-menu-toggle { display: inline-flex; }
   .nav-menu-wrap .sport-menu {
     display: grid;

@@ -2,31 +2,32 @@ import { defineStore } from 'pinia'
 import { userApi } from '../api'
 import { ElMessage } from 'element-plus'
 import { authStorage } from '../utils/authStorage'
+import { t } from '../i18n'
 
 function commercialAuthError(raw, kind = 'login') {
   const msg = String(raw || '').trim()
   const lower = msg.toLowerCase()
   if (!msg) {
     return kind === 'register'
-      ? '注册未完成，请检查邮箱、验证码与密码后重试'
-      : '登录未成功，请确认账号与密码，或稍后再试'
+      ? t('account.errors.registerGeneric')
+      : t('account.errors.loginGeneric')
   }
   if (/password|密码/.test(lower) && /incorrect|wrong|错误|不匹配|不正确/.test(lower)) {
-    return '账号或密码不正确。可使用「忘记密码」重置，或核对大小写后重试'
+    return t('account.errors.passwordIncorrect')
   }
   if (/captcha|验证码|图形/.test(lower)) {
-    return '安全验证未通过，请刷新验证码后重试'
+    return t('account.errors.securityCheckFailed')
   }
   if (/exist|已存在|already/.test(lower)) {
-    return '该邮箱可能已注册，请直接登录或使用忘记密码'
+    return t('account.errors.emailExists')
   }
   if (/network|timeout|网络|超时/.test(lower)) {
-    return '网络不稳定，请稍后重试。你的数据不会因此丢失'
+    return t('account.errors.networkUnstable')
   }
   if (/[\u4e00-\u9fff]/.test(msg) && msg.length <= 80) return msg
   return kind === 'register'
-    ? (msg.length <= 80 ? msg : '注册未完成，请稍后重试或检查验证码是否过期')
-    : (msg.length <= 80 ? msg : '登录未成功，请稍后重试')
+    ? (msg.length <= 80 ? msg : t('account.errors.registerRetryLater'))
+    : (msg.length <= 80 ? msg : t('account.errors.loginRetryLater'))
 }
 
 export const useUserStore = defineStore('user', {
@@ -155,7 +156,7 @@ export const useUserStore = defineStore('user', {
       const res = await userApi.register(email, nickname, password, verificationCode, captchaId, captchaAnswer)
       const data = res?.data ?? res
       if (data.ok) {
-        ElMessage.success('注册成功，请使用邮箱登录以同步收藏与预测')
+        ElMessage.success(t('account.notice.registerSuccess'))
         return true
       } else {
         ElMessage.error(commercialAuthError(data.message, 'register'))

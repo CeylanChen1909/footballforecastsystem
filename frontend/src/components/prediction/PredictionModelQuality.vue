@@ -1,20 +1,20 @@
 <template>
-  <div v-if="visible" class="model-quality-panel" aria-label="模型质量说明">
+  <div v-if="visible" class="model-quality-panel" :aria-label="t('prediction.modelQuality.aria')">
     <div class="quality-panel-head">
-      <div><strong>模型可靠性</strong><small>基于时间外测试集，不代表单场结果保证</small></div>
-      <el-tag size="small" :type="reliable ? 'success' : 'warning'">{{ reliable ? '测试表现较稳健' : '建议谨慎参考' }}</el-tag>
+      <div><strong>{{ t('prediction.modelQuality.title') }}</strong><small>{{ t('prediction.modelQuality.subtitle') }}</small></div>
+      <el-tag size="small" :type="reliable ? 'success' : 'warning'">{{ reliable ? t('prediction.modelQuality.reliable') : t('prediction.modelQuality.caution') }}</el-tag>
     </div>
     <div class="quality-metric-grid">
-      <div v-if="value('model_accuracy') != null"><span>时间外准确率</span><strong>{{ percent(value('model_accuracy')) }}</strong></div>
-      <div v-if="value('model_balanced_accuracy') != null"><span>综合类别准确率</span><strong>{{ percent(value('model_balanced_accuracy')) }}</strong></div>
-      <div v-if="value('model_log_loss') != null"><span>概率误差 Log loss</span><strong>{{ number(value('model_log_loss')) }}</strong></div>
-      <div v-if="value('model_baseline_log_loss') != null"><span>基线概率误差</span><strong>{{ number(value('model_baseline_log_loss')) }}</strong></div>
-      <div v-if="value('model_test_size') != null"><span>时间外测试场次</span><strong>{{ value('model_test_size') }}</strong></div>
-      <div v-if="quality.model_class_recall?.DRAW != null"><span>平局识别率</span><strong>{{ percent(quality.model_class_recall.DRAW) }}</strong></div>
+      <div v-if="value('model_accuracy') != null"><span>{{ t('prediction.modelQuality.accuracy') }}</span><strong>{{ percent(value('model_accuracy')) }}</strong></div>
+      <div v-if="value('model_balanced_accuracy') != null"><span>{{ t('prediction.modelQuality.balancedAccuracy') }}</span><strong>{{ percent(value('model_balanced_accuracy')) }}</strong></div>
+      <div v-if="value('model_log_loss') != null"><span>{{ t('prediction.modelQuality.logLoss') }}</span><strong>{{ number(value('model_log_loss')) }}</strong></div>
+      <div v-if="value('model_baseline_log_loss') != null"><span>{{ t('prediction.modelQuality.baselineLogLoss') }}</span><strong>{{ number(value('model_baseline_log_loss')) }}</strong></div>
+      <div v-if="value('model_test_size') != null"><span>{{ t('prediction.modelQuality.testSize') }}</span><strong>{{ value('model_test_size') }}</strong></div>
+      <div v-if="quality.model_class_recall?.DRAW != null"><span>{{ t('prediction.modelQuality.drawRecall') }}</span><strong>{{ percent(quality.model_class_recall.DRAW) }}</strong></div>
     </div>
     <div v-if="quality.model_quality_gate" class="quality-gate-note" :class="quality.model_quality_gate.eligible ? 'gate-pass' : 'gate-hold'">
-      <strong>{{ quality.model_quality_gate.eligible ? '已通过生产门槛' : '当前模型未通过生产门槛' }}</strong>
-      <span>{{ quality.model_quality_gate.message || '模型结果仅作为实验性参考' }}</span>
+      <strong>{{ quality.model_quality_gate.eligible ? t('prediction.modelQuality.gatePassed') : t('prediction.modelQuality.gateFailed') }}</strong>
+      <span>{{ quality.model_quality_gate.message || t('prediction.modelQuality.gateFallback') }}</span>
     </div>
     <small v-if="scopeText" class="quality-scope-warning">{{ scopeText }}</small>
     <small v-if="quality.model_scope?.warning" class="quality-scope-warning">{{ quality.model_scope.warning }}</small>
@@ -23,11 +23,13 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from '../../i18n'
 const props = defineProps({
   quality: { type: Object, default: () => ({}) },
   visible: { type: Boolean, default: false },
   reliable: { type: Boolean, default: false }
 })
+const { t } = useI18n()
 const value = key => {
   const number = Number(props.quality?.[key])
   return Number.isFinite(number) ? number : null
@@ -36,7 +38,9 @@ const percent = value => `${(Number(value) * 100).toFixed(1)}%`
 const number = value => Number(value).toFixed(3)
 const scopeText = computed(() => {
   const competitions = props.quality?.model_scope?.competitions
-  return Array.isArray(competitions) && competitions.length ? `当前模型覆盖：${competitions.join('、')}` : ''
+  return Array.isArray(competitions) && competitions.length
+    ? t('prediction.modelQuality.scope', { competitions: competitions.join(t('prediction.common.listSeparator')) })
+    : ''
 })
 </script>
 

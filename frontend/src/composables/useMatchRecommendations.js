@@ -1,7 +1,8 @@
 import { computed, ref } from 'vue'
 import { crawlerApi } from '../api'
+import { locale, t } from '../i18n'
 
-const cacheKey = () => 'match-focus:rolling'
+const cacheKey = () => `match-focus:rolling:${locale.value}`
 
 const readCache = () => {
   try {
@@ -51,11 +52,11 @@ export function useMatchRecommendations({ limit = 6 } = {}) {
       if (serial !== requestSerial) return
       if (cached) {
         apply(cached, { isStale: true })
-        error.value = '推荐数据暂时无法更新，当前显示上次成功读取的结果。'
+        error.value = t('components.recommendations.staleError')
       } else {
         items.value = []
         meta.value = {}
-        error.value = requestError?.message || '比赛焦点暂时无法更新，请稍后重试。'
+        error.value = requestError?.message || t('components.recommendations.unavailableError')
       }
     } finally {
       if (serial === requestSerial) loading.value = false

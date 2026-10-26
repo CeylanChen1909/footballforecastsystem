@@ -7,11 +7,11 @@
   >
     <div class="discovery-head">
       <div class="discovery-copy">
-        <span class="discovery-kicker">焦点</span>
-        <h2 id="prediction-discovery-title">精选预测入口</h2>
-        <p>点开看本场概率与数据覆盖。</p>
+        <span class="discovery-kicker">{{ t('matches.discoveryKicker') }}</span>
+        <h2 id="prediction-discovery-title">{{ t('matches.discoveryTitle') }}</h2>
+        <p>{{ t('matches.discoveryDescription') }}</p>
       </div>
-      <span class="discovery-more">来自比赛焦点</span>
+      <span class="discovery-more">{{ t('matches.discoveryMore') }}</span>
     </div>
     <div class="discovery-list" role="list">
       <button
@@ -20,12 +20,12 @@
         type="button"
         class="discovery-chip"
         role="listitem"
-        :aria-label="`查看 ${homeName(match)} 对 ${awayName(match)} 的预测`"
+        :aria-label="t('matches.discoveryAria', { home: homeName(match), away: awayName(match) })"
         @click="$emit('predict', match)"
       >
         <span class="discovery-league">{{ leagueName(match) }}</span>
         <strong>{{ homeName(match) }} <em>vs</em> {{ awayName(match) }}</strong>
-        <span class="discovery-cta">{{ isFinished(match) ? '复盘' : '预测' }}</span>
+        <span class="discovery-cta">{{ isFinished(match) ? t('matches.review') : t('matches.predict') }}</span>
       </button>
     </div>
   </section>
@@ -33,8 +33,11 @@
 
 <script setup>
 import { computed } from 'vue'
-import { isFinished as isFinishedMatch } from '../../utils/match'
-import { getTeamDisplayName } from '../../utils/teamNames'
+import { getLeagueDisplay, getTeamDisplay, isFinished as isFinishedMatch } from '../../utils/match'
+import { displayLeagueName, getTeamDisplayName } from '../../utils/teamNames'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -45,9 +48,9 @@ defineEmits(['predict'])
 
 const visibleItems = computed(() => (Array.isArray(props.items) ? props.items : []).slice(0, props.limit))
 const team = (match, side) => match?.teams?.[side] || {}
-const homeName = match => getTeamDisplayName(team(match, 'home').name || match?.homeTeamName || '主队', props.teamNameMode)
-const awayName = match => getTeamDisplayName(team(match, 'away').name || match?.awayTeamName || '客队', props.teamNameMode)
-const leagueName = match => match?.league?.name || match?.leagueName || '赛事'
+const homeName = match => getTeamDisplayName(team(match, 'home').name || match?.homeTeamName || t('matches.homeTeam'), props.teamNameMode, getTeamDisplay(match, 'home'))
+const awayName = match => getTeamDisplayName(team(match, 'away').name || match?.awayTeamName || t('matches.awayTeam'), props.teamNameMode, getTeamDisplay(match, 'away'))
+const leagueName = match => displayLeagueName(match?.league?.name || match?.leagueName || t('matches.leagueFallback'), getLeagueDisplay(match))
 const itemKey = (match, index) => match?.matchId || match?.id || match?.fixtureId || `discover-${index}`
 const isFinished = match => isFinishedMatch(match)
 </script>

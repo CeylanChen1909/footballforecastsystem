@@ -1,27 +1,31 @@
 <template>
-  <div class="image-captcha" role="group" aria-label="图形验证码">
-    <button type="button" class="captcha-image-button" title="点击刷新验证码" @click="$emit('refresh')">
-      <img v-if="image" :src="image" alt="图形验证码，点击刷新" />
-      <span v-else class="captcha-placeholder">加载中…</span>
+  <div class="image-captcha" role="group" :aria-label="t('account.captcha.groupAria')">
+    <button type="button" class="captcha-image-button" :title="t('account.captcha.refreshTitle')" @click="$emit('refresh')">
+      <img v-if="image" :src="image" :alt="t('account.captcha.imageAlt')" />
+      <span v-else class="captcha-placeholder">{{ t('account.captcha.loading') }}</span>
     </button>
     <el-input
       :model-value="answer"
-      placeholder="请输入图中字符"
+      :placeholder="t('account.captcha.placeholder')"
       autocomplete="off"
       maxlength="5"
       @update:model-value="$emit('update:answer', $event.toUpperCase())"
       @keyup.enter="$emit('submit')"
     />
-    <button type="button" class="captcha-refresh" @click="$emit('refresh')">换一张</button>
+    <button type="button" class="captcha-refresh" @click="$emit('refresh')">{{ t('account.captcha.change') }}</button>
   </div>
 </template>
 
 <script setup>
+import { useI18n } from '../../i18n'
+
 defineProps({
   image: { type: String, default: '' },
   answer: { type: String, default: '' }
 })
 defineEmits(['refresh', 'update:answer', 'submit'])
+
+const { t } = useI18n()
 </script>
 
 <style scoped>

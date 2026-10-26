@@ -2,13 +2,13 @@
   <button
     type="button"
     class="changelog-trigger"
-    aria-label="打开更新日志"
-    title="更新日志"
+    :aria-label="t('matches.changelogOpenAria')"
+    :title="t('matches.changelogTitle')"
     aria-controls="matches-changelog-drawer"
     @click="openChangelog"
   >
     <el-icon class="changelog-icon" aria-hidden="true"><Clock /></el-icon>
-    <span class="changelog-label">更新日志</span>
+    <span class="changelog-label">{{ t('matches.changelogTitle') }}</span>
   </button>
 
   <el-drawer
@@ -22,13 +22,13 @@
     <template #header>
       <div class="changelog-drawer-heading">
         <span class="changelog-drawer-kicker">CHANGELOG</span>
-        <h2>更新日志</h2>
-        <p>记录近期影响比赛浏览和预测体验的变化。</p>
+        <h2>{{ t('matches.changelogTitle') }}</h2>
+        <p>{{ t('matches.changelogDescription') }}</p>
       </div>
     </template>
 
     <div class="changelog-list" aria-live="polite">
-      <el-empty v-if="!entries.length" description="暂无更新日志" :image-size="72" />
+      <el-empty v-if="!entries.length" :description="t('matches.changelogEmpty')" :image-size="72" />
       <article v-for="entry in entries" :key="entry.id" class="changelog-entry">
         <div class="changelog-entry-marker" aria-hidden="true"></div>
         <div class="changelog-entry-content">
@@ -52,50 +52,53 @@ import { computed, getCurrentInstance, onMounted, ref } from 'vue'
 import { Clock } from '@element-plus/icons-vue'
 import { changelogApi } from '../../api'
 import { registerElementPlusDrawer } from '../../plugins/register-element-plus-drawer'
+import { useI18n } from '../../i18n'
 
 registerElementPlusDrawer(getCurrentInstance()?.appContext.app)
 
+const { t } = useI18n()
 const STORAGE_KEY = 'football_changelog_last_seen'
 const visible = ref(false)
 const lastSeen = ref(localStorage.getItem(STORAGE_KEY) || '')
 
-const defaultEntries = [
+const defaultEntries = computed(() => [
   {
     id: '2026-08-25-account',
     date: '2026-08-25',
-    tag: '账户',
+    tag: t('matches.changelog.account.tag'),
     tone: 'account',
-    title: '注册与账户资料体验更新',
-    description: '优化邮箱验证码校验、头像同步和球队关注状态反馈。',
-    details: ['验证码失败不会清空已填写内容', '个人资料头像会同步到顶部导航']
+    title: t('matches.changelog.account.title'),
+    description: t('matches.changelog.account.description'),
+    details: [t('matches.changelog.account.detail1'), t('matches.changelog.account.detail2')]
   },
   {
     id: '2026-08-24-focus',
     date: '2026-08-24',
-    tag: '赛程',
+    tag: t('matches.changelog.schedule.tag'),
     tone: 'match',
-    title: '比赛焦点改为动态推荐',
-    description: '焦点比赛根据联赛、开赛距离和球队热度计算，不再绑定某个日期。',
-    details: ['左侧焦点栏可快速打开比赛详情', '球队中文名、英文名支持切换和模糊搜索']
+    title: t('matches.changelog.schedule.title'),
+    description: t('matches.changelog.schedule.description'),
+    details: [t('matches.changelog.schedule.detail1'), t('matches.changelog.schedule.detail2')]
   },
   {
     id: '2026-08-23-prediction',
     date: '2026-08-23',
-    tag: '预测',
+    tag: t('matches.changelog.prediction.tag'),
     tone: 'prediction',
-    title: '预测状态表达更清晰',
-    description: '区分已生成、生成中、数据不足和暂不可用，减少状态误读。',
-    details: ['比赛时间和赛果状态统一按北京时间展示', '数据源延迟时保留明确的更新时间提示']
+    title: t('matches.changelog.prediction.title'),
+    description: t('matches.changelog.prediction.description'),
+    details: [t('matches.changelog.prediction.detail1'), t('matches.changelog.prediction.detail2')]
   }
-]
-const entries = ref(defaultEntries)
+])
+const remoteEntries = ref(null)
+const entries = computed(() => remoteEntries.value || defaultEntries.value)
 
 const hasUnread = computed(() => entries.value.length > 0 && (!lastSeen.value || lastSeen.value !== String(entries.value[0].id)))
 
 const loadEntries = async () => {
   try {
     const remote = await changelogApi.list(10)
-    if (Array.isArray(remote)) entries.value = remote
+    if (Array.isArray(remote)) remoteEntries.value = remote
   } catch {
     // The static fallback keeps the entry useful while an older deployment
     // is waiting for the changelog migration and service restart.

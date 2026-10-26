@@ -4,7 +4,7 @@
     :class="`catalog-rarity-${String(item.rarity || 'N').toLowerCase()}`"
     role="button"
     tabindex="0"
-    :aria-label="`查看${item.name}角色卡详情`"
+    :aria-label="t('agent.card.viewDetailAria', { name: item.name })"
     @click="$emit('detail', item)"
     @keydown.enter.prevent="$emit('detail', item)"
     @keydown.space.prevent="$emit('detail', item)"
@@ -15,28 +15,30 @@
         <span v-else>{{ initial(item.name) }}</span>
       </div>
       <div>
-        <span class="game-eyebrow">位置：{{ item.position || '全能' }} · <b class="rarity-label">{{ item.rarity || 'N' }}</b></span>
+        <span class="game-eyebrow">{{ t('agent.card.position', { position: item.position || t('agent.card.allRound') }) }} · <b class="rarity-label">{{ item.rarity || 'N' }}</b></span>
         <h3>{{ item.name }}</h3>
-        <small>{{ shortPosition(item.position) }} · {{ item.overall }} 总评</small>
+        <small>{{ shortPosition(item.position) }} · {{ t('agent.card.overall', { overall: item.overall }) }}</small>
       </div>
     </div>
-    <p>{{ item.description || '管理员策展的虚拟角色卡，能力值仅用于幻想阵容玩法。' }}</p>
+    <p>{{ item.description || t('agent.card.defaultDescription') }}</p>
     <div v-if="tags.length" class="catalog-tags"><span v-for="tag in tags.slice(0, 4)" :key="tag" :title="tag">{{ tag }}</span></div>
-    <div class="catalog-stats"><span v-for="key in statKeys" :key="key">{{ statHelp[key] }} <b>{{ item[key] }}</b></span></div>
-    <div class="catalog-item-foot"><strong>{{ item.price_points || 0 }} 点</strong><el-tag v-if="item.owned" type="success">已拥有</el-tag><el-button v-else type="primary" size="small" :loading="loading" :disabled="!authenticated" @click.stop="$emit('redeem', item)">{{ authenticated ? '兑换角色' : '登录后兑换' }}</el-button></div>
+    <div class="catalog-stats"><span v-for="key in statKeys" :key="key">{{ t(statHelp[key]) }} <b>{{ item[key] }}</b></span></div>
+    <div class="catalog-item-foot"><strong>{{ t('agent.card.points', { points: item.price_points || 0 }) }}</strong><el-tag v-if="item.owned" type="success">{{ t('agent.card.owned') }}</el-tag><el-button v-else type="primary" size="small" :loading="loading" :disabled="!authenticated" @click.stop="$emit('redeem', item)">{{ authenticated ? t('agent.card.redeem') : t('agent.card.loginToRedeem') }}</el-button></div>
     <small v-if="item.source_attribution" class="catalog-source">{{ item.source_attribution }} · {{ item.source_license || 'CC BY-SA 4.0' }}</small>
   </article>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from '../../i18n'
+const { t } = useI18n()
 const props = defineProps({ item: { type: Object, required: true }, authenticated: Boolean, loading: Boolean })
 defineEmits(['detail', 'redeem'])
 const statKeys = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical']
-const statHelp = { pace: '速度', shooting: '射门', passing: '传球', dribbling: '盘带', defending: '防守', physical: '身体' }
+const statHelp = { pace: 'agent.card.stat.pace', shooting: 'agent.card.stat.shooting', passing: 'agent.card.stat.passing', dribbling: 'agent.card.stat.dribbling', defending: 'agent.card.stat.defending', physical: 'agent.card.stat.physical' }
 const tags = computed(() => { try { const parsed = JSON.parse(props.item?.tags_json || '[]'); return Array.isArray(parsed) ? parsed : [] } catch { return [] } })
 const initial = name => String(name || '?').trim().slice(0, 1).toUpperCase()
-const shortPosition = value => { const text = String(value || '全能'); return text.includes('Goal') || text.includes('门') ? 'GK' : text.includes('Def') || text.includes('后') ? 'DEF' : text.includes('Mid') || text.includes('中') ? 'MID' : text.includes('For') || text.includes('前') || text.includes('Strik') ? 'FWD' : 'ALL' }
+const shortPosition = value => { const text = String(value || ''); return text.includes('Goal') || text.includes('门') ? 'GK' : text.includes('Def') || text.includes('后') ? 'DEF' : text.includes('Mid') || text.includes('中') ? 'MID' : text.includes('For') || text.includes('前') || text.includes('Strik') ? 'FWD' : 'ALL' }
 </script>
 
 <style scoped>

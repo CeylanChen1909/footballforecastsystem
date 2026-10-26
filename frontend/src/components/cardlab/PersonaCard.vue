@@ -2,7 +2,7 @@
   <article
     class="persona-card game-player-card"
     :class="[`tier-${tier}`, { selected, compared, readonly: readOnly }]"
-    :aria-label="`${card.player_name || '虚拟角色'}卡牌${readOnly ? '（只读）' : ''}`"
+    :aria-label="t('agent.card.cardAria', { name: card.player_name || t('agent.card.character'), readonly: readOnly ? t('agent.card.readonlySuffix') : '' })"
     role="group"
     tabindex="0"
     @click="$emit('select', card)"
@@ -20,17 +20,19 @@
     <span class="game-card-position">{{ shortPosition(card.position) }} · {{ card.team_name || 'PERSONA' }}</span>
     <div v-if="tags.length" class="persona-tags"><span v-for="tag in tags.slice(0, 3)" :key="tag" :title="tag">{{ tagLabel(tag) }}</span><b v-if="tags.length > 3">+{{ tags.length - 3 }}</b></div>
     <div class="game-card-stats">
-      <span v-for="item in statList" :key="item.key" :title="item.label"><b>{{ card[item.key] }}</b>{{ item.short }}</span>
+      <span v-for="item in statList" :key="item.key" :title="t(item.label)"><b>{{ card[item.key] }}</b>{{ item.short }}</span>
     </div>
-    <span v-if="readOnly" class="card-readonly-mark">只读公开</span>
-    <span v-else-if="owned" class="card-owned-mark">✓ 已入阵</span>
-    <button type="button" class="card-compare-button" :aria-label="`比较${card.player_name || '角色'}`" @click.stop="$emit('compare', card)">比较</button>
+    <span v-if="readOnly" class="card-readonly-mark">{{ t('agent.card.readonly') }}</span>
+    <span v-else-if="owned" class="card-owned-mark">{{ t('agent.card.ownedMark') }}</span>
+    <button type="button" class="card-compare-button" :aria-label="t('agent.card.compareAria', { name: card.player_name || t('agent.card.roleName') })" @click.stop="$emit('compare', card)">{{ t('agent.card.compare') }}</button>
   </article>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useI18n } from '../../i18n'
 
+const { t } = useI18n()
 const props = defineProps({
   card: { type: Object, required: true },
   selected: { type: Boolean, default: false },
@@ -44,17 +46,17 @@ defineEmits(['select', 'compare'])
 const imageUrl = ref(props.card.photo_url || '')
 watch(() => props.card.photo_url, value => { imageUrl.value = value || '' })
 const statList = [
-  { key: 'pace', label: '速度', short: 'PAC' },
-  { key: 'shooting', label: '射门', short: 'SHO' },
-  { key: 'passing', label: '传球', short: 'PAS' },
-  { key: 'dribbling', label: '盘带', short: 'DRI' },
-  { key: 'defending', label: '防守', short: 'DEF' },
-  { key: 'physical', label: '身体', short: 'PHY' }
+  { key: 'pace', label: 'agent.card.stat.pace', short: 'PAC' },
+  { key: 'shooting', label: 'agent.card.stat.shooting', short: 'SHO' },
+  { key: 'passing', label: 'agent.card.stat.passing', short: 'PAS' },
+  { key: 'dribbling', label: 'agent.card.stat.dribbling', short: 'DRI' },
+  { key: 'defending', label: 'agent.card.stat.defending', short: 'DEF' },
+  { key: 'physical', label: 'agent.card.stat.physical', short: 'PHY' }
 ]
 const tier = computed(() => { const overall = Number(props.card.overall || 0); if (props.card.catalog_id || props.card.rarity) return overall >= 90 ? 'ur' : overall >= 85 ? 'ssr' : overall >= 78 ? 'sr' : overall >= 70 ? 'r' : 'n'; return props.card.card_type === 'CUSTOM_PERSONA' ? 'persona' : overall >= 85 ? 'elite' : overall >= 78 ? 'gold' : overall >= 70 ? 'silver' : 'bronze' })
 const tierLabel = computed(() => ({ ur: 'UR', ssr: 'SSR', sr: 'SR', r: 'R', n: 'N', persona: 'PERSONA', elite: 'ELITE', gold: 'GOLD', silver: 'SILVER', bronze: 'BASE' }[tier.value]))
 const initials = value => String(value || '?').trim().slice(0, 1).toUpperCase()
-const shortPosition = value => String(value || '全能').replace('边前卫', '边翼').slice(0, 4)
+const shortPosition = value => value ? String(value).replace('边前卫', t('agent.card.winger')).slice(0, 4) : t('agent.card.allRoundShort')
 const tags = computed(() => { const personal = Array.isArray(props.card.tags) ? props.card.tags : []; let canonical = []; try { const parsed = JSON.parse(props.card.tags_json || '[]'); canonical = Array.isArray(parsed) ? parsed : [] } catch { canonical = [] } return [...new Set([...canonical, ...personal])].filter(tag => tag !== 'favorite') })
 const tagLabel = value => String(value || '').replace(/^[^:：]+[:：]/, '')
 </script>

@@ -3,8 +3,8 @@
     <section class="chart-card chart-card--wide">
       <div class="chart-head">
         <div>
-          <div class="chart-title">近 7 天资讯趋势</div>
-          <div class="chart-subtitle">内容生产与发布节奏</div>
+          <div class="chart-title">{{ t('competition.chart.newsTrendTitle') }}</div>
+          <div class="chart-subtitle">{{ t('competition.chart.newsTrendSubtitle') }}</div>
         </div>
         <el-tag type="success" effect="plain">News</el-tag>
       </div>
@@ -14,8 +14,8 @@
     <section class="chart-card">
       <div class="chart-head">
         <div>
-          <div class="chart-title">近 7 天审计趋势</div>
-          <div class="chart-subtitle">后台操作与系统行为</div>
+          <div class="chart-title">{{ t('competition.chart.auditTrendTitle') }}</div>
+          <div class="chart-subtitle">{{ t('competition.chart.auditTrendSubtitle') }}</div>
         </div>
         <el-tag type="warning" effect="plain">Logs</el-tag>
       </div>
@@ -25,8 +25,8 @@
     <section class="chart-card">
       <div class="chart-head">
         <div>
-          <div class="chart-title">内容状态分布</div>
-          <div class="chart-subtitle">已发布 / 草稿 / 隐藏 / 删除</div>
+          <div class="chart-title">{{ t('competition.chart.statusTitle') }}</div>
+          <div class="chart-subtitle">{{ t('competition.chart.statusSubtitle') }}</div>
         </div>
         <el-tag type="primary" effect="plain">News Mix</el-tag>
       </div>
@@ -36,8 +36,8 @@
     <section class="chart-card chart-card--wide">
       <div class="chart-head">
         <div>
-          <div class="chart-title">热点雷达</div>
-          <div class="chart-subtitle">热门联赛 / 球队 / 资讯标签 / 内容热度 / 赛事活跃度</div>
+          <div class="chart-title">{{ t('competition.chart.radarTitle') }}</div>
+          <div class="chart-subtitle">{{ t('competition.chart.radarSubtitle') }}</div>
         </div>
         <el-tag type="danger" effect="plain">Radar</el-tag>
       </div>
@@ -52,8 +52,11 @@ import { init, use } from 'echarts/core'
 import { LineChart, PieChart, RadarChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
+import { useI18n } from '../../i18n'
 
 use([LineChart, PieChart, RadarChart, GridComponent, TooltipComponent, LegendComponent, RadarComponent, CanvasRenderer])
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   newsSeries: { type: Array, default: () => [] },
@@ -101,11 +104,11 @@ const buildRadarOption = () => ({
     splitNumber: 4,
     axisName: { color: '#475569', fontSize: 12 },
     indicator: [
-      { name: '热门联赛', max: 100 },
-      { name: '热门球队', max: 100 },
-      { name: '热门标签', max: 100 },
-      { name: '内容热度', max: 100 },
-      { name: '赛事活跃', max: 100 }
+      { name: t('competition.chart.radarLeagues'), max: 100 },
+      { name: t('competition.chart.radarTeams'), max: 100 },
+      { name: t('competition.chart.radarTags'), max: 100 },
+      { name: t('competition.chart.radarContent'), max: 100 },
+      { name: t('competition.chart.radarMatches'), max: 100 }
     ],
     splitLine: { lineStyle: { color: ['#e1e1e1'] } },
     splitArea: { areaStyle: { color: ['rgba(15,107,77,0.03)', 'rgba(15,107,77,0.07)'] } },
@@ -143,7 +146,7 @@ onMounted(async () => {
   window.addEventListener('resize', resizeCharts)
 })
 
-watch(() => [props.newsSeries, props.logSeries, props.xAxis, props.statusSeries, props.radarData], () => {
+watch(() => [props.newsSeries, props.logSeries, props.xAxis, props.statusSeries, props.radarData, locale.value], () => {
   newsChart?.setOption(buildLineOption(props.newsSeries, '#0f6b4d'))
   logChart?.setOption(buildLineOption(props.logSeries, '#ffb900'))
   statusChart?.setOption(buildPieOption())

@@ -4,27 +4,27 @@
       <template #header>
         <div class="panel-header">
           <div>
-            <strong>更新日志</strong>
-            <small>管理比赛页顶部展示的版本变化、功能更新和维护说明</small>
+            <strong>{{ t('admin.changelog.title') }}</strong>
+            <small>{{ t('admin.changelog.subtitle') }}</small>
           </div>
           <div class="panel-actions">
-            <el-button :loading="loading" @click="load">刷新</el-button>
-            <el-button type="primary" @click="openCreate">新建日志</el-button>
+            <el-button :loading="loading" @click="load">{{ t('admin.common.refresh') }}</el-button>
+            <el-button type="primary" @click="openCreate">{{ t('admin.changelog.newEntry') }}</el-button>
           </div>
         </div>
       </template>
 
       <div class="changelog-toolbar">
-        <el-input v-model="keyword" clearable placeholder="搜索标题、摘要或标签" @keyup.enter="load" @clear="load" />
-        <el-select v-model="status" clearable placeholder="全部状态" @change="load">
+        <el-input v-model="keyword" clearable :placeholder="t('admin.changelog.searchPlaceholder')" @keyup.enter="load" @clear="load" />
+        <el-select v-model="status" clearable :placeholder="t('admin.changelog.allStatuses')" @change="load">
           <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
-        <el-button plain @click="resetFilters">重置</el-button>
+        <el-button plain @click="resetFilters">{{ t('admin.changelog.reset') }}</el-button>
       </div>
 
-      <PageState v-if="error" type="error" title="更新日志加载失败" :description="error" action-text="重试" @action="load" />
-      <el-table v-else v-loading="loading" :data="items" row-key="id" empty-text="暂无更新日志">
-        <el-table-column label="日志" min-width="330">
+      <PageState v-if="error" type="error" :title="t('admin.changelog.loadFailed')" :description="error" :action-text="t('admin.common.retry')" @action="load" />
+      <el-table v-else v-loading="loading" :data="items" row-key="id" :empty-text="t('admin.changelog.empty')">
+        <el-table-column :label="t('admin.changelog.col.entry')" min-width="330">
           <template #default="{ row }">
             <div class="entry-title-cell">
               <strong>{{ row.title }}</strong>
@@ -33,59 +33,59 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="tag" label="标签" width="90" />
-        <el-table-column label="状态" width="105">
+        <el-table-column prop="tag" :label="t('admin.changelog.col.tag')" width="90" />
+        <el-table-column :label="t('admin.common.status')" width="105">
           <template #default="{ row }"><el-tag size="small" :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="发布时间" width="160">
-          <template #default="{ row }">{{ row.publishAt || '未安排' }}</template>
+        <el-table-column :label="t('admin.changelog.col.publishAt')" width="160">
+          <template #default="{ row }">{{ row.publishAt || t('admin.changelog.unscheduled') }}</template>
         </el-table-column>
-        <el-table-column label="最近修改" width="160">
+        <el-table-column :label="t('admin.changelog.col.updatedAt')" width="160">
           <template #default="{ row }">{{ row.updatedAt || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column :label="t('admin.changelog.col.actions')" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="row.status === 'PUBLISHED' ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.status === 'PUBLISHED' ? '下线' : '发布' }}</el-button>
-            <el-button link type="danger" @click="remove(row)">删除</el-button>
+            <el-button link type="primary" @click="openEdit(row)">{{ t('admin.common.edit') }}</el-button>
+            <el-button link :type="row.status === 'PUBLISHED' ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.status === 'PUBLISHED' ? t('admin.changelog.action.unpublish') : t('admin.changelog.action.publish') }}</el-button>
+            <el-button link type="danger" @click="remove(row)">{{ t('admin.common.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="pagination-row">
-        <span>共 {{ total }} 条</span>
+        <span>{{ t('admin.common.totalRecords', { total }) }}</span>
         <el-pagination v-model:current-page="page" v-model:page-size="size" layout="prev, pager, next, sizes" :page-sizes="[10, 20, 50]" :total="total" @current-change="load" @size-change="page = 1; load()" />
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑更新日志' : '新建更新日志'" width="min(900px, 94vw)" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="editingId ? t('admin.changelog.dialog.edit') : t('admin.changelog.dialog.create')" width="min(900px, 94vw)" destroy-on-close>
       <div class="editor-layout">
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="changelog-form">
           <div class="form-grid">
-            <el-form-item label="标题" prop="title"><el-input v-model="form.title" maxlength="160" show-word-limit placeholder="例如：比赛焦点推荐上线" /></el-form-item>
-            <el-form-item label="版本标识"><el-input v-model="form.versionLabel" maxlength="64" placeholder="例如 v1.8.0（可选）" /></el-form-item>
+            <el-form-item :label="t('admin.changelog.form.title')" prop="title"><el-input v-model="form.title" maxlength="160" show-word-limit :placeholder="t('admin.changelog.form.titlePlaceholder')" /></el-form-item>
+            <el-form-item :label="t('admin.changelog.form.versionLabel')"><el-input v-model="form.versionLabel" maxlength="64" :placeholder="t('admin.changelog.form.versionPlaceholder')" /></el-form-item>
           </div>
-          <el-form-item label="摘要" prop="summary"><el-input v-model="form.summary" type="textarea" :rows="2" maxlength="500" show-word-limit placeholder="一句话说明这次更新对用户有什么影响" /></el-form-item>
+          <el-form-item :label="t('admin.changelog.form.summary')" prop="summary"><el-input v-model="form.summary" type="textarea" :rows="2" maxlength="500" show-word-limit :placeholder="t('admin.changelog.form.summaryPlaceholder')" /></el-form-item>
           <div class="form-grid form-grid-three">
-            <el-form-item label="标签"><el-input v-model="form.tag" maxlength="32" placeholder="赛程 / 预测 / 账户" /></el-form-item>
-            <el-form-item label="色彩语义"><el-select v-model="form.tone"><el-option v-for="item in toneOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-            <el-form-item label="状态"><el-select v-model="form.status"><el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+            <el-form-item :label="t('admin.changelog.form.tag')"><el-input v-model="form.tag" maxlength="32" :placeholder="t('admin.changelog.form.tagPlaceholder')" /></el-form-item>
+            <el-form-item :label="t('admin.changelog.form.tone')"><el-select v-model="form.tone"><el-option v-for="item in toneOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+            <el-form-item :label="t('admin.changelog.form.status')"><el-select v-model="form.status"><el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
           </div>
-          <el-form-item label="发布时间"><el-date-picker v-model="form.publishAt" type="datetime" value-format="YYYY-MM-DD HH:mm" format="YYYY-MM-DD HH:mm" placeholder="立即发布可留空" /></el-form-item>
-          <el-form-item label="详细更新（每行一条）"><el-input v-model="form.detailsText" type="textarea" :rows="7" maxlength="5000" show-word-limit placeholder="例如：\n焦点比赛根据联赛和球队热度计算\n支持中英文球队名切换" /></el-form-item>
+          <el-form-item :label="t('admin.changelog.form.publishAt')"><el-date-picker v-model="form.publishAt" type="datetime" value-format="YYYY-MM-DD HH:mm" format="YYYY-MM-DD HH:mm" :placeholder="t('admin.changelog.form.publishPlaceholder')" /></el-form-item>
+          <el-form-item :label="t('admin.changelog.form.details')"><el-input v-model="form.detailsText" type="textarea" :rows="7" maxlength="5000" show-word-limit :placeholder="t('admin.changelog.form.detailsPlaceholder')" /></el-form-item>
         </el-form>
 
-        <aside class="entry-preview" aria-label="更新日志预览">
+        <aside class="entry-preview" :aria-label="t('admin.changelog.previewAria')">
           <span class="preview-kicker">PREVIEW</span>
-          <div class="preview-meta"><time>{{ form.publishAt || '待发布' }}</time><span :class="`is-${form.tone}`">{{ form.tag || '标签' }}</span></div>
-          <h3>{{ form.title || '更新日志标题' }}</h3>
-          <p>{{ form.summary || '摘要会显示在这里。' }}</p>
+          <div class="preview-meta"><time>{{ form.publishAt || t('admin.changelog.previewPending') }}</time><span :class="`is-${form.tone}`">{{ form.tag || t('admin.changelog.previewTag') }}</span></div>
+          <h3>{{ form.title || t('admin.changelog.previewTitle') }}</h3>
+          <p>{{ form.summary || t('admin.changelog.previewSummary') }}</p>
           <ul v-if="previewDetails.length"><li v-for="item in previewDetails" :key="item">{{ item }}</li></ul>
         </aside>
       </div>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="save">保存日志</el-button>
+        <el-button @click="dialogVisible = false">{{ t('admin.common.cancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="save">{{ t('admin.changelog.saveEntry') }}</el-button>
       </template>
     </el-dialog>
   </section>
@@ -96,6 +96,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminApi } from '../../api/admin'
 import PageState from '../../components/layout/PageState.vue'
+import { useI18n } from '../../i18n'
+
+const { t } = useI18n()
 
 const items = ref([])
 const total = ref(0)
@@ -111,25 +114,25 @@ const editingId = ref(null)
 const formRef = ref(null)
 const form = reactive({ title: '', summary: '', detailsText: '', tag: '赛程', tone: 'match', versionLabel: '', status: 'DRAFT', publishAt: '' })
 
-const statusOptions = [
-  { value: 'DRAFT', label: '草稿' },
-  { value: 'PUBLISHED', label: '已发布' },
-  { value: 'HIDDEN', label: '已下线' },
-  { value: 'ARCHIVED', label: '已归档' }
-]
-const toneOptions = [
-  { value: 'account', label: '账户（紫色）' },
-  { value: 'match', label: '赛程（绿色）' },
-  { value: 'prediction', label: '预测（橙色）' },
-  { value: 'system', label: '系统（灰色）' }
-]
-const rules = {
-  title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-  summary: [{ required: true, message: '请输入摘要', trigger: 'blur' }]
-}
+const statusOptions = computed(() => [
+  { value: 'DRAFT', label: t('admin.changelog.status.draft') },
+  { value: 'PUBLISHED', label: t('admin.changelog.status.published') },
+  { value: 'HIDDEN', label: t('admin.changelog.status.hidden') },
+  { value: 'ARCHIVED', label: t('admin.changelog.status.archived') }
+])
+const toneOptions = computed(() => [
+  { value: 'account', label: t('admin.changelog.tone.account') },
+  { value: 'match', label: t('admin.changelog.tone.match') },
+  { value: 'prediction', label: t('admin.changelog.tone.prediction') },
+  { value: 'system', label: t('admin.changelog.tone.system') }
+])
+const rules = computed(() => ({
+  title: [{ required: true, message: t('admin.changelog.validation.title'), trigger: 'blur' }],
+  summary: [{ required: true, message: t('admin.changelog.validation.summary'), trigger: 'blur' }]
+}))
 const previewDetails = computed(() => String(form.detailsText || '').split(/\r?\n/).map(item => item.trim()).filter(Boolean).slice(0, 8))
 
-const statusLabel = value => statusOptions.find(item => item.value === value)?.label || value || '未知'
+const statusLabel = value => statusOptions.value.find(item => item.value === value)?.label || value || t('admin.common.unknown')
 const statusType = value => ({ PUBLISHED: 'success', DRAFT: 'info', HIDDEN: 'warning', ARCHIVED: '' }[value] || 'info')
 const load = async () => {
   loading.value = true
@@ -141,7 +144,7 @@ const load = async () => {
   } catch (err) {
     items.value = []
     total.value = 0
-    error.value = err?.message || '更新日志加载失败'
+    error.value = err?.message || t('admin.changelog.loadFailed')
   } finally { loading.value = false }
 }
 const resetFilters = () => { keyword.value = ''; status.value = ''; page.value = 1; load() }
@@ -158,7 +161,7 @@ const save = async () => {
   saving.value = true
   try {
     await adminApi.saveChangelog({ ...form, id: editingId.value || undefined })
-    ElMessage.success(editingId.value ? '更新日志已保存' : '更新日志已创建')
+    ElMessage.success(editingId.value ? t('admin.changelog.saved') : t('admin.changelog.created'))
     dialogVisible.value = false
     await load()
   } catch { /* interceptor 已提示错误 */ } finally { saving.value = false }
@@ -167,19 +170,19 @@ const toggleStatus = async row => {
   const next = row.status === 'PUBLISHED' ? 'HIDDEN' : 'PUBLISHED'
   try {
     await adminApi.setChangelogStatus(row.id, next)
-    ElMessage.success(next === 'PUBLISHED' ? '日志已发布' : '日志已下线')
+    ElMessage.success(next === 'PUBLISHED' ? t('admin.changelog.published') : t('admin.changelog.unpublished'))
     await load()
   } catch { /* interceptor 已提示错误 */ }
 }
 const remove = async row => {
   try {
-    await ElMessageBox.confirm(`确定删除“${row.title}”吗？删除后不可恢复。`, '删除更新日志', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' })
+    await ElMessageBox.confirm(t('admin.changelog.deleteConfirm', { title: row.title }), t('admin.changelog.deleteTitle'), { type: 'warning', confirmButtonText: t('admin.common.delete'), cancelButtonText: t('admin.common.cancel') })
     await adminApi.deleteChangelog(row.id)
-    ElMessage.success('更新日志已删除')
+    ElMessage.success(t('admin.changelog.deleted'))
     if (items.value.length === 1 && page.value > 1) page.value -= 1
     await load()
   } catch (err) {
-    if (err !== 'cancel' && err !== 'close') ElMessage.error(err?.message || '删除失败')
+    if (err !== 'cancel' && err !== 'close') ElMessage.error(err?.message || t('admin.changelog.deleteFailed'))
   }
 }
 
