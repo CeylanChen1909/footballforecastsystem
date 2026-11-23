@@ -123,8 +123,20 @@ public class MatchPredictionPrecomputeService {
                 .sorted(Comparator.comparing(CrawlerMatch::getMatchTime))
                 .limit(100)
                 .toList();
+        // P0-5: freshness gate. The old code queued every eligible match on
+        // every 5-minute scan, so a snapshot was regenerated even when nothing
+        // had changed (each run cost 2 upserts + a full predictOnly with
+        // several full-table scans, and burned t_match_prediction ids up to
+        // 1,783,617). One batched status read now decides per match:
+        // fresh READY/UNAVAILABLE snapshots are skipped, as are PENDING/FAILED
+        // rows inside the 10-minute window the HTTP path already honors.
+        PredictionStatusResult statuses = readPredictionStatuses(candidates);
         for (CrawlerMatch match : candidates) {
             Long fixtureId = effectiveFixtureId(match);
+            Map<String, Object> current = fixtureId == null ? null : statuses.items().get(fixtureId);
+            if (current != null && isFresh(current, match)) continue;
+            if (current != null && "PENDING".equals(current.get("status")) && isRecent(current, 10)) continue;
+            if (current != null && "FAILED".equals(current.get("status")) && isRecent(current, 10)) continue;
             if (tryAcquire(fixtureId)) {
                 queued++;
                 executor.submit(() -> generateOne(match));
@@ -167,6 +179,7 @@ public class MatchPredictionPrecomputeService {
 
     private void generateOne(CrawlerMatch match) {
         Long fixtureId = effectiveFixtureId(match);
+        boolean success = false;
         try {
             upsertPending(match, fixtureId);
             MatchPredictionRequest request = new MatchPredictionRequest(
@@ -187,11 +200,18 @@ public class MatchPredictionPrecomputeService {
                 upsertUnavailable(match, fixtureId, response);
                 log.info("比赛预测暂不可用: fixtureId={}, reason={}", fixtureId, response.fallbackReason());
             }
+            success = true;
         } catch (Exception ex) {
             log.warn("比赛预测预计算失败: fixtureId={}, error={}", fixtureId, ex.getMessage());
             upsertFailed(match, fixtureId, ex.getMessage());
         } finally {
-            release(fixtureId);
+            // P0-5: on success keep the distributed lock as a 10-minute
+            // debounce instead of releasing it immediately — without this,
+            // the next 5-minute scan could re-queue the same fixture the
+            // moment any writer touches crawler_matches.updated_at again.
+            // On failure the lock is released so the next scan can retry
+            // (FAILED rows are still guarded by the 10-minute window above).
+            release(fixtureId, success);
         }
     }
 
@@ -217,13 +237,30 @@ public class MatchPredictionPrecomputeService {
     }
 
     private void release(Long fixtureId) {
+        release(fixtureId, false);
+    }
+
+    /**
+     * Releases the precompute lock. With {@code debounce} the Redis key is
+     * kept for another 10 minutes (instead of being deleted) so the 5-minute
+     * scan cannot immediately re-queue a fixture that was just generated;
+     * the local {@code inFlight} guard is always cleared. When Redis is
+     * down the debounce is silently unavailable (single-instance local guard
+     * only) and the scan falls back to the {@link #isFresh} DB check.
+     */
+    private void release(Long fixtureId, boolean debounce) {
         inFlight.remove(fixtureId);
         String token = distributedLockTokens.remove(fixtureId);
         if (token == null) return;
         String key = "football:prediction:precompute:" + fixtureId;
         try {
             String current = redisTemplate.opsForValue().get(key);
-            if (token.equals(current)) redisTemplate.delete(key);
+            if (!token.equals(current)) return;
+            if (debounce) {
+                redisTemplate.expire(key, Duration.ofMinutes(10));
+            } else {
+                redisTemplate.delete(key);
+            }
         } catch (Exception ex) {
             log.debug("释放预测分布式锁失败 fixtureId={}: {}", fixtureId, ex.getMessage());
         }
@@ -302,7 +339,9 @@ public class MatchPredictionPrecomputeService {
             row.put("qualityTier", qualityTier(source));
             row.put("featureVersion", stringValue(source.get("feature_version")));
             row.put("topFeatures", readJsonList(source.get("top_features_json")));
-            row.put("featureMeta", readJsonMap(source.get("feature_meta_json")));
+            // P0-3 影子评估：feature_meta_json 里有影子记录，但绝不经 API 返回给前端；
+            // 对照分析只在数据库里做（见 p0/reports/shadow.md）。
+            row.put("featureMeta", PersistencePredictionService.publicFeatureMeta(readJsonMap(source.get("feature_meta_json"))));
             row.put("explanation", localizeExplanation(stringValue(source.get("explanation")), source));
             row.put("featureComplete", booleanValue(source.get("feature_complete")));
             row.put("featureStatus", stringValue(source.get("feature_status")));

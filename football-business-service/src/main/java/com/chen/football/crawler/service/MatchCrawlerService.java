@@ -804,13 +804,25 @@ public class MatchCrawlerService {
             if (existing != null) {
                 // 数据源的身份字段也必须随上游结果同步。尤其是早期采集记录可能
                 // 没有 fixture_id，后续同一场比赛补齐数字 ID 时不能继续保留 NULL。
-                if (match.getExternalMatchId() != null && !match.getExternalMatchId().isBlank()) {
+                // P0-5: dirty check — only a real change writes back. The old
+                // code called updateById on every round, which refreshed
+                // updated_at each time and made MatchPredictionPrecomputeService
+                // isFresh() permanently false (full recompute every 5 min).
+                // mergeNonBlank keeps its "blank/null never overwrites" rule;
+                // it now reports whether anything actually changed.
+                boolean changed = false;
+                if (match.getExternalMatchId() != null && !match.getExternalMatchId().isBlank()
+                        && !Objects.equals(existing.getExternalMatchId(), match.getExternalMatchId())) {
                     existing.setExternalMatchId(match.getExternalMatchId());
+                    changed = true;
                 }
-                if (match.getFixtureId() != null && match.getFixtureId() > 0) {
+                if (match.getFixtureId() != null && match.getFixtureId() > 0
+                        && !Objects.equals(existing.getFixtureId(), match.getFixtureId())) {
                     existing.setFixtureId(match.getFixtureId());
+                    changed = true;
                 }
-                mergeNonBlank(existing, match);
+                changed = mergeNonBlank(existing, match) || changed;
+                if (!changed) return SaveOutcome.UNCHANGED;
                 existing.setUpdatedAt(LocalDateTime.now(BUSINESS_ZONE));
                 matchMapper.updateById(existing);
                 return SaveOutcome.UPDATED;
@@ -826,25 +838,49 @@ public class MatchCrawlerService {
         }
     }
 
-    private void mergeNonBlank(CrawlerMatch existing, CrawlerMatch incoming) {
-        if (incoming.getLeagueName() != null && !incoming.getLeagueName().isBlank()) existing.setLeagueName(incoming.getLeagueName());
-        if (incoming.getLeagueId() != null && !incoming.getLeagueId().isBlank()) existing.setLeagueId(incoming.getLeagueId());
-        if (incoming.getHomeTeamName() != null && !incoming.getHomeTeamName().isBlank()) existing.setHomeTeamName(incoming.getHomeTeamName());
-        if (incoming.getHomeTeamId() != null && !incoming.getHomeTeamId().isBlank()) existing.setHomeTeamId(incoming.getHomeTeamId());
-        if (incoming.getHomeTeamLogo() != null && !incoming.getHomeTeamLogo().isBlank()) existing.setHomeTeamLogo(incoming.getHomeTeamLogo());
-        if (incoming.getAwayTeamName() != null && !incoming.getAwayTeamName().isBlank()) existing.setAwayTeamName(incoming.getAwayTeamName());
-        if (incoming.getAwayTeamId() != null && !incoming.getAwayTeamId().isBlank()) existing.setAwayTeamId(incoming.getAwayTeamId());
-        if (incoming.getAwayTeamLogo() != null && !incoming.getAwayTeamLogo().isBlank()) existing.setAwayTeamLogo(incoming.getAwayTeamLogo());
-        if (incoming.getHomeScore() != null) existing.setHomeScore(incoming.getHomeScore());
-        if (incoming.getAwayScore() != null) existing.setAwayScore(incoming.getAwayScore());
-        if (incoming.getStatus() != null && !incoming.getStatus().isBlank()) existing.setStatus(incoming.getStatus());
-        if (incoming.getMatchTime() != null) existing.setMatchTime(incoming.getMatchTime());
-        if (incoming.getVenue() != null && !incoming.getVenue().isBlank()) existing.setVenue(incoming.getVenue());
-        if (incoming.getRound() != null && !incoming.getRound().isBlank()) existing.setRound(incoming.getRound());
-        if (incoming.getNote() != null && !incoming.getNote().isBlank()) existing.setNote(incoming.getNote());
+    /**
+     * P0-5: merges non-blank incoming fields into the stored row, exactly as
+     * before (blank/null never overwrites), but now reports whether any field
+     * actually changed — mirroring {@link #mergeRealtimeState}. Callers skip
+     * {@code updateById} (and therefore the {@code updated_at} refresh) when
+     * nothing changed. Package-private static for unit tests.
+     */
+    static boolean mergeNonBlank(CrawlerMatch existing, CrawlerMatch incoming) {
+        boolean changed = false;
+        if (incoming.getLeagueName() != null && !incoming.getLeagueName().isBlank()
+                && !Objects.equals(existing.getLeagueName(), incoming.getLeagueName())) { existing.setLeagueName(incoming.getLeagueName()); changed = true; }
+        if (incoming.getLeagueId() != null && !incoming.getLeagueId().isBlank()
+                && !Objects.equals(existing.getLeagueId(), incoming.getLeagueId())) { existing.setLeagueId(incoming.getLeagueId()); changed = true; }
+        if (incoming.getHomeTeamName() != null && !incoming.getHomeTeamName().isBlank()
+                && !Objects.equals(existing.getHomeTeamName(), incoming.getHomeTeamName())) { existing.setHomeTeamName(incoming.getHomeTeamName()); changed = true; }
+        if (incoming.getHomeTeamId() != null && !incoming.getHomeTeamId().isBlank()
+                && !Objects.equals(existing.getHomeTeamId(), incoming.getHomeTeamId())) { existing.setHomeTeamId(incoming.getHomeTeamId()); changed = true; }
+        if (incoming.getHomeTeamLogo() != null && !incoming.getHomeTeamLogo().isBlank()
+                && !Objects.equals(existing.getHomeTeamLogo(), incoming.getHomeTeamLogo())) { existing.setHomeTeamLogo(incoming.getHomeTeamLogo()); changed = true; }
+        if (incoming.getAwayTeamName() != null && !incoming.getAwayTeamName().isBlank()
+                && !Objects.equals(existing.getAwayTeamName(), incoming.getAwayTeamName())) { existing.setAwayTeamName(incoming.getAwayTeamName()); changed = true; }
+        if (incoming.getAwayTeamId() != null && !incoming.getAwayTeamId().isBlank()
+                && !Objects.equals(existing.getAwayTeamId(), incoming.getAwayTeamId())) { existing.setAwayTeamId(incoming.getAwayTeamId()); changed = true; }
+        if (incoming.getAwayTeamLogo() != null && !incoming.getAwayTeamLogo().isBlank()
+                && !Objects.equals(existing.getAwayTeamLogo(), incoming.getAwayTeamLogo())) { existing.setAwayTeamLogo(incoming.getAwayTeamLogo()); changed = true; }
+        if (incoming.getHomeScore() != null
+                && !Objects.equals(existing.getHomeScore(), incoming.getHomeScore())) { existing.setHomeScore(incoming.getHomeScore()); changed = true; }
+        if (incoming.getAwayScore() != null
+                && !Objects.equals(existing.getAwayScore(), incoming.getAwayScore())) { existing.setAwayScore(incoming.getAwayScore()); changed = true; }
+        if (incoming.getStatus() != null && !incoming.getStatus().isBlank()
+                && !Objects.equals(existing.getStatus(), incoming.getStatus())) { existing.setStatus(incoming.getStatus()); changed = true; }
+        if (incoming.getMatchTime() != null
+                && !Objects.equals(existing.getMatchTime(), incoming.getMatchTime())) { existing.setMatchTime(incoming.getMatchTime()); changed = true; }
+        if (incoming.getVenue() != null && !incoming.getVenue().isBlank()
+                && !Objects.equals(existing.getVenue(), incoming.getVenue())) { existing.setVenue(incoming.getVenue()); changed = true; }
+        if (incoming.getRound() != null && !incoming.getRound().isBlank()
+                && !Objects.equals(existing.getRound(), incoming.getRound())) { existing.setRound(incoming.getRound()); changed = true; }
+        if (incoming.getNote() != null && !incoming.getNote().isBlank()
+                && !Objects.equals(existing.getNote(), incoming.getNote())) { existing.setNote(incoming.getNote()); changed = true; }
+        return changed;
     }
 
-    private enum SaveOutcome { INSERTED, UPDATED, REJECTED, FAILED }
+    private enum SaveOutcome { INSERTED, UPDATED, UNCHANGED, REJECTED, FAILED }
 
     public List<CrawlerMatch> getMatchesFromDb(Date startDate, Date endDate) {
         if (startDate != null && endDate != null) {

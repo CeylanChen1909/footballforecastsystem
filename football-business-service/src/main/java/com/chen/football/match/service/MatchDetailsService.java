@@ -1,6 +1,7 @@
 package com.chen.football.match.service;
 
 import com.chen.football.common.client.ApiFootballClient;
+import com.chen.football.common.client.ApiFootballClient.BudgetBucket;
 import com.chen.football.common.i18n.I18nText;
 import com.chen.football.common.i18n.LabelCatalog;
 import com.chen.football.common.client.FootballDataClient;
@@ -35,6 +36,14 @@ public class MatchDetailsService {
     private final ApiFootballProperties apiFootballProperties;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    /**
+     * P0-4: whether {@code t_match_detail_snapshot.failure_count} exists.
+     * The column is created by {@link #ensureSchema()} for fresh databases;
+     * production needs the one-line ALTER (see reports/acq.md §P0-4) before
+     * the counter is populated. Probed lazily once; {@code false} simply
+     * skips the counter instead of breaking the snapshot write.
+     */
+    private volatile Boolean failureCountSupported;
 
     public MatchDetailsService(ApiFootballClient apiFootballClient,
                                FootballDataClient footballDataClient,
@@ -61,6 +70,7 @@ public class MatchDetailsService {
                   payload_json LONGTEXT NOT NULL,
                   status VARCHAR(32) NOT NULL DEFAULT 'NORMAL',
                   error_message VARCHAR(1000) NULL,
+                  failure_count INT NOT NULL DEFAULT 0,
                   fetched_at DATETIME NOT NULL,
                   PRIMARY KEY (id),
                   UNIQUE KEY uk_match_detail_source (fixture_id, detail_type, source),
@@ -70,7 +80,36 @@ public class MatchDetailsService {
                 """);
     }
 
+    /** P0-4: lazily probes for the {@code failure_count} column (see field doc). */
+    boolean failureCountSupported() {
+        Boolean cached = failureCountSupported;
+        if (cached != null) return cached;
+        boolean supported = false;
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.columns "
+                            + "WHERE table_schema = DATABASE() AND table_name = 't_match_detail_snapshot' "
+                            + "AND column_name = 'failure_count'",
+                    Integer.class);
+            supported = count != null && count > 0;
+        } catch (Exception ignored) {
+            supported = false;
+        }
+        failureCountSupported = supported;
+        return supported;
+    }
+
     public Map<String, Object> getDetails(Long fixtureId, boolean refresh) {
+        return getDetails(fixtureId, refresh, BudgetBucket.ON_DEMAND);
+    }
+
+    /**
+     * Bucket-aware variant of {@link #getDetails(Long, boolean)}.
+     * The scheduled refresh task passes {@link BudgetBucket#SCHEDULED};
+     * user-triggered reads (match page, agent tool) use the default
+     * {@link BudgetBucket#ON_DEMAND} so they draw on the on-demand reserve.
+     */
+    public Map<String, Object> getDetails(Long fixtureId, boolean refresh, BudgetBucket bucket) {
         if (fixtureId == null) {
             return errorBundle(null, "fixtureId 不能为空");
         }
@@ -86,7 +125,7 @@ public class MatchDetailsService {
         } else {
             snapshots = loadSnapshots(fixtureId);
             if (refresh || snapshots.isEmpty()) {
-                refreshMissing(fixtureId, providerFixtureId, match, snapshots, refresh);
+                refreshMissing(fixtureId, providerFixtureId, match, snapshots, refresh, bucket);
                 snapshots = loadSnapshots(fixtureId);
             }
         }
@@ -94,29 +133,44 @@ public class MatchDetailsService {
     }
 
     public Map<String, Object> refresh(Long fixtureId) {
+        return refresh(fixtureId, BudgetBucket.ON_DEMAND);
+    }
+
+    /**
+     * Bucket-aware variant of {@link #refresh(Long)}.
+     * The scheduled refresh task passes {@link BudgetBucket#SCHEDULED}.
+     */
+    public Map<String, Object> refresh(Long fixtureId, BudgetBucket bucket) {
         // Manual refresh is authenticated but still user-triggerable. Avoid
         // spending the provider quota repeatedly when a user double-clicks
         // or several clients refresh the same fixture at once.
+        // P0-4: the recency guard only counts NORMAL rows — a recent failure
+        // must not masquerade as a fresh fetch and block the next retry.
         try {
             Integer recent = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM t_match_detail_snapshot WHERE fixture_id=? AND fetched_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)",
+                    "SELECT COUNT(*) FROM t_match_detail_snapshot WHERE fixture_id=? AND status='NORMAL' AND fetched_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)",
                     Integer.class, fixtureId);
-            if (recent != null && recent > 0) return getDetails(fixtureId, false);
+            if (recent != null && recent > 0) return getDetails(fixtureId, false, bucket);
         } catch (Exception ignored) { }
-        return getDetails(fixtureId, true);
+        return getDetails(fixtureId, true, bucket);
     }
 
     /** Fetch one detail type without spending requests on unrelated endpoints. */
     public Map<String, Object> refreshType(Long fixtureId, String type) {
+        return refreshType(fixtureId, type, BudgetBucket.ON_DEMAND);
+    }
+
+    /** Bucket-aware variant of {@link #refreshType(Long, String)}. */
+    public Map<String, Object> refreshType(Long fixtureId, String type, BudgetBucket bucket) {
         if (fixtureId == null || !TYPES.contains(type)) return errorBundle(fixtureId, "不支持的详情类型");
         Map<String, Object> match = loadMatch(fixtureId);
         if (!match.isEmpty() && !SOURCE.equalsIgnoreCase(string(match.get("source")))) {
-            return getDetails(fixtureId, false);
+            return getDetails(fixtureId, false, bucket);
         }
         if (apiFootballProperties.getApiKey() == null || apiFootballProperties.getApiKey().isBlank()) {
             saveSnapshot(fixtureId, type, List.of(), "NOT_CONFIGURED", "API_FOOTBALL_KEY 未配置");
         } else {
-            fetchAndSave(fixtureId, number(match.get("fixture_id")) == null ? fixtureId : number(match.get("fixture_id")), type);
+            fetchAndSave(fixtureId, number(match.get("fixture_id")) == null ? fixtureId : number(match.get("fixture_id")), type, bucket);
         }
         return bundle(fixtureId, match, loadSnapshots(fixtureId));
     }
@@ -138,18 +192,29 @@ public class MatchDetailsService {
      * useful for rolling xG features only after the match is finished.
      */
     public void refreshAlias(Long storageFixtureId, Long providerFixtureId, List<String> types) {
+        refreshAlias(storageFixtureId, providerFixtureId, types, BudgetBucket.ON_DEMAND);
+    }
+
+    /**
+     * Bucket-aware variant of {@link #refreshAlias(Long, Long, List)}.
+     * The scheduled refresh task passes {@link BudgetBucket#SCHEDULED} so its
+     * detail calls draw on the scheduled share, never the on-demand reserve.
+     */
+    public void refreshAlias(Long storageFixtureId, Long providerFixtureId, List<String> types, BudgetBucket bucket) {
         if (storageFixtureId == null || storageFixtureId <= 0 || providerFixtureId == null || providerFixtureId <= 0) {
             return;
         }
         for (String type : types == null ? List.<String>of() : types) {
             if (!List.of("lineups", "injuries", "odds", "statistics").contains(type)) continue;
             try {
+                // P0-4: only a NORMAL row counts as "recently fetched". A recent
+                // failure/empty row must not block the next retry round.
                 Integer recent = jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) FROM t_match_detail_snapshot WHERE fixture_id=? AND detail_type=? AND fetched_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
+                        "SELECT COUNT(*) FROM t_match_detail_snapshot WHERE fixture_id=? AND detail_type=? AND status='NORMAL' AND fetched_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
                         Integer.class, storageFixtureId, type);
                 if (recent != null && recent > 0) continue;
             } catch (Exception ignored) { }
-            fetchAndSave(storageFixtureId, providerFixtureId, type);
+            fetchAndSave(storageFixtureId, providerFixtureId, type, bucket);
         }
     }
 
@@ -158,6 +223,15 @@ public class MatchDetailsService {
                                 Map<String, Object> match,
                                 Map<String, Snapshot> snapshots,
                                 boolean force) {
+        refreshMissing(storageFixtureId, providerFixtureId, match, snapshots, force, BudgetBucket.ON_DEMAND);
+    }
+
+    private void refreshMissing(Long storageFixtureId,
+                                Long providerFixtureId,
+                                Map<String, Object> match,
+                                Map<String, Snapshot> snapshots,
+                                boolean force,
+                                BudgetBucket bucket) {
         if (apiFootballProperties.getApiKey() == null || apiFootballProperties.getApiKey().isBlank()) {
             for (String type : TYPES) {
                 if (force || !snapshots.containsKey(type)) {
@@ -175,7 +249,7 @@ public class MatchDetailsService {
         List<String> requested = played ? TYPES : List.of("lineups", "injuries", "odds");
         for (String type : requested) {
             if (!force && snapshots.containsKey(type)) continue;
-            fetchAndSave(storageFixtureId, providerFixtureId, type);
+            fetchAndSave(storageFixtureId, providerFixtureId, type, bucket);
         }
         // 未开始比赛的其他类型明确标记为 UNSUPPORTED，避免前端无限转圈。
         for (String type : TYPES) {
@@ -186,18 +260,22 @@ public class MatchDetailsService {
     }
 
     private void fetchAndSave(Long fixtureId, String type) {
-        fetchAndSave(fixtureId, fixtureId, type);
+        fetchAndSave(fixtureId, fixtureId, type, BudgetBucket.ON_DEMAND);
     }
 
     private void fetchAndSave(Long storageFixtureId, Long providerFixtureId, String type) {
+        fetchAndSave(storageFixtureId, providerFixtureId, type, BudgetBucket.ON_DEMAND);
+    }
+
+    private void fetchAndSave(Long storageFixtureId, Long providerFixtureId, String type, BudgetBucket bucket) {
         try {
             Map<String, Object> raw = switch (type) {
-                case "events" -> apiFootballClient.getFixtureEvents(providerFixtureId).block();
-                case "lineups" -> apiFootballClient.getFixtureLineups(providerFixtureId).block();
-                case "statistics" -> apiFootballClient.getFixtureStatistics(providerFixtureId).block();
-                case "players" -> apiFootballClient.getFixturePlayers(providerFixtureId).block();
-                case "injuries" -> apiFootballClient.getFixtureInjuries(providerFixtureId).block();
-                case "odds" -> apiFootballClient.getFixtureOdds(providerFixtureId).block();
+                case "events" -> apiFootballClient.getFixtureEvents(providerFixtureId, bucket).block();
+                case "lineups" -> apiFootballClient.getFixtureLineups(providerFixtureId, bucket).block();
+                case "statistics" -> apiFootballClient.getFixtureStatistics(providerFixtureId, bucket).block();
+                case "players" -> apiFootballClient.getFixturePlayers(providerFixtureId, bucket).block();
+                case "injuries" -> apiFootballClient.getFixtureInjuries(providerFixtureId, bucket).block();
+                case "odds" -> apiFootballClient.getFixtureOdds(providerFixtureId, bucket).block();
                 default -> null;
             };
             if (raw == null) {
@@ -402,9 +480,56 @@ public class MatchDetailsService {
         return result;
     }
 
+    /**
+     * P0-4: an empty/failed result must never overwrite a NORMAL row.
+     * <p>
+     * Production evidence (2026-11-23, read-only query): 282/522 snapshot rows
+     * are REQUEST_FAILED and every single one carries a provider
+     * "429 Too Many Requests" error — the old unconditional upsert let each
+     * failed burst replace the last good payload and refresh {@code fetched_at},
+     * which then made the refresh task believe the fixture was "recently
+     * fetched" and skip the next retry. Lineups are the visible casualty:
+     * only 1/140 rows is still NORMAL.
+     * <p>
+     * Rules:
+     * <ul>
+     *   <li>NORMAL result → plain upsert (payload + status + fetched_at), as before.</li>
+     *   <li>Non-NORMAL result (EMPTY / REQUEST_FAILED / QUOTA_LIMITED /
+     *       NOT_CONFIGURED / UNSUPPORTED) over an existing NORMAL row → only
+     *       {@code error_message} (+ {@code failure_count} when the column
+     *       exists) is updated. Payload, status and {@code fetched_at} stay
+     *       untouched, so the last good data keeps serving and the NORMAL-only
+     *       skip logic can still schedule a retry.</li>
+     *   <li>Non-NORMAL result with no NORMAL row → plain upsert (insert the
+     *       failure, or replace a previous failure/empty row), so the UI still
+     *       shows REQUEST_FAILED instead of UNKNOWN.</li>
+     * </ul>
+     * The guard is a single conditional UPDATE
+     * ({@code ... AND status='NORMAL'}), so the check-and-protect is atomic
+     * even if a scheduled round and a user refresh race on the same fixture.
+     * Known trade-off (by design, per P0-4 spec): if the provider genuinely
+     * retracts data, a stale NORMAL row persists until a fresh NORMAL arrives.
+     */
     private void saveSnapshot(Long fixtureId, String type, Object payload, String status, String error) {
         try {
             String json = objectMapper.writeValueAsString(payload == null ? List.of() : payload);
+            if (!"NORMAL".equals(status)) {
+                int protectedRows = protectNormalRow(fixtureId, type, error);
+                if (protectedRows > 0) return;
+            }
+            // A fresh NORMAL result resets the failure counter; a failure that
+            // lands here (no NORMAL row to protect) leaves the counter alone
+            // so consecutive failures keep accumulating.
+            if ("NORMAL".equals(status) && failureCountSupported()) {
+                jdbcTemplate.update("""
+                        INSERT INTO t_match_detail_snapshot
+                          (fixture_id, detail_type, source, payload_json, status, error_message, failure_count, fetched_at)
+                        VALUES (?, ?, ?, ?, ?, ?, 0, NOW())
+                        ON DUPLICATE KEY UPDATE payload_json = VALUES(payload_json), status = VALUES(status),
+                          error_message = VALUES(error_message), failure_count = 0, fetched_at = VALUES(fetched_at)
+                        """, fixtureId, type, SOURCE, json, status, error);
+                return;
+            }
             jdbcTemplate.update("""
                     INSERT INTO t_match_detail_snapshot
                       (fixture_id, detail_type, source, payload_json, status, error_message, fetched_at)
@@ -414,6 +539,31 @@ public class MatchDetailsService {
                     """, fixtureId, type, SOURCE, json, status, error);
         } catch (Exception e) {
             log.warn("[MatchDetails] save {} fixture={} failed: {}", type, fixtureId, e.getMessage());
+        }
+    }
+
+    /**
+     * Records a failed/empty observation on top of an existing NORMAL row
+     * without touching its payload, status or {@code fetched_at}.
+     *
+     * @return 1 if a NORMAL row was protected, 0 if there is no NORMAL row
+     *         (caller then falls through to the plain upsert).
+     */
+    private int protectNormalRow(Long fixtureId, String type, String error) {
+        try {
+            if (failureCountSupported()) {
+                return jdbcTemplate.update(
+                        "UPDATE t_match_detail_snapshot SET error_message = ?, failure_count = failure_count + 1 "
+                                + "WHERE fixture_id = ? AND detail_type = ? AND source = ? AND status = 'NORMAL'",
+                        error, fixtureId, type, SOURCE);
+            }
+            return jdbcTemplate.update(
+                    "UPDATE t_match_detail_snapshot SET error_message = ? "
+                            + "WHERE fixture_id = ? AND detail_type = ? AND source = ? AND status = 'NORMAL'",
+                    error, fixtureId, type, SOURCE);
+        } catch (Exception e) {
+            log.debug("[MatchDetails] protect NORMAL row {} fixture={} failed: {}", type, fixtureId, e.getMessage());
+            return 0;
         }
     }
 
@@ -440,6 +590,15 @@ public class MatchDetailsService {
                 || normalized.contains("forbidden") || normalized.contains("access to this date")
                 || normalized.contains("daily_budget")) {
             return "QUOTA_LIMITED";
+        }
+        // P0-4: a provider 429 is per-minute throttling, NOT daily-budget
+        // exhaustion — it is retryable in the next round (and the P0-2 request
+        // pacing exists to stop re-triggering it). Production evidence:
+        // all 282 REQUEST_FAILED rows (2026-11-23) are 429s of this form.
+        // Kept as REQUEST_FAILED (retryable) rather than QUOTA_LIMITED, which
+        // is reserved for daily-budget / plan errors that must not be retried.
+        if (normalized.contains("429") || normalized.contains("too many requests")) {
+            return "REQUEST_FAILED";
         }
         return "REQUEST_FAILED";
     }

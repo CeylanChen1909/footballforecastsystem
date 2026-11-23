@@ -159,12 +159,14 @@ prediction:
   prematch-details-initial-delay-ms: ${PREMATCH_DETAILS_INITIAL_DELAY_MS:30000}
   prematch-details-fixed-delay-ms: ${PREMATCH_DETAILS_FIXED_DELAY_MS:1800000}
   prematch-details-max-fixtures-per-run: ${PREMATCH_DETAILS_MAX_FIXTURES_PER_RUN:18}
-  prematch-details-max-historical-per-run: ${PREMATCH_DETAILS_MAX_HISTORICAL_PER_RUN:5}
+  prematch-details-max-historical-per-run: ${PREMATCH_DETAILS_MAX_HISTORICAL_PER_RUN:2}
   # Primary BBC matches have no API-Football fixture id. Resolve a bounded
   # number by team/date for metadata enrichment only; no alternate fixture is
   # written to crawler_matches.
   prematch-details-max-primary-per-run: ${PREMATCH_DETAILS_MAX_PRIMARY_PER_RUN:12}
-  prematch-details-max-primary-historical-per-run: ${PREMATCH_DETAILS_MAX_PRIMARY_HISTORICAL_PER_RUN:5}
+  # P0-2: historical statistics are capped at 2 fixtures and run at most once
+  # per day (PrematchDetailsRefreshTask.beginDailyHistoricalRun).
+  prematch-details-max-primary-historical-per-run: ${PREMATCH_DETAILS_MAX_PRIMARY_HISTORICAL_PER_RUN:2}
 deepseek:
   api-key: ${DEEPSEEK_API_KEY:}
   base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
@@ -188,6 +190,17 @@ api-football:
   base-url: ${API_FOOTBALL_BASE_URL:https://v3.football.api-sports.io}
   cache-ttl-seconds: ${API_FOOTBALL_CACHE_TTL:300}
   max-daily-requests: ${API_FOOTBALL_MAX_DAILY_REQUESTS:90}
+  # P0-2 budget split (must sum to max-daily-requests; the client clamps and
+  # always protects the on-demand reserve). Scheduled = timed enrichment jobs,
+  # on-demand = user-triggered detail reads. No server-side override is set in
+  # docker-compose.prod.yml, so 90 = the configured default; the actual provider
+  # plan is still unconfirmed (A-D2) — if it is a paid plan, raise the total here.
+  scheduled-daily-limit: ${API_FOOTBALL_SCHEDULED_DAILY_LIMIT:60}
+  on-demand-daily-limit: ${API_FOOTBALL_ON_DEMAND_DAILY_LIMIT:30}
+  # P0-2 pacing: minimum gap between provider requests. Production 429 bursts
+  # (up to ~25 requests in one minute) trip the provider's per-minute throttle;
+  # 2000 ms caps the client at ~30 requests/minute.
+  min-request-interval-ms: ${API_FOOTBALL_MIN_INTERVAL_MS:2000}
   # 球队阵容只在用户主动打开球队资料时按需请求，不参与比赛主采集链路。
   squad-enabled: ${API_FOOTBALL_SQUAD_ENABLED:true}
 understat:
