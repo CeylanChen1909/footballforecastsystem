@@ -34,7 +34,10 @@ services:
     networks:
       - football-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3001/ || exit 1"]
+      # 注意：louislam/uptime-kuma:1 镜像内没有 wget（2026-11-23 部署实测
+      # healthcheck 报 "wget: not found"，容器永远 starting），只有 curl，
+      # 故用 curl。302（未建账号时的 setup 跳转）对 curl -f 不算失败。
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3001/ > /dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
