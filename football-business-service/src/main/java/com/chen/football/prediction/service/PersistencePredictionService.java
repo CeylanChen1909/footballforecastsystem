@@ -35,6 +35,16 @@ import java.util.stream.Stream;
 @Service
 public class PersistencePredictionService {
     private static final String MODEL_VERSION = "elo-calibrated-v3";
+    /**
+     * P0-3 混合模型影子评估（2026-11-23 起，跑 2–4 周，凭数据定去留，见
+     * footballforecast-review/p0/reports/shadow.md）：
+     * 影子记录在 featureMeta 里只用这一个顶层字段名。影子结果只写入
+     * t_match_prediction.feature_meta_json，永不进入展示字段；2–4 周后
+     * 凭对照数据决策：门控通过且优于基线则放行展示，否则下线混合模型。
+     */
+    public static final String SHADOW_FIELD = "shadowModel";
+    /** 影子调用是尽力而为的对照采样：超时放得比正式推理短，避免 ML 服务挂起时拖慢预计算线程池。 */
+    private static final int SHADOW_TIMEOUT_SECONDS = 5;
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
     private static final Logger log = LoggerFactory.getLogger(PersistencePredictionService.class);
 
@@ -125,7 +135,8 @@ public class PersistencePredictionService {
         if (userId == null) {
             // Never trust a userId supplied in a request body; authorization
             // is established only by the signed session context.
-            return r;
+            // 影子记录不随用户接口返回：只活在比赛级快照的 feature_meta_json 里。
+            return withoutShadow(r);
         }
 
         try {
@@ -181,12 +192,43 @@ public class PersistencePredictionService {
         } catch (Exception ex) {
             log.error("保存预测历史失败: {}", ex.getMessage(), ex);
         }
-        return r;
+        return withoutShadow(r);
+    }
+
+    /**
+     * 对外展示用的 featureMeta：去掉影子评估字段。影子记录只活在
+     * t_match_prediction.feature_meta_json 里供离线对照分析，绝不经 API
+     * 返回给前端、也不喂给 Agent 的 LLM 上下文（否则 LLM 可能把影子
+     * 概率当成正式预测复述给用户）。
+     */
+    public static Map<String, Object> publicFeatureMeta(Map<String, Object> featureMeta) {
+        if (featureMeta == null || !featureMeta.containsKey(SHADOW_FIELD)) return featureMeta;
+        Map<String, Object> copy = new LinkedHashMap<>(featureMeta);
+        copy.remove(SHADOW_FIELD);
+        return copy;
+    }
+
+    /** 同上：返回给调用方的响应去掉影子字段，其余字段原样保留。 */
+    private MatchPredictionResponse withoutShadow(MatchPredictionResponse r) {
+        if (r == null || r.featureMeta() == null || !r.featureMeta().containsKey(SHADOW_FIELD)) return r;
+        return new MatchPredictionResponse(r.fixtureId(), r.resultLabel(), r.homeWinProb(), r.drawProb(),
+                r.awayWinProb(), r.modelVersion(), r.explanation(), r.topFeatures(), r.featureComplete(),
+                r.featureStatus(), r.fallbackReason(), publicFeatureMeta(r.featureMeta()), r.predictionAvailable());
     }
 
     /**
      * 仅执行一次模型推理，不写入用户历史。
      * 比赛级预测预计算使用此入口，避免同一场比赛被每个用户重复保存/推理。
+     *
+     * <p>P0-3 影子评估（2026-11-23 起，跑 2–4 周，凭数据定去留）：
+     * 通过 {@code isPredictionReady} 的比赛一律先算 Java 基线并返回基线；
+     * 同时再调一次 Python，把混合模型的结果只记进 featureMeta 的
+     * {@code shadowModel} 字段（随 t_match_prediction.feature_meta_json 落库，
+     * 供离线做“同场基线 vs 混合模型”对照）。影子结果永不进入返回的
+     * resultLabel / 概率 / modelVersion，也不进入 featureMeta 以外的任何
+     * 展示字段——Python 门控当前不通过（DRAW 召回为 0，见 qualityGate），
+     * 展示混合结果即误导用户。影子调用失败只记日志，绝不抛错、不降级基线。
+     * 本次不做门槛分级改动（C.md P0-1 第 2 步）、不重训、不碰 Python 侧模型文件。
      */
     public MatchPredictionResponse predictOnly(MatchPredictionRequest req) {
         FeatureContext features = buildFeatureContext(req);
@@ -199,16 +241,43 @@ public class PersistencePredictionService {
             }
             return unavailablePrediction(req, features, features.gateReason(req));
         }
-        if (pythonEnabled && pythonClient != null && features.isPythonReady(req)) {
-            return callPythonInference(req, features);
-        }
         String reason = !features.optional.missing.isEmpty()
                 ? I18nText.of("赛前增强特征缺失，使用透明 ELO+Poisson 基线", "Prematch enriched features are missing; using a transparent ELO+Poisson baseline")
                 : I18nText.of("未启用 Python 模型", "Python model is not enabled");
-        return baselinePrediction(req, features, reason);
+        MatchPredictionResponse baseline = baselinePrediction(req, features, reason);
+        // 影子评估：结果只进 featureMeta.shadowModel，展示的永远是上面的基线。
+        // 注意：此前的正式路径（isPythonReady 时直接返回 Python 结果）已停用——
+        // 在影子评估结束、门控通过之前，混合结果一律不得展示。
+        Map<String, Object> featureMeta = new LinkedHashMap<>(baseline.featureMeta());
+        featureMeta.put(SHADOW_FIELD, collectShadowPrediction(req, features));
+        return new MatchPredictionResponse(
+                baseline.fixtureId(), baseline.resultLabel(), baseline.homeWinProb(), baseline.drawProb(),
+                baseline.awayWinProb(), baseline.modelVersion(), baseline.explanation(), baseline.topFeatures(),
+                baseline.featureComplete(), baseline.featureStatus(), baseline.fallbackReason(), featureMeta, true);
     }
 
-    private MatchPredictionResponse callPythonInference(MatchPredictionRequest req, FeatureContext features) {
+    /**
+     * P0-3 影子评估：调一次 Python {@code POST /predict}，只把结果收进影子记录返回。
+     * 与原正式路径用同一请求体（{@code toInferencePayload}）、同一鉴权头、同一
+     * ML 服务地址；区别有三：(1) 返回值不作为预测展示，只进 featureMeta；
+     * (2) 超时更短（{@link #SHADOW_TIMEOUT_SECONDS} 秒），ML 挂起也不拖垮预计算；
+     * (3) 任何失败都只记日志并以状态字段记录，调用方收到的基线不受影响。
+     * {@code python.inference.enabled=false} 本身就是影子总开关：关闭时影子记
+     * 为 DISABLED，基线照常跑。
+     */
+    private Map<String, Object> collectShadowPrediction(MatchPredictionRequest req, FeatureContext features) {
+        Map<String, Object> shadow = new LinkedHashMap<>();
+        shadow.put("mode", "SHADOW_ONLY");
+        shadow.put("evaluatedAt", Instant.now().toString());
+        Map<String, Object> javaGate = new LinkedHashMap<>();
+        javaGate.put("pythonReady", features.isPythonReady(req));
+        javaGate.put("optionalMissing", List.copyOf(features.optional.missing));
+        javaGate.put("pythonEnabled", pythonEnabled);
+        shadow.put("javaGate", javaGate);
+        if (!pythonEnabled || pythonClient == null) {
+            shadow.put("status", "DISABLED");
+            return shadow;
+        }
         try {
             Map<String, Object> body = features.toInferencePayload(req);
 
@@ -222,49 +291,47 @@ public class PersistencePredictionService {
             Map<String, Object> resp = request
                     .retrieve()
                     .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(SHADOW_TIMEOUT_SECONDS))
                     .block();
 
-            if (resp != null && resp.get("homeWinProb") != null) {
-                @SuppressWarnings("unchecked")
-                List<String> topFeatures = resp.get("topFeatures") instanceof List<?> list
-                        ? list.stream().map(String::valueOf).toList()
-                        : List.of();
-                Map<String, Object> featureMeta = new LinkedHashMap<>(features.metadata());
-                if (resp.get("modelQuality") instanceof Map<?, ?> quality) {
-                    quality.forEach((key, value) -> featureMeta.put("model_" + key, value));
-                }
-                if (resp.get("qualityGate") instanceof Map<?, ?> qualityGate) {
-                    featureMeta.put("model_quality_gate", qualityGate);
-                }
-                for (String key : List.of("confidenceStatus", "confidenceLabel", "decisionMargin", "abstainThreshold", "recommendation", "modelRoute")) {
-                    if (resp.containsKey(key)) featureMeta.put(key, resp.get(key));
-                }
-                String returnedModel = String.valueOf(resp.getOrDefault("modelVersion", ""));
-                featureMeta.put("modelKind", returnedModel.toLowerCase(Locale.ROOT).startsWith("baseline") ? "BASELINE" : "ENHANCED");
-                featureMeta.put("qualityTier", features.isComplete() ? "ENHANCED_COMPLETE" : "ENHANCED_LIMITED");
-
-                return new MatchPredictionResponse(
-                        req.fixtureId(),
-                        (String) resp.get("resultLabel"),
-                        ((Number) resp.get("homeWinProb")).doubleValue(),
-                        ((Number) resp.get("drawProb")).doubleValue(),
-                        ((Number) resp.get("awayWinProb")).doubleValue(),
-                        returnedModel,
-                        (String) resp.get("explanation"),
-                        topFeatures,
-                        features.isComplete(),
-                        features.status(),
-                        features.isComplete() ? null : I18nText.of("部分特征缺失：", "Some features are missing: ") + features.metadata().get("missing"),
-                        featureMeta,
-                        true
-                );
+            if (resp == null || resp.get("homeWinProb") == null) {
+                shadow.put("status", "INVALID_RESPONSE");
+                log.warn("影子评估：Python 返回了无效预测结果 fixtureId={}", req.fixtureId());
+                return shadow;
             }
+            shadow.put("status", "OK");
+            shadow.put("modelVersion", String.valueOf(resp.getOrDefault("modelVersion", "")));
+            if (resp.containsKey("modelRoute")) shadow.put("modelRoute", resp.get("modelRoute"));
+            shadow.put("resultLabel", resp.get("resultLabel"));
+            shadow.put("homeWinProb", resp.get("homeWinProb"));
+            shadow.put("drawProb", resp.get("drawProb"));
+            shadow.put("awayWinProb", resp.get("awayWinProb"));
+            if (resp.get("qualityGate") instanceof Map<?, ?> qualityGate) {
+                // Python 侧门控失败原因随行记录：eligible=false 时 checks 说明哪项没过
+                //（当前主因：accuracyEdge / drawRecall=0 / promotionAccepted=false）。
+                // 注意 Python 侧无论走混合还是基线兜底都会返回 qualityGate，所以
+                // 门控状态在每一行影子记录里都有，不依赖 /health 抽查。
+                shadow.put("qualityGate", qualityGate);
+            }
+            if (resp.get("modelQuality") instanceof Map<?, ?> quality) {
+                shadow.put("modelQuality", quality);
+            }
+            for (String key : List.of("confidenceStatus", "confidenceLabel", "decisionMargin", "abstainThreshold", "recommendation")) {
+                if (resp.containsKey(key)) shadow.put(key, resp.get(key));
+            }
+            if (resp.get("topFeatures") instanceof List<?> topFeatures) {
+                shadow.put("topFeatures", topFeatures.stream().map(String::valueOf).toList());
+            }
+            log.debug("影子评估完成 fixtureId={}, model={}, label={}", req.fixtureId(), shadow.get("modelVersion"), shadow.get("resultLabel"));
+            return shadow;
         } catch (Exception ex) {
-            log.warn("Python推理调用失败，使用baseline: {}", ex.getMessage());
-            return baselinePrediction(req, features, I18nText.of("Python 推理服务不可用：", "Python inference service unavailable: ") + ex.getMessage());
+            // 影子调用失败只记日志：绝不抛错、绝不影响基线预测主路径。
+            shadow.put("status", "CALL_FAILED");
+            String message = String.valueOf(ex.getMessage());
+            shadow.put("error", message.length() > 200 ? message.substring(0, 200) : message);
+            log.warn("影子评估：Python 推理调用失败，不影响基线预测 fixtureId={}, error={}", req.fixtureId(), ex.getMessage());
+            return shadow;
         }
-        return baselinePrediction(req, features, I18nText.of("Python 返回了无效预测结果", "Python returned an invalid prediction"));
     }
 
     private FeatureContext buildFeatureContext(MatchPredictionRequest req) {

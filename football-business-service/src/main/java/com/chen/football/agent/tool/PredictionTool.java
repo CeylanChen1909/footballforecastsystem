@@ -67,7 +67,8 @@ public class PredictionTool implements AgentTool {
         data.put("featureComplete", response.featureComplete());
         data.put("featureStatus", response.featureStatus());
         data.put("fallbackReason", response.fallbackReason());
-        data.put("featureMeta", response.featureMeta());
+        // P0-3 影子评估：影子记录不喂给 LLM——否则模型可能把影子概率当成正式预测复述给用户。
+        data.put("featureMeta", PersistencePredictionService.publicFeatureMeta(response.featureMeta()));
         data.put("predictionAvailable", response.predictionAvailable());
         data.put("status", response.predictionAvailable() ? "AVAILABLE" : "PARTIAL");
         data.put("message", response.predictionAvailable() ? "已读取服务端预测结果" : "预测特征不足，暂不输出结论");
