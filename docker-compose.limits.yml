@@ -1,0 +1,71 @@
+# 资源限制修正覆盖（P0-8）。与 docker-compose.4c4g.yml 叠加使用：
+#   docker compose -f docker-compose.prod.yml -f docker-compose.4c4g.yml -f docker-compose.limits.yml up -d
+# 后加载的文件优先：本文件只覆盖 4c4g 里与实测不符的项，其余沿用 4c4g。
+#
+# 为什么不能直接用 docker-compose.4c4g.yml：
+#   2026-11-23 实测 3 个服务已超过 4c4g 上限，原样应用会被 OOM-kill：
+#     football-business-service  821.6 MiB（实测） > 640m（4c4g 上限）
+#     football-user-service      450.4 MiB（实测） > 384m（4c4g 上限）
+#     football-nacos             533.8 MiB（实测） > 384m（4c4g 上限），且 CPU 瞬时约 48%
+#   另：4c4g 按"4G 内存主机"设计，但本机实测 7.8 GiB（docker stats LIMIT 7.755GiB），
+#   有上调空间。核对表与完整论证见 docs/resource-limits.md。
+#
+# 调整后内存总上限：4480 MB（约 4.4 GiB），另加 Kuma 256m；主机剩余约 3.2 GiB
+# 供宿主机 nginx / MaiBot / SillyTavern 等其他进程。CPU 上限合计 4.80（只是上限，
+# 不是预留，超 4 核无碍；各服务平时 CPU 均 <1%，nacos 例外）。
+# 上线后观察一周：任一服务出现 OOMKilled=true 即按 docs/resource-limits.md 回滚
+# 该服务限制（或再上调），不要先盲目加堆。
+
+services:
+  mysql:
+    # 实测 321.9 MiB，4c4g 的 768m 够用，不覆盖。
+    mem_limit: 768m
+    cpus: "0.90"
+
+  redis:
+    mem_limit: 128m
+    cpus: "0.20"
+
+  nacos:
+    mem_limit: 768m
+    cpus: "0.60"
+    environment:
+      JVM_XMS: 128m
+      JVM_XMX: 256m
+      JVM_XMN: 64m
+
+  football-gateway:
+    # 实测 333.3 MiB，距 4c4g 的 384m 只剩 50 MiB 余量；放宽到 512m。
+    mem_limit: 512m
+    cpus: "0.45"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-gateway
+
+  football-user-service:
+    # 实测 450.4 MiB，已超 4c4g 的 384m；放宽到 512m。
+    mem_limit: 512m
+    cpus: "0.50"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx320m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-user-service
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true -Dsun.net.inetaddr.ttl=60"
+
+  football-business-service:
+    # 实测 821.6 MiB，已超 4c4g 的 640m；放宽到 1024m。
+    # 注意：堆仍是 4c4g 的 -Xmx512m，实测 RSS 822 说明堆外约 300 MiB；
+    # 若日后堆调大，mem_limit 要同步上调。
+    mem_limit: 1024m
+    cpus: "1.20"
+    environment:
+      JAVA_OPTS: "-Xms192m -Xmx512m -XX:+UseSerialGC"
+      SPRING_CLOUD_NACOS_DISCOVERY_IP: football-business-service
+
+  football-ml-service:
+    mem_limit: 640m
+    cpus: "0.75"
+    command: ["gunicorn", "-b", "0.0.0.0:5001", "-w", "1", "--timeout", "120", "app:app"]
+
+  frontend:
+    mem_limit: 128m
+    cpus: "0.20"

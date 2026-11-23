@@ -1,0 +1,48 @@
+# Uptime Kuma 监控（P0-7）。独立容器，不动现有 8 个业务容器。
+#
+# 部署（复审通过后，见 p0 运维报告 runbook）：
+#   docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d uptime-kuma
+#   docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml ps
+#
+# 设计要点：
+# - 镜像 louislam/uptime-kuma:1（主版本 pin，不追 latest；部署时需联网拉取，
+#   2026-11-23 实测服务器本地无此镜像缓存）。
+# - 端口只绑宿主机回环 127.0.0.1:3001（2026-11-23 实测 3001 空闲），不对外暴露；
+#   首次访问用 SSH 隧道：ssh -L 3001:127.0.0.1:3001 root@103.212.187.22，
+#   再打开 http://127.0.0.1:3001 建管理员账号。
+# - 加入 football-network：Kuma 以服务名直连网关/业务 actuator
+#   （http://football-gateway:8082/actuator/health 等），9000/9001 端口
+#   未发布到宿主机，只能从网内探。Kuma 出网（探公网 https://chenfootball.asia）
+#   走容器默认 NAT，无需额外配置。
+# - 数据卷 uptime-kuma-data 独立命名卷，与业务卷隔离；删 Kuma 容器不影响业务数据。
+# - 已知局限：Kuma 与业务同机，宿主机挂则探针同挂——这是 D 组报告已记录的
+#   折中，异地探针以后再说；先解决"故障无人知"的问题。
+# - 监控项与告警通道配置见 docs/monitoring-setup.md；告警通道（邮件 vs Telegram）
+#   待 Chen 定，通道配好前 Kuma 只记录、不推送。
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: football-uptime-kuma
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.25"
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - football-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3001/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  uptime-kuma-data:
+
+networks:
+  football-network:
+    name: footballforecastsystem_football-network
