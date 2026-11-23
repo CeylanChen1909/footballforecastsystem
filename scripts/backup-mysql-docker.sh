@@ -103,7 +103,12 @@ if ! gzip -t "$tmp_target" 2>/dev/null; then
   rm -f "$tmp_target"; fail "gzip integrity check failed"; kuma_push down "gzip check failed"; exit 3
 fi
 size_bytes="$(wc -c < "$tmp_target")"
-if [[ "$size_bytes" -lt 10240 ]] || ! gzip -dc "$tmp_target" | grep -q "CREATE TABLE"; then
+# 注意：不能用 `gzip -dc | grep -q`——grep -q 首行命中即退出，gzip 写关闭的
+# 管道会收 SIGPIPE；在 `set -o pipefail` 下整个管道返回 141，即使转储完全
+# 正常也会误判失败（2026-11-23 部署实测：4.2MB 有效转储、42 个 CREATE TABLE
+# 仍报失败）。grep -c 会读完整流，不提前退出，是可靠的计数检查。
+create_count="$(gzip -dc "$tmp_target" | grep -c "CREATE TABLE" || true)"
+if [[ "$size_bytes" -lt 10240 ]] || [[ "$create_count" -eq 0 ]]; then
   rm -f "$tmp_target"; fail "backup unexpectedly small (${size_bytes}B) or no CREATE TABLE"
   kuma_push down "backup too small (${size_bytes}B)"
   exit 3
