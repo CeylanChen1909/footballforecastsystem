@@ -12,3 +12,5 @@ export function saveLegalConsent() {
 export function clearLegalConsent() {
   try { window.localStorage.removeItem(KEY) } catch { /* ignore */ }
 }
+
+export default { hasLegalConsent, saveLegalConsent, clearLegalConsent, LEGAL_CONSENT_VERSION }

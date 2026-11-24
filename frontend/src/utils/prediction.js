@@ -30,3 +30,5 @@ export const parseFeatureString = (raw) => {
   })
   return Object.keys(result).length ? result : null
 }
+
+export default { normalizeProbability, normalizeProbabilities, parseFeatureString }

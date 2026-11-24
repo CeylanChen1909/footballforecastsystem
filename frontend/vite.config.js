@@ -1,99 +1,46 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import solid from '@solidjs/vite-plugin'
 
+/**
+ * ChenFootball · SolidJS 2.0 脚手架
+ *
+ * start mode（SPA，客户端渲染，不做 SSR）：
+ *  - 官方文档（docs.solidjs.com/reference/vite-plugin-solid/start）：
+ *    `solid({ start: true })` 单独使用即 SPA；dev 以流式文档壳挂载应用，
+ *    `vite build` 输出纯静态文件到 `dist/client`，`vite preview` 自带 SPA fallback。
+ *  - start mode 下没有 index.html / 入口文件：文档壳是 `src/Document.jsx`，
+ *    应用入口由插件生成（挂载 `src/App.jsx` 默认导出）。不要再补 index.html
+ *    或 src/main.jsx，插件会忽略或与之冲突。
+ *  - 部署位（契约 §7.1）：旧版 Dockerfile 拷 `dist`，nginx.conf 拷的是
+ *    `/usr/share/nginx/html` 下的 `dist` 内容；start mode 默认写
+ *    `dist/client`，还附带一个 `dist/server`（SSR 入口）。Plan A（用户
+ *    environments.client.build.outDir: 'dist'）已证实无效——插件在 config
+ *    钩子里硬编码了 dist/client，会覆盖用户配置（2026-11-23 实测）。
+ *    采用 Plan B：`npm run build` = `vite build && node
+ *    scripts/flatten-dist.mjs`，构建后把 dist/client 拷平到 dist/ 根并删
+ *    dist/client 与 dist/server；Dockerfile 与 nginx.conf 不用改。
+ */
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [solid({ start: true })],
   build: {
     target: 'es2020',
     cssCodeSplit: true,
     assetsInlineLimit: 4096,
     chunkSizeWarningLimit: 700,
-    minify: 'esbuild',
-    esbuild: { drop: ['debugger'] },
-    modulePreload: {
-      polyfill: true,
-      resolveDependencies(filename, deps) {
-        return deps.filter((dep) => {
-          const d = String(dep).replace(/\\/g, '/')
-          if (/(admin-app|agent-app|prediction-app|vite-runtime)/i.test(d)) return false
-          if (/element-(table|table-v2|date-picker|dialog|drawer|menu|tree-v2|upload)/i.test(d)) return false
-          if (/echarts/i.test(d)) return false
-          return true
-        })
-      }
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          const normalized = id.replace(/\\/g, '/')
-          // Vite injects \0vite/preload-helper into every dynamic-import chunk.
-          // If it lands in admin-app, the entry statically imports admin-app and
-          // the user shell preloads admin CSS. Keep it in a tiny dedicated chunk.
-          if (
-            id.includes('\0') ||
-            normalized.includes('vite/preload-helper') ||
-            normalized.includes('vite/modulepreload-polyfill') ||
-            normalized.includes('commonjsHelpers') ||
-            /\/node_modules\/vite\//.test(normalized)
-          ) {
-            return 'vite-runtime'
-          }
-          if (normalized.includes('/src/plugins/register-element-plus-admin') ||
-              normalized.includes('/src/styles/element-plus-admin-on-demand') ||
-              normalized.includes('/src/plugins/element-plus-admin-extras')) {
-            return 'admin-app'
-          }
-          if (normalized.includes('/src/views/admin/') || normalized.includes('/src/components/charts/')) {
-            return 'admin-app'
-          }
-          // Keep stores/api/utils out of feature chunks so the entry never
-          // statically imports agent-app / admin-app for shared helpers.
-          if (
-            normalized.includes('/src/stores/') ||
-            normalized.includes('/src/api/') ||
-            normalized.includes('/src/utils/')
-          ) {
-            return 'app-shared'
-          }
-          // Agent.vue only in agent-app. AgentLauncher is under components/layout and stays
-          // a tiny async chunk so App.vue never pulls the Agent shell on first paint.
-          if (normalized.includes('/src/views/user/Agent.vue')) {
-            return 'agent-app'
-          }
-          if (normalized.includes('/src/views/user/Prediction.vue') || normalized.includes('/src/components/prediction/')) {
-            return 'prediction-app'
-          }
-          if (normalized.includes('/src/components/matches/PredictionDiscovery.vue')) {
-            return 'matches-discovery'
-          }
-          if (!id.includes('node_modules')) return undefined
-          if (normalized.includes('/echarts')) return 'echarts'
-          if (normalized.includes('/@element-plus/icons-vue')) return 'element-plus-icons'
-          if (normalized.includes('/element-plus/es/components/')) {
-            const match = normalized.match(/\/element-plus\/es\/components\/([^/]+)/)
-            const heavy = new Set(['table', 'table-v2', 'date-picker', 'date-picker-panel', 'dialog', 'drawer', 'menu', 'tree-v2', 'upload'])
-            if (match && heavy.has(match[1])) return `element-${match[1]}`
-          }
-          if (normalized.includes('/element-plus')) return 'element-plus-core'
-          if (normalized.includes('/vue/') || normalized.includes('/@vue/') || normalized.includes('/vue-router') || normalized.includes('/pinia')) {
-            return 'vue-vendor'
-          }
-          if (normalized.includes('/axios')) return 'http'
-          return undefined
-        }
-      }
-    }
+    // Vite 8 默认用 oxc 压缩（minify 默认值）；不要写 minify: 'esbuild'，
+    // 否则构建会要求另装 esbuild（Vite 8 已弃用 esbuild 压缩路径）。
+    modulePreload: { polyfill: true },
   },
   server: {
     port: 5173,
+    // 与旧版 vite.config.js 一致：本地开发时代理到网关。
+    // /ml 代理已删：契约 §2.8 确认它零调用方（旧版有代理、前端却无请求）。
     proxy: {
       '/api/news': { target: 'http://localhost:8082', changeOrigin: true },
       '/api': { target: 'http://localhost:8082', changeOrigin: true },
-      '/ml': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ml/, '')
-      }
-    }
-  }
+    },
+  },
+  preview: {
+    port: 4173,
+  },
 })

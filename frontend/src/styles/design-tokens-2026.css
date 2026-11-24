@@ -1,0 +1,312 @@
+/**
+ * ChenFootball 设计 tokens · 2026
+ * ============================================================
+ * 来源：frontend/src/style.css（r11，feat/commercial-polish-r11 @ 6223f2e）
+ * 的 tokens 清理 + 补齐。只定义变量，不写任何组件样式、不改任何行为。
+ *
+ * 接入（只改两行，不动构建配置）：
+ *   1. frontend/src/main.js，在 `import './style.css'` 之前加：
+ *        import './styles/design-tokens-2026.css'
+ *   2. 其余什么都不用改：本文件完整包含 style.css 现有的全部 --ff-* /
+ *      --el-* 变量名与取值（除下文“修正”清单外），style.css 可逐步瘦身，
+ *      但即使不瘦身也不会冲突——后加载的 style.css 仍会覆盖同名变量，
+ *      只是修正项会失效，所以建议接入后按报告 §5 删除 style.css 里的
+ *      :root 块（两处，见报告）。
+ *
+ * 兼容承诺：
+ *   - 所有既有 --ff-* 变量名保留，取值除“修正”清单外一字不改；
+ *     全站 275+ 处 var(--ff-*) 引用无需改动。
+ *   - 新增变量一律用 --ff-* 前缀，不引入第二套命名空间。
+ *   - 暗色值只在 [data-theme="dark"] 下生效；不加该属性时渲染与今天完全一致。
+ *
+ * 修正清单（与 r11 style.css 不同之处，共 4 项）：
+ *   M1. rgba(15,107,77, …) → rgba(18,107,80, …)：15,107,77 是 #0f6b4d，
+ *       与主色 #126b50 = rgb(18,107,80) 不是同一个绿，style.css 里 6 处
+ *       focus/hover 用的都是错的那个绿；本文件统一用 18,107,80。
+ *   M2. --ff-text-muted / --ff-text-faint：style.css 在文件首尾定义了两次
+ *       （#69766e/#9aa69f 与 r4 无障碍覆盖 #5f6c64/#6f7c74），以后者为准，
+ *       本文件只保留一份。
+ *   M3. --ff-accent / --ff-accent-2 / --ff-attention / --ff-gradient-* /
+ *       --ff-surface-strong / --ff-surface-elevated：与主色/语义色/面色
+ *       完全重复的别名，保留作兼容但标记 @deprecated，新代码不再使用。
+ *   M4. --ff-live #c84f46 与 --ff-danger #bd4b43 是两个极近的红：保留两者，
+ *       但用途收窄——live 只用于“直播中”圆点，错误状态一律用 danger。
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- 原始色板：品牌绿（由现有 --el-color-primary-light-* 反推） ---------- */
+  --ff-green-50: #eaf3ed;
+  --ff-green-100: #d0e4d9;
+  --ff-green-200: #b4d2c2;
+  --ff-green-300: #7bb29b;
+  --ff-green-400: #4a9276;
+  --ff-green-500: #2a7d60;
+  --ff-green-600: #126b50; /* 主色，沿用现状 */
+  --ff-green-700: #0d5c44;
+  --ff-green-800: #094936;
+  --ff-green-900: #07382a;
+  --ff-green-950: #052a20; /* 深色导航 / 页脚墨色 */
+
+  /* ---------- 原始色板：暖灰中性色（带一点绿，配品牌绿不发蓝） ---------- */
+  --ff-neutral-50: #fbfcfb;
+  --ff-neutral-100: #f7f8f7; /* 页面底色 */
+  --ff-neutral-200: #f1f4f2;
+  --ff-neutral-300: #edf1ee;
+  --ff-neutral-400: #e4e9e5;
+  --ff-neutral-500: #dfe5e1; /* 默认边框 */
+  --ff-neutral-600: #c4cec7; /* 强调边框 */
+  --ff-neutral-700: #98a39b;
+  --ff-neutral-800: #6f7c74; /* 极淡文字 */
+  --ff-neutral-900: #5f6c64; /* 次要文字 */
+  --ff-neutral-950: #344139; /* 正文 */
+  --ff-neutral-1000: #202a24; /* 强调文字 */
+  --ff-ink: #18241d; /* 最深墨色：标题、导航 */
+
+  /* ---------- 原始色板：语义色 ---------- */
+  --ff-success-500: #237a53;
+  --ff-success-600: #1c6b47;
+  --ff-success-soft: #e6f1eb;
+  --ff-warning-500: #a97020;
+  --ff-warning-600: #7c5413; /* 警示文字专用：#a97020 在白底上对比度不足 */
+  --ff-warning-soft: #f7eedf;
+  --ff-danger-500: #bd4b43;
+  --ff-danger-600: #9c3831;
+  --ff-danger-soft: #fbeceb;
+  --ff-info-500: #3d6f8f;
+  --ff-info-600: #2c5a74;
+  --ff-info-soft: #e9f1f5;
+  --ff-live-500: #c84f46; /* 仅用于“直播中”圆点，见 M4 */
+
+  /* ---------- 语义层：背景 / 表面 / 边框 / 文字（现状取值，原样保留） ---------- */
+  --ff-bg: var(--ff-neutral-100);
+  --ff-bg-alt: var(--ff-neutral-200);
+  --ff-surface: #ffffff;
+  --ff-surface-soft: var(--ff-neutral-50);
+  --ff-surface-quiet: #f3f6f4;
+  --ff-border: var(--ff-neutral-500);
+  --ff-border-strong: var(--ff-neutral-600);
+  --ff-text: var(--ff-neutral-950);
+  --ff-text-strong: var(--ff-neutral-1000);
+  --ff-text-muted: var(--ff-neutral-900); /* M2：取 r4 无障碍覆盖值 */
+  --ff-text-faint: var(--ff-neutral-800); /* M2：取 r4 无障碍覆盖值 */
+  --ff-focus: #1b2a22;
+  --ff-focus-muted: #aebbb4;
+  --ff-grid-line: transparent;
+
+  /* ---------- 语义层：品牌与语义（现状取值，原样保留） ---------- */
+  --ff-primary: var(--ff-green-600);
+  --ff-primary-hover: var(--ff-green-700);
+  --ff-primary-active: var(--ff-green-800);
+  --ff-primary-soft: var(--ff-green-50);
+  --ff-success: var(--ff-success-500);
+  --ff-warning: var(--ff-warning-500);
+  --ff-danger: var(--ff-danger-500);
+  --ff-live: var(--ff-live-500);
+  --ff-info: var(--ff-info-500);
+  --ff-gold: var(--ff-warning-500);
+  --ff-gold-soft: var(--ff-warning-soft);
+  --ff-gold-strong: #8b6117; /* 金色文字：白底对比度约 4.6:1，可做正文 */
+
+  /* ---------- 字体 ---------- */
+  --ff-font-sans: "Segoe UI", "Segoe UI Variable Text", "PingFang SC",
+    "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --ff-font-mono: "Cascadia Code", Consolas, "SF Mono", "Liberation Mono", monospace;
+  /* 字阶：尺寸 / 行高。body 沿用 14px/1.5；标题只用 lg 以上。 */
+  --ff-text-xs: 11px;
+  --ff-text-sm: 12px;
+  --ff-text-md: 13px;
+  --ff-text-base: 14px;
+  --ff-text-lg: 16px;
+  --ff-text-xl: 18px;
+  --ff-text-2xl: 20px;
+  --ff-text-3xl: 24px;
+  --ff-text-display: 28px;
+  --ff-leading-tight: 1.35;
+  --ff-leading-base: 1.5;
+  --ff-leading-loose: 1.7;
+  --ff-weight-regular: 400;
+  --ff-weight-semibold: 600;
+  --ff-weight-bold: 700;
+  --ff-tracking-title: -0.01em;
+  --ff-tracking-label: 0.02em;
+
+  /* ---------- 间距：4px 基数（现状 4–32 保留，补 40/48/64 三档） ---------- */
+  --ff-space-0: 0;
+  --ff-space-1: 4px;
+  --ff-space-2: 8px;
+  --ff-space-3: 12px;
+  --ff-space-4: 16px;
+  --ff-space-5: 20px;
+  --ff-space-6: 24px;
+  --ff-space-7: 32px;
+  --ff-space-8: 40px;
+  --ff-space-9: 48px;
+  --ff-space-10: 64px;
+  --ff-section-gap: var(--ff-space-9); /* 页面区块之间，移动端用 --ff-space-7 */
+  --ff-page-padding: var(--ff-space-4); /* 移动端 16px，≥768px 用 24px */
+  --ff-page-padding-desktop: var(--ff-space-6);
+  --ff-container-max: 1100px; /* 与 index.html 骨架屏 max-width 一致 */
+
+  /* ---------- 圆角：现状 4/6/8/10 保留，补 12/16/999 ---------- */
+  --ff-radius-sm: 4px;
+  --ff-radius-md: 6px;
+  --ff-radius-lg: 8px; /* 卡片 / 对话框统一用 lg */
+  --ff-radius-xl: 10px;
+  --ff-radius-2xl: 12px;
+  --ff-radius-3xl: 16px;
+  --ff-radius-full: 999px;
+
+  /* ---------- 阴影：克制扁平（现状取值，原样保留，补 xl 与 focus ring） ---------- */
+  --ff-shadow-xs: 0 1px 2px rgba(24, 36, 29, 0.05);
+  --ff-shadow-sm: 0 1px 2px rgba(31, 40, 34, 0.035);
+  --ff-shadow-md: 0 2px 5px rgba(31, 40, 34, 0.055);
+  --ff-shadow-lg: 0 5px 14px rgba(31, 40, 34, 0.08);
+  --ff-shadow-hover: 0 2px 7px rgba(31, 40, 34, 0.07);
+  --ff-shadow-xl: 0 12px 36px rgba(31, 40, 34, 0.14); /* 对话框 */
+  --ff-shadow-focus: 0 0 0 3px rgba(18, 107, 80, 0.12); /* M1：用主色 rgb */
+
+  /* ---------- 动效：150–200ms 为主，300ms 只给大面积入场 ---------- */
+  --ff-duration-fast: 0.15s;
+  --ff-duration-base: 0.2s;
+  --ff-duration-slow: 0.3s;
+  --ff-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ff-ease-out: ease-out;
+  --ff-transition-fast: var(--ff-duration-fast) var(--ff-ease-standard);
+  --ff-transition: var(--ff-duration-base) var(--ff-ease-standard);
+
+  /* ---------- 层级 ---------- */
+  --ff-z-base: 0;
+  --ff-z-sticky: 10;
+  --ff-z-dropdown: 20;
+  --ff-z-drawer: 30;
+  --ff-z-dialog: 40;
+  --ff-z-overlay: 50;
+  --ff-z-toast: 60;
+
+  /* ---------- 断点（注意：CSS 变量不能用于 @media 条件） ----------
+   * 这里的值只作“唯一事实来源”供文档与 JS（matchMedia /
+   * getComputedStyle）读取；写 @media 时仍须用字面值，且只用下面五档。
+   * 规范断点：xs 480 / sm 680 / md 768 / lg 1024 / xl 1280。
+   * 现状散落的 620/700/720/900–1100/1080 一律向最近规范档收敛：
+   * 620/700/720 → 680；900–1100/1080 → 1024。 */
+  --ff-bp-xs: 480px;
+  --ff-bp-sm: 680px;
+  --ff-bp-md: 768px;
+  --ff-bp-lg: 1024px;
+  --ff-bp-xl: 1280px;
+
+  /* ---------- 已废弃别名（保留兼容，新代码勿用） ---------- */
+  /* @deprecated 与 --ff-primary 完全重复 */
+  --ff-accent: var(--ff-primary);
+  --ff-accent-2: var(--ff-primary-hover);
+  /* @deprecated 与 --ff-warning 完全重复 */
+  --ff-attention: var(--ff-warning);
+  /* @deprecated 与 --ff-surface 完全重复 */
+  --ff-surface-strong: var(--ff-surface);
+  --ff-surface-elevated: var(--ff-surface);
+  /* @deprecated 不是渐变，只是纯色别名；真要渐变时再定义 */
+  --ff-gradient-primary: var(--ff-primary);
+  --ff-gradient-soft: var(--ff-surface);
+  --ff-gradient-page: var(--ff-bg);
+
+  /* ---------- Element Plus 桥接：全部引用 --ff-*，不再写死十六进制 ----------
+   * Element Plus 2.6 的 theme-chalk 全部由这些 --el-* 变量驱动，
+   * 因此换肤（含暗色）不需要重新编译主题，改变量即可。 */
+  --el-color-primary: var(--ff-green-600);
+  --el-color-primary-light-3: var(--ff-green-400);
+  --el-color-primary-light-5: var(--ff-green-300);
+  --el-color-primary-light-7: var(--ff-green-200);
+  --el-color-primary-light-8: var(--ff-green-100);
+  --el-color-primary-light-9: var(--ff-green-50);
+  --el-color-primary-dark-2: var(--ff-green-700);
+  --el-color-success: var(--ff-success-500);
+  --el-color-warning: var(--ff-warning-500);
+  --el-color-danger: var(--ff-danger-500);
+  --el-color-info: var(--ff-info-500);
+  --el-bg-color: var(--ff-surface);
+  --el-bg-color-page: var(--ff-bg);
+  --el-bg-color-overlay: var(--ff-surface);
+  --el-fill-color-blank: var(--ff-surface);
+  --el-fill-color-light: var(--ff-neutral-100);
+  --el-fill-color-lighter: var(--ff-neutral-200);
+  --el-fill-color-extra-light: var(--ff-neutral-50);
+  --el-fill-color-dark: var(--ff-neutral-500);
+  --el-fill-color-darker: var(--ff-neutral-600);
+  --el-border-color: var(--ff-neutral-500);
+  --el-border-color-light: var(--ff-neutral-400);
+  --el-border-color-lighter: var(--ff-neutral-300);
+  --el-border-color-extra-light: var(--ff-neutral-200);
+  --el-border-color-dark: var(--ff-neutral-600);
+  --el-border-color-darker: var(--ff-neutral-700);
+  --el-text-color-primary: var(--ff-neutral-1000);
+  --el-text-color-regular: var(--ff-neutral-1000);
+  --el-text-color-secondary: var(--ff-neutral-900);
+  --el-text-color-placeholder: var(--ff-neutral-700);
+  --el-text-color-disabled: var(--ff-neutral-600);
+  --el-mask-color: rgba(0, 0, 0, 0.45);
+  --el-box-shadow: var(--ff-shadow-lg);
+  --el-box-shadow-light: var(--ff-shadow-md);
+}
+
+/* ============================================================
+ * 暗色模式 · 第一档（仅 tokens 切换）
+ * 状态：已定义，未启用。启用条件见报告 §6：
+ *   document.documentElement.dataset.theme = 'dark'
+ * 切换时同时把 <meta name="theme-color"> 改为 #0f1512。
+ * 注意：本块只覆盖变量。硬编码颜色（约 31 处，见报告 §6 清单）
+ * 与 ECharts 配色不在此块覆盖范围内，那是第二档的工作。
+ * ============================================================ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ff-bg: #0f1512;
+  --ff-bg-alt: #131c17;
+  --ff-surface: #182420;
+  --ff-surface-soft: #1d2b25;
+  --ff-surface-quiet: #1a2620;
+  --ff-border: #2a3a32;
+  --ff-border-strong: #3d5045;
+  --ff-text: #e6ebe7;
+  --ff-text-strong: #f4f7f5;
+  --ff-text-muted: #a8b5ac;
+  --ff-text-faint: #7e8d84;
+  --ff-focus: #7bb29b;
+  --ff-focus-muted: #3d5045;
+
+  /* 暗底上主色提亮一档，保证白字按钮与文字链接的对比度 */
+  --ff-primary: var(--ff-green-400);
+  --ff-primary-hover: var(--ff-green-300);
+  --ff-primary-active: var(--ff-green-400);
+  --ff-primary-soft: #1d2b25;
+  --ff-success: #5aa87f;
+  --ff-warning: #d9a441;
+  --ff-danger: #e07a70;
+  --ff-info: #7fb0c9;
+  --ff-live: #e07a70;
+  --ff-gold: #d9a441;
+  --ff-gold-soft: #2b2517;
+
+  --ff-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --ff-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --ff-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --ff-shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.45);
+  --ff-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --ff-shadow-xl: 0 12px 36px rgba(0, 0, 0, 0.5);
+  --ff-shadow-focus: 0 0 0 3px rgba(123, 178, 155, 0.35);
+
+  /* Element Plus 在暗色下跟随 --ff-* 走，无需第二套映射；
+   * 只有遮罩与填充需要单独加深。 */
+  --el-color-primary: var(--ff-green-400);
+  --el-color-primary-light-3: var(--ff-green-300);
+  --el-color-primary-light-5: var(--ff-green-200);
+  --el-color-primary-light-7: #234034;
+  --el-color-primary-light-8: #1d2f27;
+  --el-color-primary-light-9: #1d2b25;
+  --el-color-primary-dark-2: var(--ff-green-500);
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+  --el-fill-color-light: #1d2b25;
+  --el-fill-color-lighter: #223029;
+  --el-fill-color-extra-light: #182420;
+}

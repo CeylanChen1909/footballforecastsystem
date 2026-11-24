@@ -1,6 +1,14 @@
+/**
+ * 比赛数据工具（自 Vue src/utils/match.js 移植，逻辑逐行对齐）。
+ *
+ * 唯一改动：Vue 的 `locale.value` 改为 Solid signal 调用 `locale()`；
+ * 其余格式化、状态判定、去重规则一字未动（契约 §5 同名函数区分注意：
+ * 本文件的 getLeagueName 是原始值版；Matches 页本地另有经
+ * getLeagueDisplayName 显示化的同名函数，两者不得合并）。
+ */
 import { locale, t } from '../i18n'
 
-const dateLocale = () => (locale.value === 'zh' ? 'zh-CN' : 'en-US')
+const dateLocale = () => (locale() === 'zh' ? 'zh-CN' : 'en-US')
 
 const LIVE_STATUSES = ['LIVE', 'IN_PLAY', 'PAUSED', 'HT', '1H', '2H', 'ET']
 const FINISHED_STATUSES = ['FT', 'AET', 'PEN', 'FINISHED']
@@ -23,7 +31,7 @@ const isEnglishLabel = value => /[A-Za-z]/.test(String(value || '')) && !hasChin
 // the wrong language.
 const topLevelDisplay = (value, source) => {
   if (!value || value === source) return ''
-  return locale.value === 'en' ? (isEnglishLabel(value) ? value : '') : (hasChinese(value) ? value : '')
+  return locale() === 'en' ? (isEnglishLabel(value) ? value : '') : (hasChinese(value) ? value : '')
 }
 
 export const getMatchId = match => String(match?.matchId || match?.id || match?.fixtureId || match?.fixture?.id || match?.externalMatchId || '')
@@ -175,3 +183,11 @@ export const formatCountdown = (match, now = Date.now()) => {
 }
 
 export const teamInitial = value => String(value || '?').trim().slice(0, 1).toUpperCase()
+
+export default {
+  normalizeList, getMatchId, getHomeTeam, getAwayTeam, getHomeName, getAwayName,
+  getHomeLogo, getAwayLogo, getLeagueName, getTeamDisplay, getLeagueDisplay,
+  getMatchDate, getBusinessDate, getMatchTimestamp, getStatusKey, getDisplayStatusKey,
+  isLive, isFinished, isCancelled, isUpcoming, getStatusText, getStatusClass,
+  normalizeMatches, formatMatchTime, formatShortDate, formatCountdown, teamInitial,
+}

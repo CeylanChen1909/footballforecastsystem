@@ -1,0 +1,31 @@
+/* TeamSquad 页基础层（r11 TeamSquad.vue <style>） */
+
+.squad-main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+.page-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+.toolbar-actions { display:flex; gap:8px; }
+.team-hero { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:20px 24px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-lg); background:var(--ff-surface); }
+.team-identity { display:flex; align-items:center; gap:16px; min-width:0; }.team-logo { width:80px; height:80px; object-fit:contain; flex:none; }.team-logo.placeholder { display:inline-flex; align-items:center; justify-content:center; border-radius:16px; background:var(--ff-primary-soft); color:var(--ff-primary); font-size:30px; font-weight:800; }.team-identity h1 { margin:6px 0; color:var(--ff-ink); font-size:clamp(28px,4vw,42px); letter-spacing:-.05em; }.team-identity p { margin:0; color:var(--ff-text-muted); }.hero-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.info-strip { display:grid; grid-template-columns:repeat(3,minmax(120px,auto)) minmax(260px,1fr); gap:10px; align-items:center; margin:16px 0; padding:14px 16px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface); }.info-strip div:not(.info-note) { display:flex; flex-direction:column; gap:3px; }.info-strip span { color:var(--ff-text-faint); font-size:11px; }.info-strip strong { color:var(--ff-text-strong); font-family:var(--ff-mono); font-size:14px; }.info-note { color:var(--ff-text-muted); font-size:12px; line-height:1.6; }
+.squad-groups { display:flex; flex-direction:column; gap:22px; }.group-heading { display:flex; align-items:center; gap:10px; margin-bottom:10px; color:var(--ff-text-strong); }.group-heading span { color:var(--ff-text-faint); font-size:12px; }.player-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }.player-card { display:flex; align-items:center; gap:10px; min-width:0; padding:12px; border:1px solid var(--ff-border); border-radius:var(--ff-radius-md); background:var(--ff-surface-quiet); }.player-card img,.player-avatar { width:42px; height:42px; flex:none; object-fit:cover; border-radius:50%; }.player-avatar { display:inline-flex; align-items:center; justify-content:center; background:var(--ff-primary-soft); color:var(--ff-primary); font-weight:800; }.player-copy { display:flex; flex-direction:column; gap:3px; min-width:0; }.player-copy strong { overflow:hidden; color:var(--ff-text-strong); text-overflow:ellipsis; white-space:nowrap; }.player-copy span,.player-copy small { color:var(--ff-text-muted); font-size:11px; }.empty-state { display:flex; align-items:center; gap:14px; padding:22px 10px; color:var(--ff-text-muted); }.empty-mark { color:var(--ff-primary); font-size:30px; }.empty-state strong { color:var(--ff-text-strong); }.empty-state p { margin:6px 0 12px; }
+.squad-toolbar { display:flex; align-items:center; gap:8px; margin:-2px 0 16px; }.squad-toolbar input { width:240px; }.squad-toolbar select { width:150px; }.squad-toolbar > span { margin-left:auto; color:var(--ff-text-muted); font:11px var(--ff-mono); }
+@media (max-width: 900px) { .info-strip { grid-template-columns:repeat(3,1fr); }.info-note { grid-column:1/-1; }.player-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 620px) { .squad-main { padding:16px; }.page-toolbar,.team-hero { align-items:flex-start; flex-direction:column; }.team-hero { padding:20px; }.team-logo { width:62px; height:62px; }.info-strip { grid-template-columns:repeat(2,1fr); }.player-grid { grid-template-columns:1fr; }.squad-toolbar { align-items:stretch; flex-direction:column; }.squad-toolbar input,.squad-toolbar select { width:100%; }.squad-toolbar > span { margin-left:0; } }
+.player-number { margin-left:6px; color:var(--ff-primary); font:11px var(--ff-mono); }
+.team-page-head { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:4px 2px 14px; border-bottom:1px solid var(--ff-border); }
+.team-page-head .team-identity { gap:12px; }
+.team-page-head .team-logo { width:52px; height:52px; }
+.team-page-head .team-logo.placeholder { border-radius:12px; font-size:22px; }
+.team-page-head .team-identity h1 { margin:4px 0 0; font-size:clamp(24px,3vw,32px); }
+.team-page-head .hero-actions { flex:none; }
+@media (max-width:620px) {
+  .team-page-head { align-items:flex-start; flex-direction:column; padding:2px 0 12px; }
+  .team-page-head .hero-actions { width:100%; justify-content:space-between; }
+}
+
+
+/* ===== Solid 适配层（全量迁移组新增） ===== */
+.squad-toolbar select { width: 150px; }
+.squad-toolbar input { width: 240px; }
+/* 暗色第一档 */
+[data-theme="dark"] .player-card { background: var(--ff-surface); }
+

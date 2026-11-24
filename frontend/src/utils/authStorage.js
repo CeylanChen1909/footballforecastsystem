@@ -25,3 +25,5 @@ export const authStorage = {
   clear() { SESSION_KEYS.forEach(key => this.remove(key)) }
 }
 
+
+export default authStorage

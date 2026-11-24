@@ -1,8 +1,19 @@
 #!/usr/bin/env node
 /**
  * Post-build static HTML meta shells for crawlers / share bots.
- * Does NOT execute the Vue app — only duplicates dist/index.html with
+ * Does NOT execute the Solid app — only duplicates dist/index.html with
  * route-specific title/description/canonical/og/twitter tags.
+ *
+ * Solid 适配版（原 Vue 版见 frontend-r11/scripts/prerender-meta.mjs）：
+ *  - ROUTES 的标题/描述照搬 Vue 版（SEO 壳的约定）。
+ *    注意：router.jsx 的 TITLES['/matches'] 是一句描述文案（疑似错放，
+ *    契约 §1.3 要求照原样搬，运行时 document.title 用那句文案）；而本
+ *    脚本的 /matches 壳沿用 Vue prerender 的 "比赛赛程 - ChenFootball"，
+ *    两处不一致是刻意保留的现状，见 reports/frontend-solidjs/full-migration.md。
+ *  - noscript：Solid 的 Document.jsx 已自带一个 noscript（"请启用
+ *    JavaScript…"），且没有 Vue 的 <div id="app"></div> 挂载点；本脚本
+ *    按路由替换已有的 noscript（无 noscript 时插到 </body> 前）。
+ *  - 其余逻辑（swapName/swapProp/canonical/manifest 清理）与 Vue 版一致。
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -121,13 +132,12 @@ function replaceMeta(html, { path, title, description }) {
     );
   }
 
-  // Lightweight crawler-visible body hint (SPA still mounts over #app).
+  // Lightweight crawler-visible body hint. Solid has no <div id="app">
+  // mount point (Document.jsx renders a <noscript> already); replace the
+  // existing noscript per route, or insert one before </body> if absent.
   const noscript = `<noscript><p>${title} — ${description}</p></noscript>`;
   if (!out.includes("<noscript>")) {
-    out = out.replace(
-      /<div id="app"><\/div>/i,
-      `<div id="app"></div>\n    ${noscript}`
-    );
+    out = out.replace(/<\/body>/i, `    ${noscript}\n  </body>`);
   } else {
     out = out.replace(/<noscript>[\s\S]*?<\/noscript>/i, noscript);
   }

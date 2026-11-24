@@ -134,3 +134,5 @@ export const renderMarkdown = source => {
   flushAll()
   return blocks.join('')
 }
+
+export default renderMarkdown

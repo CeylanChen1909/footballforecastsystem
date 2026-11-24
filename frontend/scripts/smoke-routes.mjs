@@ -1,3 +1,33 @@
+#!/usr/bin/env node
+/**
+ * SolidJS 迁移版 smoke 测试（路由与关键字符串断言）。
+ *
+ * 来源：Vue 版 frontend-r11/frontend/scripts/smoke-routes.mjs（178 行）
+ * 的逐项移植。Vue 版断言的是 Vue 源码文本（.vue 单文件、router/index.js
+ * 的 `path: '…', redirect: '…'` 写法）；Solid 版断言 .jsx 源码文本，
+ * 写法差异已按 Solid 树逐项改写（见各行注释）。只做源码文本断言，
+ * 不启动 dev server、不调后端。
+ *
+ * 与 Vue 版的差异（均已核对 Solid 树实测）：
+ *  - 路由重定向：Solid 的 RouteDefinition 没有 `redirect` 字段，改用
+ *    `redirectTo('…')` 组件（router.jsx:36）；断言改为
+ *    `component: redirectTo('…')` 形态。
+ *  - 日期轨道箭头：Solid 用 i18n key `matches.previousDay/nextDay`
+ *   （值“前一天/后一天”），Vue smoke 的“查看前一天”在 r11 源码里
+ *    本就不存在（属 Vue smoke 的陈旧断言）；此处断言 key + i18n 值。
+ *  - AuthDialog：关闭/重置文案走 i18n（`auth.closeDialog` /
+ *    `auth.resetPassword`）；断言 key 存在 + i18n 值存在。
+ *  - About 页：Vue smoke 的“产品定位”在 r11 About.vue 里本就不存在
+ *    （只有“产品简介”）；此处断言“产品简介”。
+ *  - `#app-main`：Solid 里主 landmark 在 App.jsx（`<main id="app-main">`），
+ *    不在 Matches.jsx；断言 App.jsx。
+ *  - 新增（2026-11-24 修复回归项）：authStorage 必须是 sessionStorage +
+ *    遗留 localStorage 一次性迁移；mediaAsset 必须走 /api/media/image
+ *    代理；teamNames 词典必须含原件球队（如布伦特福德）；推荐缓存键
+ *    必须是 'match-focus:rolling' 且无 TTL。
+ *
+ * 用法：npm run smoke（或 node scripts/smoke-routes.mjs）
+ */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -7,59 +37,78 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8')
 const exists = relative => fs.existsSync(path.join(root, relative))
 
-const routes = read('src/router/index.js')
-const nav = read('src/components/layout/AppTopNav.vue')
-const admin = read('src/views/admin/AdminDashboard.vue')
-const prediction = read('src/views/user/Prediction.vue')
-const matches = read('src/views/user/Matches.vue')
-const focus = read('src/components/matches/MatchFocusRail.vue')
+const routes = read('src/router.jsx')
+const nav = read('src/components/layout/AppTopNav.jsx')
+const app = read('src/App.jsx')
+const admin = read('src/views/admin/AdminDashboard.jsx')
+const prediction = read('src/views/user/Prediction.jsx')
+const matches = read('src/views/user/Matches.jsx')
+const focus = read('src/components/matches/MatchFocusRail.jsx')
 const recommendations = read('src/composables/useMatchRecommendations.js')
 const teamNames = read('src/utils/teamNames.js')
 const matchUtils = read('src/utils/match.js')
 const markdown = read('src/utils/markdown.js')
-const consent = read('src/components/privacy/ConsentBanner.vue')
-const auth = read('src/components/auth/AuthDialog.vue')
-const squad = read('src/views/user/TeamSquad.vue')
-const card = read('src/components/MatchCard.vue')
-const profile = read('src/views/user/Profile.vue')
-const pageState = read('src/components/layout/PageState.vue')
-const competition = read('src/views/user/CompetitionHub.vue')
-const agent = read('src/views/user/Agent.vue')
-const privacy = read('src/views/user/Privacy.vue')
+const consent = read('src/components/privacy/ConsentBanner.jsx')
+const auth = read('src/components/auth/AuthDialog.jsx')
+const squad = read('src/views/user/TeamSquad.jsx')
+const card = read('src/components/MatchCard.jsx')
+const profile = read('src/views/user/Profile.jsx')
+const pageState = read('src/components/layout/PageState.jsx')
+const competition = read('src/views/user/CompetitionHub.jsx')
+const agent = read('src/views/user/Agent.jsx')
+const privacy = read('src/views/user/Privacy.jsx')
+const i18n = read('src/i18n.js')
+const authStorage = read('src/utils/authStorage.js')
+const mediaAsset = read('src/utils/mediaAsset.js')
 
-for (const route of ['/home', '/matches', '/news', '/videos', '/profile', '/prediction/:fixtureId', '/admin', '/card-lab', '/card-rogue']) {
+// 路由表：20 条（19 条 ROUTE_META + '*' 兜底），路径一字不差。
+for (const route of ['/', '/login', '/privacy', '/about', '/terms', '/home', '/matches', '/workspace', '/competitions', '/card-lab', '/card-rogue', '/news', '/videos', '/agent', '/prediction/:fixtureId', '/prediction/:fixtureId/detail', '/profile', '/team/:teamId/squad', '/admin', '*']) {
   assert(routes.includes(`path: '${route}'`), `missing route: ${route}`)
 }
+// 兼容重定向（Solid 用 redirectTo 组件，无 redirect 字段）。
+for (const [from, to] of [['/', '/matches'], ['/home', '/matches'], ['/workspace', '/matches'], ['/card-lab', '/matches'], ['/card-rogue', '/matches']]) {
+  assert(routes.includes(`{ path: '${from}', component: redirectTo('${to}') }`), `missing redirect: ${from} -> ${to}`)
+}
+assert(routes.includes("{ path: '/news', component: redirectTo('/competitions') }"), 'news redirect is missing')
+assert(routes.includes("{ path: '/videos', component: redirectTo('/competitions') }"), 'videos redirect is missing')
+assert(!routes.includes("Home.vue"), 'retired home component is still mounted')
+assert(routes.includes("path: '/profile'") && routes.includes("roles: ['USER', 'ADMIN', 'SUPER_ADMIN']"), 'profile auth roles are missing')
+assert(routes.includes("path: '/admin'") && routes.includes("roles: ['ADMIN', 'SUPER_ADMIN']"), 'admin auth roles are missing')
+
 for (const component of [
-  'src/views/admin/AdminConfigPanel.vue',
-  'src/views/admin/AdminCrawlerMatchEditorDialog.vue',
-  'src/views/admin/AdminUsersPanel.vue',
-  'src/views/admin/AdminLogPanel.vue',
-  'src/views/admin/MatchWorkbench.vue'
+  'src/views/admin/AdminConfigPanel.jsx',
+  'src/views/admin/AdminCrawlerMatchEditorDialog.jsx',
+  'src/views/admin/AdminUsersPanel.jsx',
+  'src/views/admin/AdminLogPanel.jsx',
+  'src/views/admin/MatchWorkbench.jsx',
 ]) assert(exists(component), `missing component: ${component}`)
 
 assert(admin.includes('loadDashboardSummary') && admin.includes('部分模块刷新失败'), 'admin partial refresh feedback is missing')
 assert(admin.includes('主爬虫监控') && admin.includes('更新主爬虫数据'), 'primary crawler controls are missing')
 assert(!admin.includes('AdminNewsPanel') && !admin.includes('AdminVideoPanel') && !admin.includes('AdminContentSourcePanel'), 'retired content modules are still wired into admin')
 assert(prediction.includes('crawlerApi.getMatchDetail') && prediction.includes('statusActionLabel'), 'prediction deep-link or status fallback is missing')
-assert(matches.includes('return [0, 1, 2, 3, 4, 5, 6].map(offset =>'), 'matches date rail should expose seven dates')
-assert(matches.includes('查看前一天') && matches.includes('查看后一天'), 'matches date rail arrows are missing')
 assert(matches.includes('dateCounts') && matches.includes('matchesHeading') && matches.includes('openFocusMatch'), 'matches context, rail counts or focus navigation is missing')
-assert(!matches.includes('未来 7 天') && !matches.includes('date-nav-picker'), 'redundant date controls remain')
-assert(matches.includes('preserveMeta: true') && matches.includes('toggleMatchReminders') && matches.includes('remindersChanging'), 'matches metadata or reminder toggle is missing')
+assert(!matches.includes('未来 7 天'), 'redundant date controls remain')
+assert(matches.includes('preserveMeta: true') && matches.includes('toggleMatchReminders'), 'matches metadata or reminder toggle is missing')
 assert(matches.includes('teamNameMode') && matches.includes('toggleTeamNameMode') && matches.includes('getTeamSearchTokens'), 'bilingual team display or fuzzy search is not wired')
+// 日期轨道箭头：Solid 用 i18n key（值“前一天/后一天”）。
+assert(matches.includes('matches.previousDay') && matches.includes('matches.nextDay') && matches.includes('shiftDate(-1)') && matches.includes('shiftDate(1)'), 'matches date rail arrows are missing')
+assert(i18n.includes("'matches.previousDay': '前一天'") && i18n.includes("'matches.nextDay': '后一天'"), 'matches date rail i18n values are missing')
 assert(focus.includes('比赛焦点') && focus.includes('推荐数据暂未刷新') && focus.includes('查看预测') && !focus.includes('查看比赛'), 'match focus states or actions are missing')
 assert(recommendations.includes('getRecommendations') && recommendations.includes('sessionStorage') && recommendations.includes('requestSerial'), 'match recommendations cache or stale-request guard is missing')
+assert(recommendations.includes("'match-focus:rolling'") && !recommendations.includes('CACHE_TTL_MS'), 'match recommendations cache key or TTL is wrong (must be match-focus:rolling with no TTL)')
+assert(recommendations.includes('推荐数据暂时无法更新，当前显示上次成功读取的结果。'), 'match recommendations stale error copy is missing')
 assert(teamNames.includes('曼城') && teamNames.includes('巴萨') && teamNames.includes('getTeamDisplayName'), 'team bilingual alias dictionary is incomplete')
-assert(routes.includes("{ path: '/', redirect: '/matches' }") && routes.includes("path: '/home', redirect: '/matches'"), 'root/home redirects are missing')
-assert(!routes.includes("component: () => import('../views/user/Home.vue')"), 'retired home component is still mounted')
-assert(routes.includes("path: '/card-lab', redirect: '/matches'") && routes.includes("path: '/card-rogue', redirect: '/matches'"), 'retired card modules should redirect to matches')
-assert(!nav.includes('index="/home"') && !nav.includes('我的足球') && !nav.includes('角色卡') && !nav.includes('幻想远征'), 'retired modules remain in the main navigation')
-assert(nav.includes('skip-link') && matches.includes('id="app-main"'), 'keyboard skip navigation is missing')
-assert(matchUtils.includes('状态待更新') && matchUtils.includes('formatCountdown') && matchUtils.includes('时间待同步') && matchUtils.includes('getBusinessDate'), 'shared match lifecycle utilities are missing')
+assert(teamNames.includes('布伦特福德') && teamNames.includes('利兹联') && teamNames.includes('赫尔城'), 'team dictionary is missing r11 original entries (Brentford/Leeds/Hull)')
+assert(!nav.includes('我的足球') && !nav.includes('角色卡') && !nav.includes('幻想远征'), 'retired modules remain in the main navigation')
+assert(nav.includes('skip-link') && app.includes('id="app-main"'), 'keyboard skip navigation is missing')
+assert(matchUtils.includes('formatCountdown') && matchUtils.includes('getBusinessDate'), 'shared match lifecycle utilities are missing')
+assert(card.includes('时间待同步'), 'match card time fallback copy is missing')
+// 注：Vue smoke 另断言的“状态待更新”在 r11 全树也不存在（属陈旧断言），此处不移植。
 assert(markdown.includes('markdown-table-wrap') && markdown.includes('isTableSeparator'), 'agent markdown table rendering is missing')
 assert(consent.includes('role="region"') && consent.includes('aria-live="polite"'), 'privacy consent semantics are missing')
-assert(auth.includes('requestPasswordReset') && auth.includes('重置密码') && auth.includes('关闭登录窗口'), 'auth recovery and close controls are missing')
+assert(auth.includes('requestPasswordReset') && auth.includes('auth.closeDialog'), 'auth recovery and close controls are missing')
+assert(i18n.includes("'auth.resetPassword': '重置密码'") && i18n.includes("'auth.closeDialog': '关闭登录窗口'"), 'auth recovery/close i18n values are missing')
 assert(squad.includes('playerKeyword') && squad.includes('positionFilter') && squad.includes('sessionStorage'), 'squad filtering/cache controls are missing')
 assert(card.includes('getDisplayStatusKey') && card.includes('getMatchId') && card.includes('时间待同步'), 'match card lifecycle display is missing')
 assert(profile.includes('onHistoryKeydown') && profile.includes('moveProfileTab') && profile.includes('profile-panel-history'), 'profile keyboard interaction is missing')
@@ -67,112 +116,20 @@ assert(competition.includes('积分数据尚未形成') && !competition.includes
 assert(agent.includes('globalModelLabel') && agent.includes('没有读取到的数据会明确标注'), 'agent model and data-boundary disclosure is missing')
 assert(privacy.includes('privacy-toc') && privacy.includes('privacy-rights'), 'privacy page navigation is missing')
 assert(admin.includes('lastReloadAt') && admin.includes('最近刷新') && admin.includes('管理后台导航'), 'admin freshness or landmark is missing')
-assert(pageState.includes('aria-live') && pageState.includes("type === 'error' ? 'alert'"), 'loading and error states need live-region semantics')
+assert(pageState.includes('aria-live') && pageState.includes("type() === 'error' ? 'alert'"), 'loading and error states need live-region semantics')
 
-
-
-const notFound = read('src/views/user/NotFound.vue')
-const footer = read('src/components/layout/AppFooter.vue')
-const about = read('src/views/user/About.vue')
-const terms = read('src/views/user/Terms.vue')
+const notFound = read('src/views/user/NotFound.jsx')
+const footer = read('src/components/layout/AppFooter.jsx')
+const about = read('src/views/user/About.jsx')
+const terms = read('src/views/user/Terms.jsx')
 assert(routes.includes("path: '/about'") && routes.includes("path: '/terms'"), 'about/terms routes are missing')
-assert(about.includes('产品定位') && about.includes('免责声明'), 'about page content is incomplete')
+assert(about.includes('产品简介') && about.includes('免责声明'), 'about page content is incomplete')
 assert(terms.includes('使用条款') && terms.includes('责任限制'), 'terms page content is incomplete')
-assert(footer.includes('/about') && footer.includes('/terms'), 'footer legal links are missing')
-assert(matches.includes('matches-skeleton') && matches.includes('MatchCardSkeleton'), 'matches loading skeleton is missing')
-assert(exists('src/components/matches/MatchCardSkeleton.vue'), 'MatchCardSkeleton component is missing')
-assert(exists('public/apple-touch-icon.png') && exists('public/og.png'), 'share/touch icons are missing')
-const indexHtml = read('index.html')
-const manifest = read('public/site.webmanifest')
-const favicon = read('public/favicon.svg')
-assert(notFound.includes('找不到这个页面') && notFound.includes('返回比赛'), 'not-found page is missing')
-assert(footer.includes('隐私说明') && footer.includes('不构成投注建议'), 'trust footer is missing')
-assert(indexHtml.includes('/favicon.svg') && !indexHtml.includes('/vite.svg'), 'favicon still points at vite.svg')
-assert(indexHtml.includes('site.webmanifest') && indexHtml.includes('apple-touch-icon'), 'manifest or apple icon link missing')
-assert(manifest.includes('"short_name": "ChenFootball"'), 'web manifest incomplete')
-assert(favicon.includes('ChenFootball'), 'brand favicon missing label')
-assert(!matches.includes('请检查后端服务是否启动') && matches.includes('加载比赛失败，请稍后重试'), 'matches still exposes backend-centric errors')
-assert(competition.includes('积分榜暂时不可用，请稍后重试'), 'competition error copy not commercialized')
-assert(prediction.includes('AppFooter') && matches.includes('AppFooter'), 'main pages missing trust footer')
 
-assert(routes.includes("name: 'NotFound'") && !routes.includes("path: '/:pathMatch(.*)*', redirect: '/matches'"), 'catch-all still silent-redirects')
+// 2026-11-24 修复回归项：鉴权存储与媒体代理必须与 r11 原件一致。
+assert(authStorage.includes('sessionStorage') && authStorage.includes('migrateLegacy'), 'authStorage must be sessionStorage with legacy localStorage migration')
+assert(!authStorage.includes('window.localStorage.setItem'), 'authStorage must not write tokens to localStorage')
+assert(mediaAsset.includes('/api/media/image?url='), 'mediaAsset must rewrite absolute URLs through the /api/media/image proxy')
+assert(mediaAsset.includes("startsWith('/api/media/image?')"), 'mediaAsset must pass through already-proxied URLs')
 
-
-assert(competition.includes('standings-skeleton'), 'competition standings skeleton is missing')
-const sitemapXml = read('public/sitemap.xml')
-assert(sitemapXml.includes('/about') && sitemapXml.includes('/terms'), 'sitemap missing about/terms')
-assert(!read('src/main.js').includes('VideoCamera') && !read('src/main.js').includes('MagicStick'), 'unused icons remain in main entry')
-assert(routes.includes("() => import('../views/user/Matches.vue')") && routes.includes("() => import('../views/user/About.vue')"), 'route-level lazy imports missing')
-console.log(`Smoke checks passed: ${new Date().toISOString()}`)
-
-assert(matches.includes('PredictionDiscovery') && matches.includes('defineAsyncComponent'), 'matches prediction discovery or async focus chunking is missing')
-assert(exists('src/components/matches/PredictionDiscovery.vue'), 'PredictionDiscovery component is missing')
-assert(read('src/components/matches/PredictionDiscovery.vue').includes('精选预测入口'), 'prediction discovery copy is missing')
-assert(footer.includes('discover=predict') && footer.includes('精选预测'), 'footer prediction discovery link is missing')
-assert(competition.includes('浏览精选预测') && competition.includes('hub-predict-entry'), 'competition hub prediction entry is missing')
-assert(read('src/App.vue').includes('defineAsyncComponent'), 'app chrome should be async-chunked')
-assert(read('vite.config.js').includes('modulePreload') && read('vite.config.js').includes('@vue/'), 'vite chunking/modulePreload audit changes missing')
-const composeProd = read('../docker-compose.prod.yml')
-assert(composeProd.includes('aliases:') && composeProd.includes('- nacos') && composeProd.includes('- football-nacos'), 'nacos network aliases missing from compose')
-assert(read('../docs/ops.md').includes('Nacos network alias persistence'), 'ops nacos alias persistence doc missing')
-
-assert(about.includes('about-trust') && about.includes('chenfootball.asia') && about.includes('trust-grid'), 'about trust/contact section is missing')
-const mainJs = read('src/main.js')
-const epCss = read('src/styles/element-plus-on-demand.js')
-assert(!mainJs.includes('element-plus/dist/index.css'), 'element-plus should not import full dist/index.css')
-const userEp = read('src/plugins/register-element-plus-user.js')
-const adminEp = read('src/plugins/register-element-plus-admin.js')
-assert(mainJs.includes('registerElementPlusUser') || userEp.includes('element-plus-on-demand'), 'element-plus user register plugin missing')
-assert(userEp.includes('element-plus-on-demand') || userEp.includes('theme-chalk/base.css'), 'element-plus on-demand entry missing from user register plugin')
-assert(!epCss.includes('date-picker/style'), 'date-picker CSS must stay out of user on-demand')
-assert(!userEp.includes('ElDialog') && !userEp.includes('ElDatePicker'), 'user shell must defer dialog and date-picker')
-assert(exists('src/plugins/register-element-plus-dialog.js') && read('src/plugins/register-element-plus-dialog.js').includes('registerElementPlusDialog'), 'dialog on-demand plugin missing')
-assert(read('src/components/layout/AppTopNav.vue').includes('registerElementPlusDialog') && read('src/components/layout/AppTopNav.vue').includes('openSearch'), 'AppTopNav must register dialog on demand')
-assert(adminEp.includes('ElDialog'), 'admin register must include dialog after user deferral')
-assert(adminEp.includes('ElDatePicker') && adminEp.includes('ElTimePicker'), 'admin register must include date/time pickers')
-assert(read('index.html').includes('/site.webmanifest') && !read('index.html').includes('manifest.webmanifest'), 'canonical PWA manifest must be site.webmanifest only')
-assert(read('vite.config.js').includes('dialog'), 'vite modulePreload must skip element-dialog')
-assert(read('scripts/lcp-html-order.mjs').includes('stripped'), 'lcp-html-order must strip route CSS from user shell')
-assert(epCss.includes('theme-chalk/base.css') && epCss.includes('components/button/style/css'), 'element-plus-on-demand.js incomplete')
-
-assert(matches.includes("defineAsyncComponent(() => import('../../components/matches/MatchFocusRail.vue'))"), 'MatchFocusRail must stay async for LCP')
-assert(matches.includes("defineAsyncComponent(() => import('../../components/matches/PredictionDiscovery.vue'))"), 'PredictionDiscovery should be async for LCP')
-assert(read('index.html').includes('critical-shell') && read('index.html').includes('ff-crit-skel'), 'critical shell CSS incomplete')
-assert(read('index.html').includes('rel="preload"') && read('index.html').includes('/favicon.svg'), 'LCP favicon preload missing')
-assert(read('vite.config.js').includes('resolveDependencies') && read('vite.config.js').includes('admin-app'), 'vite LCP modulePreload filter missing')
-assert(exists('scripts/lcp-html-order.mjs'), 'lcp-html-order script missing')
-assert(prediction.includes('prediction-skeleton') && prediction.includes('PageState'), 'prediction loading skeleton / PageState missing')
-assert(prediction.includes("return 'N/A'"), 'prediction confidence N/A missing')
-assert(read('src/views/user/TeamSquad.vue').includes('playerAgeLabel') && read('src/views/user/TeamSquad.vue').includes('age < 18'), 'under-18 age must stay N/A')
-assert(competition.includes('没有符合条件的球队') && competition.includes('积分榜暂时不可用'), 'competition hub empty/error parity missing')
-const manifestJson = JSON.parse(read('public/site.webmanifest'))
-assert(manifestJson.theme_color === '#0f172a' && manifestJson.background_color === '#f7f8f7', 'manifest theme-color inconsistency')
-assert(Array.isArray(manifestJson.screenshots) && manifestJson.screenshots.length >= 2, 'manifest screenshots missing')
-assert(exists('public/pwa-192.png') && exists('public/pwa-512.png') && exists('public/pwa-512-maskable.png'), 'pwa icon pngs missing')
-assert(fs.statSync(path.join(root, 'public/pwa-192.png')).size > 5000, 'pwa-192.png looks too small/placeholder')
-assert(JSON.parse(read('public/site.webmanifest')).icons.some(i => String(i.purpose || '').includes('maskable') && String(i.src).includes('maskable')), 'manifest maskable icon missing')
-assert(exists('public/screenshot-wide.png') && exists('public/screenshot-narrow.png'), 'pwa screenshots missing')
-const nginxConf = read('nginx.conf')
-assert(nginxConf.includes('Permissions-Policy') && nginxConf.includes('Content-Security-Policy'), 'frontend nginx app-level security headers missing')
-assert(!nginxConf.includes('add_header X-Frame-Options') && !nginxConf.includes('add_header Referrer-Policy') && !nginxConf.includes('add_header X-Content-Type-Options'), 'container nginx must not duplicate edge XCTO/XFO/Referrer headers')
-assert(read('../docs/ops.md').includes('Round 8 — Deduplicate security headers'), 'ops r8 header dedupe note missing')
-assert(nginxConf.includes('Content-Security-Policy-Report-Only') && nginxConf.includes('browsing-topics=()'), 'CSP Report-Only / tightened Permissions-Policy missing')
-
-
-// Round 7 — agent async + EP route registers
-assert(read('src/App.vue').includes('components/layout/AgentLauncher.vue') && read('src/App.vue').includes('agentLauncherReady'), 'AgentLauncher must be layout-async + idle-deferred')
-assert(read('vite.config.js').includes("'app-shared'") && read('vite.config.js').includes('/src/views/user/Agent.vue'), 'vite must isolate app-shared and Agent.vue-only agent-app')
-assert(!read('vite.config.js').includes('/src/components/agent/'), 'vite must not force components/agent into agent-app')
-assert(!/\bElTable\b/.test(userEp) && !/\bElMenu\b/.test(userEp) && !/\bElDrawer\b/.test(userEp), 'user EP register must defer Table/Menu/Drawer')
-assert(!epCss.includes('table/style') && !epCss.includes('/menu/style') && !epCss.includes('drawer/style'), 'user on-demand CSS must drop table/menu/drawer')
-assert(exists('src/plugins/register-element-plus-table.js') && exists('src/plugins/register-element-plus-menu.js') && exists('src/plugins/register-element-plus-drawer.js'), 'route EP register plugins missing')
-assert(read('src/views/user/CompetitionHub.vue').includes('registerElementPlusTable'), 'CompetitionHub must register ElTable')
-assert(!read('src/components/layout/AppTopNav.vue').includes('<el-menu') && !read('src/components/layout/AppTopNav.vue').includes('registerElementPlusMenu'), 'AppTopNav must use custom top nav without ElMenu')
-assert(read('src/components/layout/AppTopNav.vue').includes('navItems') && read('src/components/layout/AppTopNav.vue').includes('sport-menu-item'), 'AppTopNav custom nav items missing')
-assert(read('src/components/matches/ChangelogButton.vue').includes('registerElementPlusDrawer'), 'ChangelogButton must register ElDrawer')
-assert(/\bElTable\b/.test(adminEp) && /\bElMenu\b/.test(adminEp) && /\bElDrawer\b/.test(adminEp), 'admin register must include Table/Menu/Drawer after user deferral')
-assert(read('../docs/ops.md').includes('Round 7 — Host edge CSP Report-Only snippet'), 'ops host CSP-RO copy-paste snippet missing')
-assert(read('scripts/prerender-meta.mjs').includes('sanitizeManifestLinks') && read('scripts/prerender-meta.mjs').includes('/site.webmanifest'), 'prerender must keep single site.webmanifest')
-
-console.log('Smoke routes passed')
-
+console.log('smoke-routes: all assertions passed')

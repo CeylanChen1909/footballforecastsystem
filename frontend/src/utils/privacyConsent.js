@@ -17,3 +17,5 @@ export function clearAnalyticsConsent() {
 export function canTrackAnalytics() {
   return getAnalyticsConsent() === 'granted'
 }
+
+export default { getAnalyticsConsent, setAnalyticsConsent, canTrackAnalytics, clearAnalyticsConsent }

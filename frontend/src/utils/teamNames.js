@@ -1,3 +1,31 @@
+/**
+ * 队名 / 联赛名工具。
+ *
+ * 来源（2026-11-24 修复）：本文件词典与 6 个原件函数（getTeamDisplayName /
+ * getTeamSearchTokens / expandSearchQueries / matchLocalSearch /
+ * findLeagueAlias / normalizeTeamSearch）逐字取自 GitHub r11 原件
+ * frontend/src/utils/teamNames.js（148 行，156 支球队，SHA d1fe2a3…）。
+ * 契约 §10 称本文件“不存在”是错的——本地镜像漏拷所致。
+ *
+ * 另保留 Solid 迁移为 import 面补的 3 个函数（r11 里不存在）：
+ * displayTeamName / displayLeagueName / getLeagueDisplayName，以及
+ * PRODUCTION_LEAGUES（10 联赛过滤表）与 getTeamNameMode（读
+ * localStorage `ff_team_name_mode`）。display* 的中英映射同样取自
+ * 上述原件词典（含别名），不再用重建版 44 对昵称表。
+ *
+ * 原件语义要点（与重建版的差异，见 fix.md）：
+ *  - getTeamDisplayName(name, mode)：mode !== 'zh' 时原样返回 source，
+ *    不查英文名；zh 模式查词典，无命中回退原名。
+ *  - normalizeTeamSearch：NFKD 去重音 + 小写 + 去非字母数字汉字，
+ *    不去 FC/AFC/SC/CF/CLUB 后缀。
+ *  - getTeamSearchTokens：返回原始名数组 [source, en, zh, ...aliases]，
+ *    不做归一化。
+ *  - expandSearchQueries：双向子串匹配全表（球队 + 8 联赛别名）展开，
+ *    不截断。
+ *  - LEAGUE_ALIASES 只有 8 个联赛（无欧冠/欧国联）；联赛过滤用的
+ *    PRODUCTION_LEAGUES（10 个）与 display* 的联赛表另行保留。
+ */
+
 // The crawler's primary source uses English club names. Keep the display and
 // search aliases in one client-side dictionary so the match list can offer a
 // predictable bilingual experience without changing the canonical IDs sent
@@ -146,3 +174,125 @@ export const findLeagueAlias = query => {
 }
 
 export const normalizeTeamSearch = normalizeTeamName
+export const PRODUCTION_LEAGUES = ['英超', '西甲', '意甲', '德甲', '法甲', '荷甲', '葡超', '英冠', '欧冠', '欧国联']
+
+/**
+ * 联赛展示表（10 行，供 displayLeagueName / getLeagueDisplayName 用；
+ * 注意与原件 LEAGUE_ALIASES（8 行，仅供 findLeagueAlias /
+ * expandSearchQueries 用）不是同一张表）。
+ */
+const LEAGUE_TABLE = [
+  { zh: '英超', en: 'Premier League', aliases: ['EPL', '英格兰超级联赛', '英超联赛'] },
+  { zh: '西甲', en: 'La Liga', aliases: ['LaLiga', '西班牙甲级联赛'] },
+  { zh: '意甲', en: 'Serie A', aliases: ['意大利甲级联赛'] },
+  { zh: '德甲', en: 'Bundesliga', aliases: ['德国甲级联赛'] },
+  { zh: '法甲', en: 'Ligue 1', aliases: ['法国甲级联赛'] },
+  { zh: '荷甲', en: 'Eredivisie', aliases: ['荷兰甲级联赛'] },
+  { zh: '葡超', en: 'Primeira Liga', aliases: ['葡萄牙超级联赛'] },
+  { zh: '英冠', en: 'Championship', aliases: ['英格兰冠军联赛'] },
+  { zh: '欧冠', en: 'UEFA Champions League', aliases: ['UCL', '欧洲冠军联赛'] },
+  { zh: '欧国联', en: 'UEFA Nations League', aliases: ['UNL', '欧洲国家联赛'] },
+]
+
+const HAS_CJK = /[一-鿿]/
+
+// 由原件 TEAM_DIRECTORY 派生的双向映射（含别名：中文别名 -> 英文全名，
+// 英文别名 -> 中文全名），供 displayTeamName 用。
+const ZH_TO_EN = new Map()
+const EN_TO_ZH = new Map()
+for (const item of TEAM_DIRECTORY) {
+  ZH_TO_EN.set(item.zh, item.en)
+  EN_TO_ZH.set(item.en, item.zh)
+  for (const alias of item.aliases) {
+    if (HAS_CJK.test(alias)) ZH_TO_EN.set(alias, item.en)
+    else EN_TO_ZH.set(alias, item.zh)
+  }
+}
+
+/** 当前队名显示模式（Matches 页的 teamNameMode 与本模块读同一键）。 */
+export function getTeamNameMode() {
+  try {
+    return window.localStorage.getItem('ff_team_name_mode') === 'en' ? 'en' : 'zh'
+  } catch {
+    return 'zh'
+  }
+}
+
+/**
+ * 按当前显示模式返回展示名；无 display 值时回退 canonical；
+ * 两者都空返回 ''（调用方另有 '主队'/'客队' 回退）。
+ * display 是后端提供的本地化值（teamDisplayName/displayName/nameEn）。
+ * （Solid 迁移补的函数，r11 原件无此函数；词典取自原件。）
+ */
+export function displayTeamName(canonicalName, displayName) {
+  const canonical = String(canonicalName || '').trim()
+  const display = String(displayName || '').trim()
+  if (!canonical && !display) return ''
+  const mode = getTeamNameMode()
+  if (mode === 'en') {
+    if (display && !HAS_CJK.test(display)) return display
+    const fromDict = ZH_TO_EN.get(canonical) || ZH_TO_EN.get(display)
+    if (fromDict) return fromDict
+    if (display) return display
+    return canonical
+  }
+  const fromDict = EN_TO_ZH.get(canonical) || EN_TO_ZH.get(display)
+  if (fromDict) return fromDict
+  if (display && HAS_CJK.test(display)) return display
+  if (canonical && HAS_CJK.test(canonical)) return canonical
+  return display || canonical
+}
+
+function findLeagueRow(name) {
+  const key = String(name || '').trim()
+  if (!key) return null
+  const normalized = normalizeTeamSearch(key)
+  return (
+    LEAGUE_TABLE.find(
+      (row) =>
+        row.zh === key ||
+        row.en.toLowerCase() === key.toLowerCase() ||
+        row.aliases.some((a) => a.toLowerCase() === key.toLowerCase()) ||
+        normalizeTeamSearch(row.en) === normalized ||
+        row.aliases.some((a) => normalizeTeamSearch(a) === normalized),
+    ) || null
+  )
+}
+
+/**
+ * 联赛版 displayTeamName。中文模式下返回中文 canonical 名本身
+ * （联赛过滤用它与 PRODUCTION_LEAGUES 比对，必须稳定可比对）。
+ * （Solid 迁移补的函数，r11 原件无此函数。）
+ */
+export function displayLeagueName(name, displayName) {
+  const key = String(name || '').trim()
+  const display = String(displayName || '').trim()
+  if (!key && !display) return ''
+  const row = findLeagueRow(key) || findLeagueRow(display)
+  const mode = getTeamNameMode()
+  if (row) return mode === 'en' ? row.en : row.zh
+  if (mode === 'en') {
+    if (display && !HAS_CJK.test(display)) return display
+    return display || key
+  }
+  if (key && HAS_CJK.test(key)) return key
+  return display || key
+}
+
+/** 单参数版：displayLeagueName(name) 无 display 参数的形态。 */
+export function getLeagueDisplayName(name) {
+  return displayLeagueName(name)
+}
+
+export default {
+  displayTeamName,
+  displayLeagueName,
+  getLeagueDisplayName,
+  getTeamDisplayName,
+  getTeamSearchTokens,
+  normalizeTeamSearch,
+  expandSearchQueries,
+  findLeagueAlias,
+  matchLocalSearch,
+  getTeamNameMode,
+}

@@ -1,11 +1,35 @@
-import { computed, ref } from 'vue'
+/**
+ * 焦点推荐 composable。
+ *
+ * 来源（2026-11-24 修复）：行为逐字取自 GitHub r11 原件
+ * frontend/src/composables/useMatchRecommendations.js（68 行，SHA b4e50ee…）。
+ * 契约 §10 称本文件“不存在”是错的——本地镜像漏拷所致。原件是 Vue
+ * ref/computed，本文件改为 Solid createSignal/createMemo，其余语义不变。
+ *
+ * 原件行为（与重建版的差异，见 fix.md）：
+ *  - 缓存键 'match-focus:rolling'（sessionStorage），无 TTL：
+ *    savedAt 只写不读，缓存永不过期；命中缓存时仅在 items 为空时
+ *    先显示并置 stale。
+ *  - load(_date, { silent })：首参是日期占位（Vue 版未使用），不传
+ *    keyword；调 crawlerApi.getRecommendations({ mode: 'focus', limit })。
+ *  - 失败时有缓存则显示缓存 + 固定文案
+ *    “推荐数据暂时无法更新，当前显示上次成功读取的结果。”；
+ *    无缓存则清空 + requestError?.message 或固定文案
+ *    “比赛焦点暂时无法更新，请稍后重试。”。
+ *  - 返回 { items, meta, loading, error, stale, hasItems, lastUpdated,
+ *    load, retry }；error 初始 ''（字符串，不是 Error 对象）。
+ *
+ * 用法（Matches.jsx）：useMatchRecommendations({ limit: 6 })，重命名为
+ * hotMatches/hotMeta/hotLoading/hotError/hotStale/loadHotMatches。
+ */
+import { createMemo, createSignal } from 'solid-js'
 import { crawlerApi } from '../api'
 
-const cacheKey = () => 'match-focus:rolling'
+const CACHE_KEY = 'match-focus:rolling'
 
 const readCache = () => {
   try {
-    const value = JSON.parse(sessionStorage.getItem(cacheKey()) || 'null')
+    const value = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null')
     return value && Array.isArray(value.items) ? value : null
   } catch {
     return null
@@ -13,35 +37,35 @@ const readCache = () => {
 }
 
 const writeCache = value => {
-  try { sessionStorage.setItem(cacheKey(), JSON.stringify({ ...value, savedAt: Date.now() })) } catch { /* storage may be disabled */ }
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ...value, savedAt: Date.now() })) } catch { /* storage may be disabled */ }
 }
 
 export function useMatchRecommendations({ limit = 6 } = {}) {
-  const items = ref([])
-  const meta = ref({})
-  const loading = ref(false)
-  const error = ref('')
-  const stale = ref(false)
+  const [items, setItems] = createSignal([])
+  const [meta, setMeta] = createSignal({})
+  const [loading, setLoading] = createSignal(false)
+  const [error, setError] = createSignal('')
+  const [stale, setStale] = createSignal(false)
   let requestSerial = 0
 
-  const hasItems = computed(() => items.value.length > 0)
-  const lastUpdated = computed(() => meta.value?.generatedAt || '')
+  const hasItems = createMemo(() => items().length > 0)
+  const lastUpdated = createMemo(() => meta()?.generatedAt || '')
 
   const apply = (payload, { isStale = false } = {}) => {
     const nextItems = Array.isArray(payload?.items)
       ? payload.items
       : Array.isArray(payload?.response) ? payload.response : []
-    items.value = nextItems
-    meta.value = payload?.meta || payload || {}
-    stale.value = isStale
+    setItems(nextItems)
+    setMeta(payload?.meta || payload || {})
+    setStale(isStale)
   }
 
   const load = async (_date, { silent = false } = {}) => {
     const serial = ++requestSerial
     const cached = readCache()
-    if (cached && !items.value.length) apply(cached, { isStale: true })
-    if (!silent) loading.value = true
-    error.value = ''
+    if (cached && !items().length) apply(cached, { isStale: true })
+    if (!silent) setLoading(true)
+    setError('')
     try {
       const response = await crawlerApi.getRecommendations({ mode: 'focus', limit })
       if (serial !== requestSerial) return
@@ -51,14 +75,14 @@ export function useMatchRecommendations({ limit = 6 } = {}) {
       if (serial !== requestSerial) return
       if (cached) {
         apply(cached, { isStale: true })
-        error.value = '推荐数据暂时无法更新，当前显示上次成功读取的结果。'
+        setError('推荐数据暂时无法更新，当前显示上次成功读取的结果。')
       } else {
-        items.value = []
-        meta.value = {}
-        error.value = requestError?.message || '比赛焦点暂时无法更新，请稍后重试。'
+        setItems([])
+        setMeta({})
+        setError(requestError?.message || '比赛焦点暂时无法更新，请稍后重试。')
       }
     } finally {
-      if (serial === requestSerial) loading.value = false
+      if (serial === requestSerial) setLoading(false)
     }
   }
 
@@ -66,3 +90,5 @@ export function useMatchRecommendations({ limit = 6 } = {}) {
 
   return { items, meta, loading, error, stale, hasItems, lastUpdated, load, retry }
 }
+
+export default useMatchRecommendations

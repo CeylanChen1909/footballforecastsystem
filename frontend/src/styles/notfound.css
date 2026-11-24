@@ -1,0 +1,27 @@
+/* NotFound 页基础层（r11 NotFound.vue <style>） */
+
+.not-found-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.not-found-main {
+  flex: 1;
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 48px 20px 28px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.not-found-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+
+/* ===== Solid 适配层（全量迁移组新增） ===== */
+.not-found-links .ff-btn { text-decoration: none; }
+
